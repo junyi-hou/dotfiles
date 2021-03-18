@@ -6110,7 +6110,7 @@ Python is a general purpose language with many libraries that enable people to j
 
 #+begin_src nix :noweb-ref home-manager
   home.packages = with pkgs; [
-    (python38.withPackages (p: with p; [ jupyter ]))
+    (python39.withPackages (p: with p; [ jupyter ]))
   ];
 #+end_src
 
