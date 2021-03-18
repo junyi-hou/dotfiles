@@ -1946,7 +1946,9 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
               shift
           done
           vterm_printf "51;E$vterm_elisp"
-                  }
+      }
+
+      PROMPT_COMMAND='echo -ne "\033]0;${HOSTNAME}:${PWD}\007"'
     '';
   };
 #+end_src
@@ -1957,13 +1959,19 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
   home.packages = [ pkgs.inetutils ];
 #+end_src
 
-To configure ~vterm~, I first extend the scrollback limit of ~vterm~ to retain more information.
+To configure ~vterm~, I first allow ~vterm~ to change the buffer name according to ~$PWD~.
+
+#+begin_src emacs-lisp
+  (setq vterm-buffer-name-string "*vterm*: %s")
+#+end_src
+
+I then extend the scrollback limit of ~vterm~ to retain more information.
 
 #+begin_src emacs-lisp
   (setq vterm-max-scrollback 10000)
 #+end_src
 
-Second, ~vterm~ is a terminal emulator and not an internal ~emacs~ buffer, keystrokes send to ~vterm~ will go straight to the underlying shell process. Therefore, I need to configure ~vterm~ to translate evil movements before send them to the underlying shell. I borrow most of the translations from the [[https://github.com/emacs-evil/evil-collection/blob/master/modes/vterm/evil-collection-vterm.el][evil-collection]] package.
+Third, ~vterm~ is a terminal emulator and not an internal ~emacs~ buffer, keystrokes send to ~vterm~ will go straight to the underlying shell process. Therefore, I need to configure ~vterm~ to translate evil movements before send them to the underlying shell. I borrow most of the translations from the [[https://github.com/emacs-evil/evil-collection/blob/master/modes/vterm/evil-collection-vterm.el][evil-collection]] package.
 
 First, ~evil~ moves the cursor backwards when entering the normal state. This behavior can cause confusion in terminals. I turn it off by setting ~evil-move-cursor-back~ to ~nil~ in ~vterm~ mode.
 
