@@ -1920,9 +1920,7 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
         }
       '';
     };
-
   }
-
 #+end_src
 
 ~vterm_prompt_end~ function also depends on the ~hostname~ command line utility, which is provided by ~inetutils~ package.
@@ -6680,6 +6678,8 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
 #+end_src
 
 ** Browser
+
+I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-webkit]] as a modern JS compatible browser inside ~emacs~, but until then, I will use ~firefox~ instead.
 
 #+begin_src nix :noweb-ref home-manager
   {
