@@ -112,6 +112,46 @@ I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on c
   emacsOverlayHash = "a1c89c95cf659512f72f6ec51c764c03801f890d";
 #+end_src
 
+The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
+
+#+begin_src nix :noweb-ref emacs-package
+  (
+    let
+      libPath = with pkgs; lib.concatStringsSep ":" [
+        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
+        "${lib.getLib stdenv.cc.cc}/lib"
+        "${lib.getLib stdenv.glibc}/lib"
+      ];
+
+      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
+        old: {
+          configureFlags = (lib.remove "--with-xft" old.configureFlags)
+                           ++ lib.singleton "--with-ns";
+        }
+      );
+
+      emacsGccDarwin = pkgs.symlinkJoin {
+        name = "emacsGccDarwin";
+        paths = [ emacsNsGcc ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/emacs \
+          --set LIBRARY_PATH ${libPath}
+        '';
+        meta.platforms = pkgs.stdenv.lib.platforms.linux;
+        passthru.nativeComp = true;
+        src = emacsNsGcc.src;
+      };
+
+    in
+
+      (if pkgs.stdenv.isLinux then pkgs.emacsPgtkGcc else emacsGccDarwin)
+  )
+#+end_src
+
+Putting them together.
+
+#+begin_src nix :noweb-ref home-manager :noweb yes
   {
     nixpkgs.overlays = [
       (import (builtins.fetchTarball {
@@ -121,7 +161,8 @@ I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on c
 
     programs.emacs = {
       enable = true;
-      package = pkgs.emacsPgtkGcc;
+      package =
+        <<emacs-package>>;
     };
 
     home = {
