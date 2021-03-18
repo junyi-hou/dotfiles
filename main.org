@@ -6374,18 +6374,21 @@ nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Sinc
 Sometimes I would like to check out package files located at ~nix-store~. To ensure reproducible environment, nix installs packages to a unique path in ~nix-store~ by prefixing the package name with a hash. This makes it difficult to quickly navigate to the path where a particular package is installed. Luckily, I have ~selectrum~ and ~prescient~. And the following function will make it super easy in finding the path in ~nix-store~.
 
 #+begin_src emacs-lisp
-  (defun gatsby:nix-eshell-in-storage (storage)
-    "Open an eshell in the directory of STORAGE."
+  (defun gatsby:nix-shell-in-storage (storage)
+    "Open an eshell/vterm in the directory of STORAGE."
     (interactive (list (read-file-name "Select the package directory: "
                                        "/nix/store/"
                                        nil
                                        nil
                                        nil
                                        'directory-name-p)))
-    (gatsby:eshell-open-here storage))
+    (let ((default-directory storage))
+      (if current-prefix-arg
+          (gatsby:vterm-open-here)
+        (gatsby:eshell-open-here))))
 
   (general-define-key :keymaps 'normal :prefix "SPC"
-    "ns" #'gatsby:nix-eshell-in-storage)
+    "ns" #'gatsby:nix-shell-in-storage)
 #+end_src
 
 I use ~nixpkgs-fmt~ to format my nix code before save.
