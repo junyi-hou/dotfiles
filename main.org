@@ -3413,7 +3413,7 @@ First, I include ~GPG~ in my ~home-manager~ system.
 
     home = {
       packages = [ pkgs.openssh ];
-      sessionVariable.SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
+      sessionVariables.SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
       activation = {
         setGpgPermission = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD find ~/.gnupg -type f -exec chmod 600 {} \;
@@ -4351,10 +4351,10 @@ To receive and send emails from the comfort in ~emacs~, I use
           {
 
             imports = [
-              <<account-settings>>
+              <<account-setting>>
             ];
 
-            nixpkgs.overlay =
+            nixpkgs.overlays =
               [
                 (
                   self: super:
@@ -4370,7 +4370,7 @@ To receive and send emails from the comfort in ~emacs~, I use
                 )
               ];
 
-            home.packages = [ pkgs.mbsync gmail-oauth2-tools ];
+            home.packages = [ pkgs.isync gmail-oauth2-tools ];
 
             services = {
               mbsync = {
@@ -4591,7 +4591,7 @@ I include my email accounts here. I have two accounts. A personal one ([[junyi.y
 
 I then export my account information to ~emacs~.
 
-#+begin_src nix :noweb-ref accont-setting
+#+begin_src nix :noweb-ref account-setting
   {
     home.file = {
       "${lispDir}/gatsby:accounts.el" =
