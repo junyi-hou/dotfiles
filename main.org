@@ -1,7 +1,7 @@
 #+title: Personal Dotfiles
 #+author: Junyi Hou
-#+property: header-args:emacs-lisp :tangle ./emacs.d/init.el :mkdirp yes :noweb yes :comments both
-#+property: header-args:nix :mkdirp yes :noweb yes :comments both
+#+property: header-args:emacs-lisp :tangle ./emacs.d/init.el :mkdirp yes
+#+property: header-args:nix :mkdirp yes
 #+startup: show3levels
 #+options: toc:3
 
@@ -168,7 +168,6 @@ In lieu of a proper namespace, I prefix all custom functions, variables with ~ga
     client.enable = true;
   };
 #+end_src
-
 
 ** Lexical Binding
 
