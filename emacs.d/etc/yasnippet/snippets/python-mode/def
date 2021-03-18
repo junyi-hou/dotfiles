@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: define python function
+# key: def
+#
+# --
+def ${1:fun}(${2:arg}):
+    \"\"\"
+    $3
+    \"\"\"
+    $0

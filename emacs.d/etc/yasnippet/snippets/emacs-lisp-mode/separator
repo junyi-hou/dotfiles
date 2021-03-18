@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: separator
+# key: sep
+# --
+;; ${1:$(make-string (max 5 (string-width yas-text)) ?\=)}
+;; ${1:separator}
+;; ${1:$(make-string (max 5 (string-width yas-text)) ?\=)}
+$0

@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: nix-shebang
+# condition: (string= "s" (buffer-substring 1 (point)))
+# key: s
+# --
+#! /usr/bin/env nix-shell
+#! nix-shell -i python3 -p python38
+
+$0

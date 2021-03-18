@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: src-block
+# key: src
+# --
+${1:#+name: $2
+}#+begin_src ${3:$$(let ((val (yas-choose-value (-filter 'identity gatsby:org-babel-available-interpreters))))
+  (unless (member val gatsby:org-babel-available-interpreters)
+    (setq-local gatsby:org-babel-available-interpreters
+                `(,@gatsby:org-babel-available-interpreters ,val)))
+  val)}
+${4:$$(progn (org-edit-special) "")}
+#+end_src

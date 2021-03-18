@@ -1,0 +1,53 @@
+# -*- mode: snippet -*-
+# name: newarticle
+# key: newarticle
+# condition: (string= (buffer-string) "newarticle")
+# --
+\documentclass[11pt]{article}
+
+% to keep graphs and tables in the very section to which they belong
+\usepackage[section]{placeins}
+
+% formatting
+\usepackage{setspace}
+\onehalfspacing
+\usepackage[top=1in,bottom=1in,left=1in,right=1in]{geometry}
+
+% to include the landscape environment
+\usepackage{pdflscape}
+
+% tables
+\usepackage{longtable,multirow,multicol,booktabs}
+
+% math
+\usepackage{amsmath,amsthm,amsfonts,amssymb}
+
+% graphics
+\usepackage{graphicx,rotating}
+
+% bib
+\usepackage{natbib}
+
+% color and hyperlinks
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{colorlinks, citecolor=blue}
+
+% font and indent
+\usepackage{mathpazo}
+\usepackage{indentfirst}
+
+\title{${1:title}}
+\author{${2:author}}
+\date{${3:date}}
+
+\begin{document}
+
+\maketitle
+
+$0
+
+
+\bibliographystyle{ecta}
+
+\end{document}

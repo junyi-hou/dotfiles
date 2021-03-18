@@ -1,0 +1,26 @@
+# -*- mode: snippet -*-
+# name: python-let
+# key: python
+# expand-env: ((yas-indent-line 'fixed))
+# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?let[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?in[[:space:]\n]+" nil 'no-error)))
+# --
+nodejs = pkgs.nodejs-12_x;
+
+nodeEnv = import ((builtins.getEnv "HOME") + "/.config/nixpkgs/utils/node-env.nix") {
+  inherit (pkgs) lib stdenv python2 utillinux runCommand writeTextFile;
+  inherit nodejs;
+  libtool = if pkgs.stdenv.isDarwin then pkgs.darwin.cctools else null;
+};
+
+pyright = nodeEnv.buildNodePackage {
+  name = "pyright";
+  packageName = "pyright";
+  version = "1.1.105";
+  src = builtins.fetchurl {
+    url = https://registry.npmjs.org/pyright/-/pyright-1.1.105.tgz;
+  };
+  production = true;
+  bypassCache = true;
+  reconstructLock = true;
+};
+$0

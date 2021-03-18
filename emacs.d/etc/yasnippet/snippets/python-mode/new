@@ -1,0 +1,17 @@
+# -*- mode: snippet -*-
+# name: new
+# key: new
+# condition: (string= "new" (buffer-string))
+# --
+'''
+`(buffer-name)` -- ${1:one-line description}
+
+${2:longer description}
+
+TODO:
+
+'''
+
+__author__ = "Junyi Hou"
+
+$0

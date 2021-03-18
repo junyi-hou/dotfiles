@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: defalias
+# key: defalias
+# --
+(defalias '${2:`(file-name-sans-extension (buffer-name))`-$1} $3
+  ${4:"docstring"})

@@ -1,0 +1,15 @@
+# -*- mode: snippet -*-
+# name: new-module
+# condition: (string= "new" (buffer-string))
+# key: new
+# --
+;;; `(buffer-name)` --- ${1:description} -*- lexical-binding: t; -*-
+
+;;; Commentary:
+
+;;; Code:
+
+$0
+
+(provide '`(file-name-sans-extension (buffer-name))`)
+;;; `(buffer-name)` ends here

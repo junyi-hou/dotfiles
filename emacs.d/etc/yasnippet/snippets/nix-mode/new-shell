@@ -1,0 +1,17 @@
+# key: new-shell
+# name: new-shell
+# expand-env: ((yas-indent-line 'fixed))
+# --
+{ pkgs ? import <nixpkgs> {} }:
+with pkgs;
+
+${1:let
+  $2
+in
+}
+mkShell {
+  buildInputs = [
+    $3
+  ];
+  $0
+}

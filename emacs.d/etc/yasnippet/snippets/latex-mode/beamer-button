@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: beamer-button
+# key: button
+# --
+\hyperlink{$1}{\beamerbutton{$2}}

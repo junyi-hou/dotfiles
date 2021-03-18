@@ -1,0 +1,47 @@
+# -*- mode: snippet -*-
+# name: newslides
+# key: newslides
+# condition: (string= (buffer-string) "newslides")
+# --
+\documentclass[11pt]{beamer}
+
+% to keep graphs and tables in the very section to which they belong
+\usepackage[section]{placeins}
+
+% to include the landscape environment
+\usepackage{pdflscape}
+
+% tables
+\usepackage{longtable,multirow,multicol,booktabs}
+
+% math
+\usepackage{amsmath,amsthm,amsfonts,amssymb}
+
+% graphics
+\usepackage{graphicx,rotating}
+
+% color and hyperlinks
+\usepackage{color}
+\usepackage{hyperref}
+\hypersetup{colorlinks, citecolor=blue}
+
+% font and indent
+\usepackage{mathpazo}
+
+\title{${1:title}}
+\author{${2:author}}
+\date{${3:date}}
+
+\usetheme{default}
+
+\begin{document}
+
+\begin{frame}
+\maketitle
+\end{frame}
+
+\begin{frame}
+$0
+\end{frame}
+
+\end{document}

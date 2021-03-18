@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: shellHook
+# key: shellHook
+# expand-env: ((yas-indent-line 'fixed))
+# --
+shellHook = ''
+  $0
+'';

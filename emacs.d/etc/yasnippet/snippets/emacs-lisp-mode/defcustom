@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: defcustom
+# key: defcustom
+# --
+(defcustom ${1:symbol} ${2:initvalue}
+  "${3:docstring}"
+  ${4::type $5}
+  :group $6
+  $0)

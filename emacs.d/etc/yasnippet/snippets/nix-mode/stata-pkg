@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: stata-pkg
+# key: stata
+# expand-env: ((yas-indent-line 'fixed))
+# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?buildInputs[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?];[[:space:]\n]+" nil 'no-error)))
+# --
+stata stataKernel
+$0

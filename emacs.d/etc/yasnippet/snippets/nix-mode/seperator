@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: seperator
+# key: sep
+# expand-env: ((yas-indent-line 'fixed))
+# --
+# ${1:$(make-string (max 5 (string-width yas-text)) ?\=)}
+# ${1:separator}
+# ${1:$(make-string (max 5 (string-width yas-text)) ?\=)}
+$0
