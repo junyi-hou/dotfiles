@@ -106,11 +106,16 @@ In lieu of a proper namespace, I prefix all custom functions, variables with ~ga
 
 ** The Main ~emacs~ Package
 
-#+begin_src nix :noweb-ref home-manager
+I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on child frame border is made. I put the relevant ~emacs-overlay~ version below:
+
+#+begin_src nix :noweb-ref version-info
+  emacsOverlayHash = "a1c89c95cf659512f72f6ec51c764c03801f890d";
+#+end_src
+
   {
     nixpkgs.overlays = [
       (import (builtins.fetchTarball {
-        url = https://github.com/nix-community/emacs-overlay/archive/a1c89c95cf659512f72f6ec51c764c03801f890d.tar.gz;
+        url = "https://github.com/nix-community/emacs-overlay/archive/" + emacsOverlayHash + ".tar.gz";
       }))
     ];
 
