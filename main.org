@@ -84,7 +84,7 @@
 
 Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
 
-#+begin_src nix :noweb-ref (if (eq system-type 'gnu/linux) "home-manager" "nowave") :noweb yes
+#+begin_src nix :tangle ./linux/use-system-wayland.nix :noweb yes
     home = {
       file = {
         ".config/fontconfig" = {
@@ -128,6 +128,14 @@ In addition, I include some Linux-wayland specific packages.
       C-S-v=paste
     '';
   };
+#+end_src
+
+Make sure to load those configuration on the correct system.
+
+#+begin_src nix :noweb-ref home-manage
+  imports = [
+    (if stdenv.isLinux then ./linux/use-system-wayland.nix)
+  ];
 #+end_src
 
 On MacOS system, those components are builtin, and I don't need to worry about it.
