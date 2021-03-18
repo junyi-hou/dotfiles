@@ -1900,6 +1900,10 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
                   }
 
         PROMPT_COMMAND='echo -ne "\033]0;''${HOSTNAME}:''${PWD}\007"'
+
+        ff(){
+          emacsclient $@ &
+        }
       '';
     };
 
