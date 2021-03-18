@@ -44,33 +44,37 @@
       };
     };
 
-    <<home-manager>>
+    imports = [
+      <<home-manager>>
+    ];
   }
 #+end_src
 
 * Cache Support
 
 #+begin_src nix :noweb-ref home-manager
-  imports = [
-    (
-      let
-        declCachix = builtins.fetchTarball "https://github.com/jonascarpay/declarative-cachix/archive/master.tar.gz";
-      in
-        import "${declCachix}/home-manager.nix"
-    )
-  ];
+  {
+    imports = [
+      (
+        let
+          declCachix = builtins.fetchTarball "https://github.com/jonascarpay/declarative-cachix/archive/master.tar.gz";
+        in
+          import "${declCachix}/home-manager.nix"
+      )
+    ];
 
-  caches.cachix = [
-    { name = "nix-community"; }
-  ];
+    caches.cachix = [
+      { name = "nix-community"; }
+    ];
 
-  home.file = {
-    nixConf.text = ''
+    home.file = {
+      nixConf.text = ''
       experimental-features = nix-command flakes
       keep-derivations = true
       keep-outputs = true
     '';
-  };
+    };
+  }
 #+end_src
 
 * System-specific Settings
@@ -149,32 +153,34 @@ In lieu of a proper namespace, I prefix all custom functions, variables with ~ga
 ** The Main ~emacs~ Package
 
 #+begin_src nix :noweb-ref home-manager
-  nixpkgs.overlays = [
-    (import (builtins.fetchTarball {
-      url = https://github.com/nix-community/emacs-overlay/archive/a1c89c95cf659512f72f6ec51c764c03801f890d.tar.gz;
-    }))
-  ];
+  {
+    nixpkgs.overlays = [
+      (import (builtins.fetchTarball {
+        url = https://github.com/nix-community/emacs-overlay/archive/a1c89c95cf659512f72f6ec51c764c03801f890d.tar.gz;
+      }))
+    ];
 
-  programs.emacs = {
-    enable = true;
-    package = pkgs.emacsPgtkGcc;
-  };
-
-  home = {
-    file.".emacs.d" = {
-      source = ./emacs.d;
-      recursive = true;
+    programs.emacs = {
+      enable = true;
+      package = pkgs.emacsPgtkGcc;
     };
-    sessionVariables = {
-      EDITOR = "emacsclient -c";
-      VISUAL = "emacsclient -c";
-    };
-  };
 
-  services.emacs = {
-    enable = true;
-    client.enable = true;
-  };
+    home = {
+      file.".emacs.d" = {
+        source = ./emacs.d;
+        recursive = true;
+      };
+      sessionVariables = {
+        EDITOR = "emacsclient -c";
+        VISUAL = "emacsclient -c";
+      };
+    };
+
+    services.emacs = {
+      enable = true;
+      client.enable = true;
+    };
+  }
 #+end_src
 
 ** Lexical Binding
@@ -1578,7 +1584,9 @@ Like other shells, ~eshell~ support defining alias.
 Since I use ~bat~ to replace the builtin ~cat~, I need to make it available.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.bat ];
+  {
+    home.packages = [ pkgs.bat ];
+  }
 #+end_src
 
 Now I define useful functions to interact with ~eshell~. First, I implement ~bash~'s history command search (~C-r~) in ~eshell~. ~eshell~'s version is better than the ~bash~'s since I have a powerful completion framework ~selectrum~.
@@ -1913,58 +1921,64 @@ I do not need to register ~libvterm~ with ~home-manager~. Rather, the recommende
 According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~ requires some shell-side configuration. Since I use ~bash~ by default, I need to add those shell-side configuration to my ~.bashrc~.
 
 #+begin_src nix :noweb-ref home-manager
-  programs.bash = {
-    enable = true;
+  {
+    programs.bash = {
+      enable = true;
 
-    profileExtra = ''
-      [[ -f ~/.bashrc ]] && . ~/.bashrc
+      profileExtra = ''
+        [[ -f ~/.bashrc ]] && . ~/.bashrc
     '';
 
-    initExtra = ''
-      alias ls="ls --color"
-      alias ll="ls -alh --color"
-      alias cat="bat"
+      initExtra = ''
+        alias ls="ls --color"
+        alias ll="ls -alh --color"
+        alias cat="bat"
 
-      mkcd(){
-          mkdir -p -- "$1" && cd -P -- "$1"
-      }
+        mkcd(){
+            mkdir -p -- "$1" && cd -P -- "$1"
+        }
 
-      vterm_printf(){
-          if [ -n "$TMUX" ] && ([ "''${TERM%%-*}" = "tmux" ] || [ "''${TERM%%-*}" = "screen" ] ); then
-              # Tell tmux to pass the escape sequences through
-              printf "\ePtmux;\e\e]%s\007\e\\" "$1"
-          elif [ "''${TERM%%-*}" = "screen" ]; then
-              # GNU screen (screen, screen-256color, screen-256color-bce)
-              printf "\eP\e]%s\007\e\\" "$1"
-          else
-              printf "\e]%s\e\\" "$1"
-          fi
-      }
+        vterm_printf(){
+            if [ -n "$TMUX" ] && ([ "''${TERM%%-*}" = "tmux" ] || [ "''${TERM%%-*}" = "screen" ] ); then
+                # Tell tmux to pass the escape sequences through
+                printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+            elif [ "''${TERM%%-*}" = "screen" ]; then
+                # GNU screen (screen, screen-256color, screen-256color-bce)
+                printf "\eP\e]%s\007\e\\" "$1"
+            else
+                printf "\e]%s\e\\" "$1"
+            fi
+        }
 
-      vterm_prompt_end(){
-          vterm_printf "51;A$(whoami)@$(hostname):$(pwd)"
-      }
-      PS1=$PS1'\[$(vterm_prompt_end)\]'
+        vterm_prompt_end(){
+            vterm_printf "51;A$(whoami)@$(hostname):$(pwd)"
+        }
+        PS1=$PS1'\[$(vterm_prompt_end)\]'
 
-      vterm_cmd() {
-          local vterm_elisp
-          vterm_elisp=""
-          while [ $# -gt 0 ]; do
-              vterm_elisp="$vterm_elisp""$(printf '"%s" ' "$(printf "%s" "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g')")"
-              shift
-          done
-          vterm_printf "51;E$vterm_elisp"
-      }
+        vterm_cmd() {
+            local vterm_elisp
+            vterm_elisp=""
+            while [ $# -gt 0 ]; do
+                vterm_elisp="$vterm_elisp""$(printf '"%s" ' "$(printf "%s" "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g')")"
+                shift
+            done
+            vterm_printf "51;E$vterm_elisp"
+                  }
 
-      PROMPT_COMMAND='echo -ne "\033]0;${HOSTNAME}:${PWD}\007"'
-    '';
-  };
+        PROMPT_COMMAND='echo -ne "\033]0;''${HOSTNAME}:''${PWD}\007"'
+      '';
+    };
+
+  }
+
 #+end_src
 
 ~vterm_prompt_end~ function also depends on the ~hostname~ command line utility, which is provided by ~inetutils~ package.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.inetutils ];
+  {
+    home.packages = [ pkgs.inetutils ];
+  }
 #+end_src
 
 To configure ~vterm~, I first allow ~vterm~ to change the buffer name according to ~$PWD~.
@@ -3274,9 +3288,11 @@ I am not a native speaker. This makes spelling and grammar checkers very helpful
 To check spelling, I use ~flyspell~ and ~flyspell-correct~ frontend, which in turn rely on ~ispell~, ~aspell~, or ~hunspell~ command line utility.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = with pkgs; [
-    aspell aspellDicts.en aspellDicts.en-computers aspellDicts.en-science
-  ];
+  {
+    home.packages = with pkgs; [
+      aspell aspellDicts.en aspellDicts.en-computers aspellDicts.en-science
+    ];
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -3325,7 +3341,9 @@ When in ~text-mode~, I want the spelling checker to check all my text. But when 
 To check grammar, I use ~langtool~, which uses ~languagetool~ as backend. ~langtool~ is a fairly old package, and it does not support checking grammar on-the-go. So I am thinking about writing/updating a new ~languagetool~ integration.
 
 #+begin_src nix :noweb-ref home-manager
+  {
     home.packages = [ pkgs.languagetool ];
+  }
 #+end_src
 
 As per [[https://github.com/mhayashi1120/Emacs-langtool][its document]], I need to set ~langtool-bin~ before loading the package.
@@ -3420,10 +3438,12 @@ Two system level adjustments need to be made in order to use ~i3-mode~.
 First, I need to install ~jq~, as it is required to use under ~sway~. Second, I need to include ~$HOME/.local/bin~ in my ~$PATH~ variable, as ~i3-mode~ places scripts in this directory.
 
 #+begin_src nix :noweb-ref home-manager
-  home = {
-    packages = [ pkgs.jq ];
-    sessionPath = [ "$HOME/.local/bin" ];
-  };
+  {
+    home = {
+      packages = [ pkgs.jq ];
+      sessionPath = [ "$HOME/.local/bin" ];
+    };
+  }
 #+end_src
 
 Instead of automatically enable ~i3-mode~. I enable it if I really need it (e.g., when writing paper so I need to jump quickly between ~emacs~ and my pdf viewer).
@@ -3448,27 +3468,28 @@ I use ~home-manager~ to configure my [[accounts][account information]] (email ad
 First, I include ~GPG~ in my ~home-manager~ system.
 
 #+begin_src nix :noweb-ref home-manager
-  programs = {
-    gpg = {
-      enable = true;
-      settings.use-agent = true;
+  {
+    programs = {
+      gpg = {
+        enable = true;
+        settings.use-agent = true;
+      };
+
+      ssh.enable = true;
     };
 
-    ssh.enable = true;
-  };
-
-  home = {
-    packages = [ pkgs.openssh ];
-    sessionVariales.SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
-    activation = {
+    home = {
+      packages = [ pkgs.openssh ];
+      sessionVariable.SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
+      activation = {
         setGpgPermission = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD find ~/.gnupg -type f -exec chmod 600 {} \;
           $DRY_RUN_CMD find ~/.gnupg -type d -exec chmod 700 {} \;
         '';
+      };
     };
-  };
 
-  services = {
+    services = {
       gpg-agent = {
         enable = true;
         enableSshSupport = true;
@@ -3482,7 +3503,8 @@ First, I include ~GPG~ in my ~home-manager~ system.
           allow-emacs-pinentry
         '';
       };
-  };
+    };
+  }
 #+end_src
 
 Second, I enable ~epa~ package in ~emacs~.
@@ -3505,12 +3527,14 @@ Second, I enable ~epa~ package in ~emacs~.
 First, install the ~pass~ package using ~home-manager~.
 
 #+begin_src nix :noweb-ref home-manager
-  programs.password-store = {
-    enable = true;
-    settings = {
-      PASSWORD_STORE_DIR = "${homeDir}/.password-store";
+  {
+    programs.password-store = {
+      enable = true;
+      settings = {
+        PASSWORD_STORE_DIR = "${homeDir}/.password-store";
+      };
     };
-  };
+  }
 #+end_src
 
 Second, enable ~password-store~ package to interacting with ~pass~ inside ~emacs~.
@@ -3574,34 +3598,36 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 Register ~git~ with ~home-manager~ first.
 
 #+begin_src nix :noweb-ref home-manager :noweb yes
-  programs = {
-    git = {
-      enable = true;
+  {
+    programs = {
+      git = {
+        enable = true;
 
-      userName = realUser;
-      userEmail =
-        let
-          defaultAcc = with builtins; head
-            (filter (a: a.primary) (attrValues config.accounts.email.accounts));
-        in
-          defaultAcc.address;
-      aliases = {
-        st = "status";
-        co = "checkout";
-        log = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
-      };
-      ignores = [
-        <<gitignore>>
-      ];
-      extraConfig = {
-        github = {
-          user = "junyi-hou";
+        userName = realUser;
+        userEmail =
+          let
+            defaultAcc = with builtins; head
+              (filter (a: a.primary) (attrValues config.accounts.email.accounts));
+          in
+            defaultAcc.address;
+        aliases = {
+          st = "status";
+          co = "checkout";
+          log = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit";
+        };
+        ignores = [
+          <<gitignore>>
+        ];
+        extraConfig = {
+          github = {
+            user = "junyi-hou";
+          };
         };
       };
     };
-  };
 
-  home.packages = [ pkgs.gitAndTools.delta ];
+    home.packages = [ pkgs.gitAndTools.delta ];
+  }
 #+end_src
 
 *** global gitignore
@@ -3757,7 +3783,9 @@ Finally, I set up the general keybindings to call up ~magit~.
 First enable ~delta~ with ~home-manager~.
 
 #+begin_src nix :noweb-ref home-manager
-  programs.git.delta.enable = true;
+  {
+    programs.git.delta.enable = true;
+  }
 #+end_src
 
 Then enable the ~magit-delta~ package.
@@ -3985,7 +4013,9 @@ The first two are accomplished by my own small package ~project-plus~, which bui
 I use ~deadgrep~ to search for text in projects. ~deadgrep~ use ~ripgrep~ as the backend to search text in project based on regexp.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.ripgrep ];
+  {
+    home.packages = [ pkgs.ripgrep ];
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -4044,19 +4074,21 @@ An big advantage of ~nix~ is that it can create reproducible isolate production 
 To address this problem, I use ~envrc~, which makes ~process-environment~ a buffer-local variable. I first need to enable ~direnv~ and ~nix-direnv~ support in ~home-manager~.
 
 #+begin_src nix :noweb-ref home-manager
-  programs.direnv = {
-    enable = true;
-    enableNixDirenvIntegration = true;
-    enableBashIntegration = true;
-    config = {
-      whitelist = {
-        prefix = [ projectDir researchDir ];
-      };
-      global = {
-        strict_env = false;
+  {
+    programs.direnv = {
+      enable = true;
+      enableNixDirenvIntegration = true;
+      enableBashIntegration = true;
+      config = {
+        whitelist = {
+          prefix = [ projectDir researchDir ];
+        };
+        global = {
+          strict_env = false;
+        };
       };
     };
-  };
+  }
 #+end_src
 
 Then register ~envrc~ within ~emacs~.
@@ -4317,8 +4349,10 @@ To receive and send emails from the comfort in ~emacs~, I use
 
 + ~mbsync~ (registered as ~isync~ in many package managers) to fetch and sync maildir with the remote server.
 
-  #+begin_src nix :noweb home-manager
-    programs.mbsync.enable = true;
+  #+begin_src nix :noweb account-setting
+    {
+      programs.mbsync.enable = true;
+    }
   #+end_src
 
   To deal with the security requirement of GMail, I use a ~xoauth2~ plugins for ~cryus~ library. [[http://blog.onodera.asia/2020/06/how-to-use-google-g-suite-oauth2-with.html][This blog]] provides a good summary on how to enable ~xoauth2~ for ~mbsync~, which involves installing a ~cryus~ plugin. ~cryus~ requires all plugins to live in the same directory, which is difficult for a ~nix~-based system, as ~cryus~ plugins lives in different ~nix~ storage. I use a hack which consists of three steps:
@@ -4331,102 +4365,115 @@ To receive and send emails from the comfort in ~emacs~, I use
 
     Until [[https://github.com/NixOS/nixpkgs/issues/108480][the upstream]] figured out some ways to deal with this, I will use my hack to allow ~mbsync~ retrieve emails from google.
 
-    #+begin_src nix :noweb-ref home-manager
-      nixpkgs.overlay = let
-        gmail-oauth2-tools = with pkgs; stdenv.mkDerivation {
-          name = "gmail-oauth2-tools";
-          src = fetchFromGitHub {
-            owner = "google";
-            repo = "gmail-oauth2-tools";
-            rev = "e3229155a4037267ce40f1a3a681f53221aa4d8d";
-            sha256 = "1cxpkiaajhq1gjsg47r2b5xgck0r63pvkyrkm7af8c8dw7fyn64f";
+    #+begin_src nix :noweb-ref home-manager :noweb yes
+      (
+        let
+          gmail-oauth2-tools = with pkgs; stdenv.mkDerivation {
+            name = "gmail-oauth2-tools";
+            src = fetchFromGitHub {
+              owner = "google";
+              repo = "gmail-oauth2-tools";
+              rev = "e3229155a4037267ce40f1a3a681f53221aa4d8d";
+              sha256 = "1cxpkiaajhq1gjsg47r2b5xgck0r63pvkyrkm7af8c8dw7fyn64f";
+            };
+            buildInputs = [ python27 pass oauth2Lib ];
+            installPhase = ''
+              mkdir -p $out/bin
+              cp python/oauth2.py $out/bin/gmail-oauth2-tools
+              chmod +x $out/bin/gmail-oauth2-tools
+
+              # authorization script
+              cat > $out/bin/gmail-get-token <<EOF
+              #! /usr/bin/env bash
+              ID=\$(${pass}/bin/pass google-api/id)
+              SECRET=\$(${pass}/bin/pass google-api/secret)
+              TOKEN=\$(${pass}/bin/pass google-api/\$1)
+              ACCOUNT=\$1
+
+              $out/bin/gmail-oauth2-tools --user=\$ACCOUNT --client_id=\$ID --client_secret=\$SECRET --refresh_token=\$TOKEN --generate_oauth2_token | awk -F" " '{if(NR==1)print \$3}'
+              EOF
+
+              chmod +x $out/bin/gmail-get-token
+            '';
           };
-          buildInputs = [ python27 pass oauth2Lib ];
-          installPhase = ''
-            mkdir -p $out/bin
-            cp python/oauth2.py $out/bin/gmail-oauth2-tools
-            chmod +x $out/bin/gmail-oauth2-tools
 
-            # authorization script
-            cat > $out/bin/gmail-get-token <<EOF
-            #! /usr/bin/env bash
-            ID=\$(${pass}/bin/pass google-api/id)
-            SECRET=\$(${pass}/bin/pass google-api/secret)
-            TOKEN=\$(${pass}/bin/pass google-api/\$1)
-            ACCOUNT=\$1
-
-            $out/bin/gmail-oauth2-tools --user=\$ACCOUNT --client_id=\$ID --client_secret=\$SECRET --refresh_token=\$TOKEN --generate_oauth2_token | awk -F" " '{if(NR==1)print \$3}'
-            EOF
-
-            chmod +x $out/bin/gmail-get-token
-          '';
-        };
-
-        cyrus = import <nixpkgs/pkgs/development/libraries/cyrus-sasl/default.nix> {
-          inherit (pkgs) lib stdenv fetchurl openssl openldap kerberos db gettext
-            pam fixDarwinDylibNames autoreconfHook buildPackages pruneLibtoolFiles fetchpatch;
-        };
-
-        oauth2Lib = with pkgs; stdenv.mkDerivation {
-          name = "sasl2-oauth";
-          src = fetchFromGitHub {
-            owner = "robn";
-            repo = "sasl2-oauth";
-            rev = "4236b6fb904d836b85b55ba32128b843fd8c2362";
-            sha256 = "17c1131yy41smz86fkb6rywfqv3hpn0inqk179a4jcr1snsgr891";
+          cyrus = import <nixpkgs/pkgs/development/libraries/cyrus-sasl/default.nix> {
+            inherit (pkgs) lib stdenv fetchurl openssl openldap kerberos db gettext
+              pam fixDarwinDylibNames autoreconfHook buildPackages pruneLibtoolFiles fetchpatch;
           };
-          nativeBuildInputs = [ autoreconfHook cyrus ];
-        };
 
-      in
-        [
-          (
-            self: super:
-            {
-              cyrus_sasl = super.cyrus_sasl.overrideAttrs (div: rec {
-                postInstall = ''
+          oauth2Lib = with pkgs; stdenv.mkDerivation {
+            name = "sasl2-oauth";
+            src = fetchFromGitHub {
+              owner = "robn";
+              repo = "sasl2-oauth";
+              rev = "4236b6fb904d836b85b55ba32128b843fd8c2362";
+              sha256 = "17c1131yy41smz86fkb6rywfqv3hpn0inqk179a4jcr1snsgr891";
+            };
+            nativeBuildInputs = [ autoreconfHook cyrus ];
+          };
+
+        in
+
+          {
+
+            imports = [
+              <<account-settings>>
+            ];
+
+            nixpkgs.overlay =
+              [
+                (
+                  self: super:
+                  {
+                    cyrus_sasl = super.cyrus_sasl.overrideAttrs (div: rec {
+                      postInstall = ''
                 for lib in ${oauth2Lib}/lib/sasl2/*; do
                   ln -sf $lib $out/lib/sasl2/
                 done
               '';
-              });
-            }
-          )
-        ];
+                    });
+                  }
+                )
+              ];
 
-      home.packages = [ pkgs.mbsync gmail-oauth2-tools ];
+            home.packages = [ pkgs.mbsync gmail-oauth2-tools ];
 
-      services = {
-        mbsync = {
-          enable = true;
-          # sync every 5 minutes, but alerts can be less frequent
-          frequency = "*:0/5";
-          postExec = ''${pkgs.notmuch}/bin/notmuch new'';
-        };
-      };
+            services = {
+              mbsync = {
+                enable = true;
+                # sync every 5 minutes, but alerts can be less frequent
+                frequency = "*:0/5";
+                postExec = ''${pkgs.notmuch}/bin/notmuch new'';
+              };
+            };
+          }
+      )
   #+end_src
 
 + ~notmuch~ to index and search emails based on tag and other maildir attributes. It also provides a great ~emacs~ package to interact and manipulate its database.
 
-  #+begin_src nix :noweb-ref home-manager
-    programs.notmuch = {
-      enable = true;
-      maildir.synchronizeFlags = true;
-      new = {
-        tags = [ "new" ]; # to be used together with afew
-      };
-      hooks = {
-        postNew = ''
+  #+begin_src nix :noweb-ref account-setting
+    {
+      programs.notmuch = {
+        enable = true;
+        maildir.synchronizeFlags = true;
+        new = {
+          tags = [ "new" ]; # to be used together with afew
+        };
+        hooks = {
+          postNew = ''
               ${pkgs.afew}/bin/afew --new --tag
             '';
-      };
-      search.excludeTags = [ "trash" "spam" ];
-      extraConfig = {
-        index = {
-          header = "List List-Id";
+        };
+        search.excludeTags = [ "trash" "spam" ];
+        extraConfig = {
+          index = {
+            header = "List List-Id";
+          };
         };
       };
-    };
+    }
 #+end_src
 
 + on its own, ~notmuch~ do not associate the maildir of mails with their tags. For example, mails tagged with ~trash~ are not moved to the ~trash~ maildir. ~afew~ deals with this problem by providing a "mover" command to move mails according to their tags. In addition, it provides an easy way to setup initial tagging.
@@ -4436,33 +4483,35 @@ To receive and send emails from the comfort in ~emacs~, I use
   - mails with "spam" tag to spam, without "spam" tag to archive or inbox, depending on whether they have "inbox" tags;
   - mails with "trash" tag to trash, without "trash" tag to archive or inbox, depending on whether they have "inbox" tags;
 
-    #+begin_src nix :noweb-ref home-manager
-      programs.afew.enable = true;
+    #+begin_src nix :noweb-ref account-setting
+      {
+        programs.afew.enable = true;
 
-      programs.afew.extraConfig = with builtins;
-        let
-          folder-fn = mailboxes: account: with account;
-            concatStringsSep " " (map (box: "${name}/${box}") mailboxes);
+        programs.afew.extraConfig = with builtins;
+          let
+            folder-fn = mailboxes: account: with account;
+              concatStringsSep " " (map (box: "${name}/${box}") mailboxes);
 
-          rule-fn = account: with account;
-            ''
-              ${name}/inbox   = 'tag:spam':${name}/spam                       'NOT tag:inbox':${name}/archive 'tag:trash':${name}/trash
-              ${name}/archive = 'tag:inbox':${name}/inbox                     'tag:spam':${name}/spam         'tag:trash':${name}/trash
-              ${name}/spam    = 'NOT tag:spam AND tag:inbox':${name}/inbox    'NOT tag:spam':${name}/archive
-              ${name}/trash   = 'tag:inbox AND (NOT tag:trash)':${name}/inbox 'NOT tag:trash':${name}/archive
+            rule-fn = account: with account;
+              ''
+                ${name}/inbox   = 'tag:spam':${name}/spam                       'NOT tag:inbox':${name}/archive 'tag:trash':${name}/trash
+                ${name}/archive = 'tag:inbox':${name}/inbox                     'tag:spam':${name}/spam         'tag:trash':${name}/trash
+                ${name}/spam    = 'NOT tag:spam AND tag:inbox':${name}/inbox    'NOT tag:spam':${name}/archive
+                ${name}/trash   = 'tag:inbox AND (NOT tag:trash)':${name}/inbox 'NOT tag:trash':${name}/archive
               '';
 
-          move-folders = "folders = " + concatStringsSep " "
-            (map (folder-fn [ "inbox" "spam" "archive" "trash" ])
-              (attrValues config.accounts.email.accounts));
+            move-folders = "folders = " + concatStringsSep " "
+              (map (folder-fn [ "inbox" "spam" "archive" "trash" ])
+                (attrValues config.accounts.email.accounts));
 
-          move-rules = concatStringsSep
-            "\n" (map rule-fn (attrValues config.accounts.email.accounts));
-        in
-          ''
-            [MailMover]
-            rename = True
-          '' + move-folders + "\n" + move-rules;
+            move-rules = concatStringsSep
+              "\n" (map rule-fn (attrValues config.accounts.email.accounts));
+          in
+            ''
+              [MailMover]
+              rename = True
+            '' + move-folders + "\n" + move-rules;
+      }
   #+end_src
 
   Second, I add the following initial filters:
@@ -4522,100 +4571,110 @@ To receive and send emails from the comfort in ~emacs~, I use
 
     Putting them together:
 
-    #+begin_src nix :noweb-ref home-manager :noweb yes
-      programs.afew.extraConfig = ''
-        [SpamFilter]
-        [ArchiveSentMailsFilter]
-        [OnlyAllowListFilter]
-        [Filter.1]
-        query = NOT path:"/.*/inbox/**/"
-        tags = -new
-        message = remove the "new" tag for message not found in the inbox folder
-        [Filter.2]
-        query = from:github.com AND tag:new
-        tags = -new +github
-        [InboxFilter]
-      '';
-
-      home.file = {
-        ".config/afew/OnlyAllowListFilter.py" = {
-          text = ''
-      <<OnlyAllowListFilter>>
-          '';
-        };
-        ".config/afew/allow_list" = {
-          text = ''
-      <<AllowList>>
-          '';
-        };
-      };
-
-      home.activation = {
-        removeAfewFilterCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          if [ -d ~/.config/afew/__pycache__ ]; then
-              $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
-          fi
+    #+begin_src nix :noweb-ref account-setting :noweb yes
+      {
+        programs.afew.extraConfig = ''
+          [SpamFilter]
+          [ArchiveSentMailsFilter]
+          [OnlyAllowListFilter]
+          [Filter.1]
+          query = NOT path:"/.*/inbox/**/"
+          tags = -new
+          message = remove the "new" tag for message not found in the inbox folder
+          [Filter.2]
+          query = from:github.com AND tag:new
+          tags = -new +github
+          [InboxFilter]
         '';
-      };
+
+        home.file = {
+          ".config/afew/OnlyAllowListFilter.py" = {
+            text = ''
+        <<OnlyAllowListFilter>>
+            '';
+          };
+          ".config/afew/allow_list" = {
+            text = ''
+        <<AllowList>>
+            '';
+          };
+        };
+
+        home.activation = {
+          removeAfewFilterCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            if [ -d ~/.config/afew/__pycache__ ]; then
+                $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
+            fi
+          '';
+        };
+      }
     #+end_src
 
 + finally, I use ~msmtp~ to send emails. ~msmtp~ has nice multi account supports so I won't send the email from the wrong address.
 
-  #+begin_src nix :noweb-ref home-manager
-    programs.msmtp.enable = true;
+  #+begin_src nix :noweb-ref account-setting
+    {
+      programs.msmtp.enable = true;
+    }
   #+end_src
 
 *** accounts
 
 I include my email accounts here. I have two accounts. A personal one ([[junyi.yi.hou@gmail.com]]), and one that I got from my school ([[junyi.hou@berkeley.edu]]). I set my personal account as my default email account.
 
-#+begin_src nix :noweb yes :noweb-ref home-manager
-  accounts.email = {
-    maildirBasePath = mailDir;
-    accounts = let
+#+begin_src nix :noweb yes :noweb-ref account-setting
+  (
+    let
       mbsyncExtraConf = {
         Create = "Slave";
         Expunge = "Both";
         SyncState = "*";
         Sync = "all";
       };
+
     in
+
       {
-        <<personal-account>>
+        accounts.email = {
+          maildirBasePath = mailDir;
+          accounts = {
+            <<personal-account>>
+            <<uc-berkeley-account>>
+          };
+        };
 
-        <<uc-berkeley-account>>
-      };
-  };
-
-  home.activation = {
-    initMailDir =
-      let
-        mkAccountDir = with builtins; concatStringsSep "\n"
-          (map (account: ''$DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${mailDir}/${account.name}'')
-            (attrValues config.accounts.email.accounts));
-      in
-        lib.hm.dag.entryAfter [ "writeBoundary" ] mkAccountDir;
-  };
+        home.activation = {
+          initMailDir =
+            let
+              mkAccountDir = with builtins; concatStringsSep "\n"
+                (map (account: ''$DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${mailDir}/${account.name}'')
+                  (attrValues config.accounts.email.accounts));
+            in
+              lib.hm.dag.entryAfter [ "writeBoundary" ] mkAccountDir;
+        };
+      }
+  )
 #+end_src
 
 I then export my account information to ~emacs~.
 
-#+begin_src nix :noweb-ref home-manager
-  home.file = {
-    "${lispDir}/gatsby:accounts.el" =
-      let
-        defaultAcc = with builtins; head (
-          filter (a: a.primary) (attrValues config.accounts.email.accounts));
-        allAccounts = with builtins;
-          concatStringsSep " "
-            (map (a: ''"'' + a + ''"'')
-              (catAttrs "address"
-                (filter (a: a.flavor == "gmail.com")
-                  (sort (a1: a2: if a1.primary then true else false)
-                    (attrValues config.accounts.email.accounts)))));
-      in
-        {
-          text = ''
+#+begin_src nix :noweb-ref accont-setting
+  {
+    home.file = {
+      "${lispDir}/gatsby:accounts.el" =
+        let
+          defaultAcc = with builtins; head (
+            filter (a: a.primary) (attrValues config.accounts.email.accounts));
+          allAccounts = with builtins;
+            concatStringsSep " "
+              (map (a: ''"'' + a + ''"'')
+                (catAttrs "address"
+                  (filter (a: a.flavor == "gmail.com")
+                    (sort (a1: a2: if a1.primary then true else false)
+                      (attrValues config.accounts.email.accounts)))));
+        in
+          {
+            text = ''
               ;;; gatsby:accounts.el -*- lexical-binding: t; -*-
 
               ;; the default account
@@ -4635,8 +4694,9 @@ I then export my account information to ~emacs~.
               (provide 'gatsby:accounts)
               ;;; gatsby:accounts.el ends here
             '';
-        };
-  };
+          };
+    };
+  }
 #+end_src
 
 **** personal account
@@ -5066,7 +5126,9 @@ Now apply evil style key binding to ~notmuch-tree~ mode.
 The builtin ~shr~ html renderer is bare-bones. To improve the html rendering quality, I use the external ~w3m~ program to render html emails.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.w3m ];
+  {
+    home.packages = [ pkgs.w3m ];
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -5233,12 +5295,13 @@ When starting up ~emacs~ for the first time, the ~password-store~ will ask me fo
 Makes sure that the calendar directory (~$HOME/.cal~) exists.
 
 #+begin_src nix :noweb-ref home-manager
-  home.activation = {
-
-    initCalDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  {
+    home.activation = {
+      initCalDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD mkdir -p $VERBOSE_ARG $HOME/.cal
         '';
-  };
+    };
+  }
 #+end_src
 
 By default, ~org-gcal~ will place each occurrence of recurring events as a top level entry. This can be improved by setting ~org-gcal-recurring-events-mode~ to ~nested~, which will collect recurring events into one entry.
@@ -6117,9 +6180,11 @@ It is difficult to read regexp in ~elisp~, since I need to escape the escape cha
 Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel. I use version 3.9 of python.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = with pkgs; [
-    (python39.withPackages (p: with p; [ jupyter ]))
-  ];
+  {
+    home.packages = with pkgs; [
+      (python39.withPackages (p: with p; [ jupyter ]))
+    ];
+  }
 #+end_src
 
 I use the builtin ~python-mode~, together with ~emacs-jupyter~ and ~eglot~ for REPL/LSP support.
@@ -6206,9 +6271,9 @@ Now define keybindings.
 STATA is a package that can conduct statistical analysis using its own script-like language. It has two main advantages for me: it is widely used in economics community, and therefore has a large array of packages to perform different statistical analyses. I am also more familiar with it than the R package.
 
 #+begin_src nix :noweb-ref home-manager
-  home = {
-    packages = with pkgs; let
-      stata = stdenv.mkDerivation {
+  (
+    let
+      stata = with pkgs; stdenv.mkDerivation {
         name = "stata-14";
         src = /home/lactaid/Downloads/stata;
         # FIXME: still complaining not finding the following libraries
@@ -6241,14 +6306,14 @@ STATA is a package that can conduct statistical analysis using its own script-li
         argv = ["python" "-m" "stata_kernel" "-f" "{connection_file}"];
       };
 
-      stataKernel = python39.pkgs.buildPythonPackage rec {
+      stataKernel = with pkgs; python39.pkgs.buildPythonPackage rec {
         pname = "stata_kernel";
         version = "1.12.2";
         src = builtins.fetchTarball {
           url = https://github.com/kylebarron/stata_kernel/archive/v1.12.2.tar.gz;
         };
         propagatedBuildInputs = [
-          pkgs.python39
+          python39
           python39Packages.beautifulsoup4
           python39Packages.jupyter
           python39Packages.pandas
@@ -6264,26 +6329,34 @@ STATA is a package that can conduct statistical analysis using its own script-li
           # install kernel files
           mkdir -p $out/kernels/stata_kernel
           echo '\${builtins.toJSON kernelFile}' > $out/kernels/stata_kernel/kernel.json
-          '';
+        '';
       };
+
     in
-      [ stata stataKernel ];
 
-    file.".stata_kernel.conf".text = ''
-      [stata_kernel]
-      stata_path = \${stata}/stata-mp
-      execution_mode = console
-      cache_directory = ~/.cache/stata_kernel_cache
-      autocomplete_closing_symbol = False
-      graph_format = svg
-      graph_scale = 1
-      user_graph_keywords = coefplot,vioplot
-    '';
+      {
+        home = {
+          packages = [ stata stataKernel ];
 
-    sessionVariables = {
-      JUPYTER_PATH = ''$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}'';
-    };
-  };
+          file = {
+            ".stata_kernel.conf".text = ''
+              [stata_kernel]
+              stata_path = \${stata}/stata-mp
+              execution_mode = console
+              cache_directory = ~/.cache/stata_kernel_cache
+              autocomplete_closing_symbol = False
+              graph_format = svg
+              graph_scale = 1
+              user_graph_keywords = coefplot,vioplot
+            '';
+          };
+
+          sessionVariables = {
+            JUPYTER_PATH = ''$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}'';
+          };
+        };
+      }
+  )
 #+end_src
 
 There is no official major mode for stata ~do~ script files. ~ess~ (emacs speak statistics) used to offer an integrated development environment for STATA (in addition to R and other statistical packages). Yet, ~ess-stata-mode~ became [[http://ess.r-project.org/Manual/news.html][obsolete]] since version 19.03. I use a stripped down version of ~stata-mode~ to work in STATA script files.
@@ -6328,11 +6401,13 @@ There are several useful packages for day-to-day and development with ~nix~:
 nix community offers a basic LSP server for linting .nix file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [
-    (import (builtins.fetchTarball {
-      url = https://github.com/nix-community/rnix-lsp/archive/master.tar.gz;
-    }))
-  ];
+  {
+    home.packages = [
+      (import (builtins.fetchTarball {
+        url = https://github.com/nix-community/rnix-lsp/archive/master.tar.gz;
+      }))
+    ];
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -6381,9 +6456,9 @@ Sometimes I would like to check out package files located at ~nix-store~. To ens
 I use ~nixpkgs-fmt~ to format my nix code before save.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = with pkgs; [
-      nixpkgs-fmt
-  ];
+  {
+    home.packages = [ pkgs.nixpkgs-fmt ];
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -6398,10 +6473,12 @@ I use ~nixpkgs-fmt~ to format my nix code before save.
 Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get the hash value of source codes that I can feed to the ~fetcher~ function later.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = with pkgs; [
-    nix-prefetch-scripts
-    nix-prefetch-github
-  ];
+  {
+    home.packages = with pkgs; [
+      nix-prefetch-scripts
+      nix-prefetch-github
+    ];
+  }
 #+end_src
 
 ** Markdown
@@ -6484,12 +6561,18 @@ This concludes the configuration for ~man~
 First install ~textlive~ and the LSP ~digestif~ via ~home-manager~.
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = with pkgs; let
+  (
+    let
 
-    digestif = pkgs.writeScriptBin "digestif" (builtins.readFile
-      (builtins.fetchurl https://raw.githubusercontent.com/astoff/digestif/master/scripts/digestif));
+      digestif = pkgs.writeScriptBin "digestif" (builtins.readFile
+        (builtins.fetchurl https://raw.githubusercontent.com/astoff/digestif/master/scripts/digestif));
 
-    in [ texlive.combined.scheme-full digestif ];
+    in
+
+      {
+        home.packages =  [ pkgs.texlive.combined.scheme-full digestif ];
+      }
+  )
 #+end_src
 
 AUCTeX is a gigantic package that aims at providing a tex IDE for ~emacs~. Although I already use a tex LSP ([[https://github.com/astoff/digestif][digestif]]) to handles label, autocomplete, etc. I still need AUCTeX to conveniently interact with tex command line utilities (mainly via ~TeX-command-sequence~ function)
@@ -6610,7 +6693,9 @@ Furthermore, tex has many wired pairs (like $). It does not play well with ~elec
 Finally, I use ~Zathura~ as pdf viewer.
 
 #+begin_src nix :noweb-ref home-manager
-  programs.zathura.enable = true;
+  {
+    programs.zathura.enable = true;
+  }
 #+end_src
 
 #+begin_src emacs-lisp
@@ -6633,17 +6718,21 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
 ** Command Line Utilities
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
+  {
+    home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
+  }
 #+end_src
 
 ** Browser
 
 #+begin_src nix :noweb-ref home-manager
-  home.packages = [ pkgs.firefox ];
+  {
+    home.packages = [ pkgs.firefox ];
 
-  home.sessionVariables = {
-    MOZ_ENABLE_WAYLAND = 1;
-  };
+    home.sessionVariables = {
+      MOZ_ENABLE_WAYLAND = 1;
+    };
+  }
 #+end_src
 
 * TODO
