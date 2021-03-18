@@ -1,5 +1,5 @@
 result
 emacs.d/init.el
 home.nix
-emacs.d/eshell/**
+**/eshell/**
 *.nix

@@ -1573,7 +1573,7 @@ In addition to the above setting, I also need to use ~em-term~ package for corre
 
 Like other shells, ~eshell~ support defining alias.
 
-#+begin_src conf :tangle ./emacs.d/eshell/aliases :mkdirp yes
+#+begin_src conf :tangle ./emacs.d/etc/eshell/aliases :mkdirp yes
   alias cat bat $*
   alias ll ls -alh
   alias cls gatsby:eshell-clear-buffer
