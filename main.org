@@ -160,7 +160,7 @@ In lieu of a proper namespace, I prefix all custom functions, variables with ~ga
     sessionVariables = {
       EDITOR = "emacsclient -c";
       VISUAL = "emacsclient -c";
-    }
+    };
   };
 
   services.emacs = {
@@ -1949,7 +1949,7 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
           vterm_printf "51;E$vterm_elisp"
                   }
     '';
-  }
+  };
 #+end_src
 
 ~vterm_prompt_end~ function also depends on the ~hostname~ command line utility, which is provided by ~inetutils~ package.
@@ -4411,7 +4411,7 @@ To receive and send emails from the comfort in ~emacs~, I use
           header = "List List-Id";
         };
       };
-    }
+    };
 #+end_src
 
 + on its own, ~notmuch~ do not associate the maildir of mails with their tags. For example, mails tagged with ~trash~ are not moved to the ~trash~ maildir. ~afew~ deals with this problem by providing a "mover" command to move mails according to their tags. In addition, it provides an easy way to setup initial tagging.
@@ -4621,9 +4621,8 @@ I then export my account information to ~emacs~.
               ;;; gatsby:accounts.el ends here
             '';
         };
-  }
+  };
 #+end_src
-
 
 **** personal account
 
@@ -4690,7 +4689,7 @@ I then export my account information to ~emacs~.
     passwordCommand = "${gmail-oauth2-tools}/bin/gmail-get-token junyi.yi.hou@gmail.com";
 
     primary = true;
-  }
+  };
 #+end_src
 
 **** UC Berkeley account
@@ -4761,7 +4760,7 @@ I then export my account information to ~emacs~.
     };
     notmuch.enable = true;
     passwordCommand = "${gmail-oauth2-tools}/bin/gmail-get-token junyi.hou@berkeley.edu";
-  }
+  };
 #+end_src
 
 *** notmuch
