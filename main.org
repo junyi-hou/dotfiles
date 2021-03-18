@@ -25,6 +25,11 @@
 
 * ~home-manager~ Initialization
 
+The following snippet initialize my ~home.nix~ file that feed into ~home-manager switch~ command that updates my dotfiles. It contains two fields:
+
+- ~<<version-info>>~ to control package versions (e.g., python version)
+- ~<<home-manager>>~ to import relevant home-manager configurations from different segment.
+
 #+begin_src nix :tangle home.nix :noweb yes
   { pkgs, lib, config, ... }:
 
@@ -36,6 +41,8 @@
     lispDir = ''${homeDir}/.emacs.d/site-lisp'';
     projectDir = ''${homeDir}/projects'';
     researchDir = ''${homeDir}/research'';
+
+    <<version-info>>
   in
 
   {
@@ -4326,7 +4333,7 @@ To receive and send emails from the comfort in ~emacs~, I use
               rev = "e3229155a4037267ce40f1a3a681f53221aa4d8d";
               sha256 = "1cxpkiaajhq1gjsg47r2b5xgck0r63pvkyrkm7af8c8dw7fyn64f";
             };
-            buildInputs = [ python27 pass oauth2Lib ];
+            buildInputs = [ python2 pass oauth2Lib ];
             installPhase = ''
               mkdir -p $out/bin
               cp python/oauth2.py $out/bin/gmail-oauth2-tools
@@ -6127,12 +6134,21 @@ It is difficult to read regexp in ~elisp~, since I need to escape the escape cha
 
 ** Python
 
-Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel. I use version 3.9 of python.
+Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel. I use version 3.9 and 2.7 of python.
+
+#+begin_src nix :noweb-ref version-info
+  python3 = pkgs.python39;
+  python2 = pkgs.python27;
+  python3Packages = pkgs.python39Packages;
+  python2Packages = pkgs.python27Packages;
+#+end_src
+
+Register the package.
 
 #+begin_src nix :noweb-ref home-manager
   {
     home.packages = with pkgs; [
-      (python39.withPackages (p: with p; [ jupyter ]))
+      (python3.withPackages (p: with p; [ jupyter ]))
     ];
   }
 #+end_src
@@ -6257,22 +6273,22 @@ STATA is a package that can conduct statistical analysis using its own script-li
         argv = ["python" "-m" "stata_kernel" "-f" "{connection_file}"];
       };
 
-      stataKernel = with pkgs; python39.pkgs.buildPythonPackage rec {
+      stataKernel = with pkgs; python3.pkgs.buildPythonPackage rec {
         pname = "stata_kernel";
         version = "1.12.2";
         src = builtins.fetchTarball {
           url = https://github.com/kylebarron/stata_kernel/archive/v1.12.2.tar.gz;
         };
         propagatedBuildInputs = [
-          python39
-          python39Packages.beautifulsoup4
-          python39Packages.jupyter
-          python39Packages.pandas
-          python39Packages.packaging
-          python39Packages.pillow
-          python39Packages.pexpect
-          python39Packages.pygments
-          python39Packages.requests
+          python3
+          python3Packages.beautifulsoup4
+          python3Packages.jupyter
+          python3Packages.pandas
+          python3Packages.packaging
+          python3Packages.pillow
+          python3Packages.pexpect
+          python3Packages.pygments
+          python3Packages.requests
           stata
         ];
         doCheck = false;
