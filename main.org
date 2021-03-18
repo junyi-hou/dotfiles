@@ -6263,7 +6263,7 @@ STATA is a package that can conduct statistical analysis using its own script-li
         postInstall = ''
           # install kernel files
           mkdir -p $out/kernels/stata_kernel
-          echo '\${builtins.toJSON kernelFile}' > $out/kernels/stata_kernel/kernel.json
+          echo '${builtins.toJSON kernelFile}' > $out/kernels/stata_kernel/kernel.json
         '';
       };
 
