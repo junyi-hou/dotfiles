@@ -77,73 +77,6 @@
   }
 #+end_src
 
-* System-specific Settings
-
-~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
-
-+ display services (~wayland~, ~sway~)
-+ notification services (~libnotify~, ~mako~)
-+ fonts
-+ network services (~networkmanager~, ~bluez~)
-
-Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
-
-#+begin_src nix :tangle ./linux/use-system-wayland.nix :noweb yes
-    home = {
-      file = {
-        ".config/fontconfig" = {
-          source = ./linux/fontconfig;
-          recursive = true;
-        };
-        ".config/sway/config".source = ./linux/sway;
-        ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
-        ".config/waybar/config".source = ./linux/waybar;
-        ".config/waybar/style.css".source = ./linux/waybar-style;
-      };
-    };
-
-    fonts.fontconfig.enable = true;
-
-    <<linux-setup>>
-#+end_src
-
-I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system packages (e.g., ~sway~).
-
-#+begin_src nix :noweb linux-setup
-  home.sessionPath = [ "/usr/bin" ];
-#+end_src
-
-In addition, I include some Linux-wayland specific packages.
-
-#+begin_src nix :noweb linux-setup
-  home.packages = with pkgs; [
-    bemenu
-    havoc # terminal
-  ];
-
-  home.file".config/havoc.cfg" = {
-    text = ''
-      [child]
-      program=bash
-      [font]
-      size=25
-      [bind]
-      C-S-c=copy
-      C-S-v=paste
-    '';
-  };
-#+end_src
-
-Make sure to load those configuration on the correct system.
-
-#+begin_src nix :noweb-ref home-manage
-  imports = [
-    (if stdenv.isLinux then ./linux/use-system-wayland.nix)
-  ];
-#+end_src
-
-On MacOS system, those components are builtin, and I don't need to worry about it.
-
 *  ~emacs~ Configuration
 
 This section contains the code and explanation of my personal configuration for ~emacs~ editor. This configuration is meant to be used with the native comp branch and a running emacs server (with ~server-start~).
@@ -6733,6 +6666,95 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
       MOZ_ENABLE_WAYLAND = 1;
     };
   }
+#+end_src
+
+* System-specific Settings
+
+Initializing system-specific configuration using the ~lib.mkIf~ function:
+
+#+begin_src nix :tangle ./system-specific-config.nix :noweb yes
+  { pkgs, lib, config, ...}:
+
+  lib.mkMerge [
+    <<linux-config>>
+    <<macos-config>>
+  ]
+#+end_src
+
+Make sure to load those configuration in the main ~home.nix~ file.
+
+#+begin_src nix :noweb-ref home-manager
+  ./system-specific-config.nix
+#+end_src
+
+** Linux with Wayland
+
+~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
+
++ display services (~wayland~, ~sway~)
++ notification services (~libnotify~, ~mako~)
++ fonts
++ network services (~networkmanager~, ~bluez~)
+
+Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
+
+#+begin_src nix :noweb-ref linux-config :noweb yes
+  (
+    lib.mkIf (pkgs.stdenv.isLinux) {
+      home = {
+        file = {
+          ".config/fontconfig" = {
+            source = ./linux/fontconfig;
+            recursive = true;
+          };
+          ".config/sway/config".source = ./linux/sway;
+          ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
+          ".config/waybar/config".source = ./linux/waybar;
+          ".config/waybar/style.css".source = ./linux/waybar-style;
+        };
+      };
+
+      fonts.fontconfig.enable = true;
+
+      <<extra-linux-packages>>
+      <<extra-linux-setup>>
+    }
+  )
+#+end_src
+
+I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system packages (e.g., ~sway~).
+
+#+begin_src nix :noweb-ref extra-linux-setup
+  home.sessionPath = [ "/usr/bin" ];
+#+end_src
+
+In addition, I include some Linux-wayland specific packages.
+
+#+begin_src nix :noweb-ref extra-linux-packages
+  home.packages = with pkgs; [
+    bemenu
+    havoc # terminal
+  ];
+
+  home.file".config/havoc.cfg" = {
+    text = ''
+      [child]
+      program=bash
+      [font]
+      size=25
+      [bind]
+      C-S-c=copy
+      C-S-v=paste
+    '';
+  };
+#+end_src
+
+** MacOS
+
+On MacOS system, those components are builtin, and I don't need to worry about it.
+
+#+begin_src nix :noweb-ref macos-config
+
 #+end_src
 
 * TODO
