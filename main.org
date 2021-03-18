@@ -6169,7 +6169,8 @@ Python is different as indentation is part of the syntax. The following function
             (s-join "\n"
                     (--map (if (s-prefix-p (s-repeat indent " ") it)
                                (substring it indent)
-                             ""))))
+                             "")
+                           strings)))
         string)))
 
   (defun gatsby:python-eval-region-or-line ()
@@ -6737,7 +6738,7 @@ In addition, I include some Linux-wayland specific packages.
     havoc # terminal
   ];
 
-  home.file".config/havoc.cfg" = {
+  home.file.".config/havoc.cfg" = {
     text = ''
       [child]
       program=bash
