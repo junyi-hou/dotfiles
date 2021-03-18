@@ -3593,7 +3593,7 @@ Register ~git~ with ~home-manager~ first.
     };
   };
 
-  home.packages = [ gitAndTools.delta ];
+  home.packages = [ pkgs.gitAndTools.delta ];
 #+end_src
 
 *** global gitignore
