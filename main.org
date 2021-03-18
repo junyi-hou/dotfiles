@@ -1460,6 +1460,7 @@ First, command history. I want to:
 Second, setup proper xterm color.
 
 #+begin_src emacs-lisp :noweb-ref eshell-setup
+  (require 'esh-mode)
   (add-hook 'eshell-before-prompt-hook (lambda () (setq xterm-color-preserve-properties t)))
   (add-to-list 'eshell-preoutput-filter-functions 'xterm-color-filter)
   (setq eshell-output-filter-functions
