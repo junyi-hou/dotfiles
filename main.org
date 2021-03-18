@@ -3530,7 +3530,7 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 
 Register ~git~ with ~home-manager~ first.
 
-#+begin_src nix :noweb-ref home-manager :noweb yes
+#+begin_src nix :noweb-ref account-setting :noweb yes
   {
     programs = {
       git = {
