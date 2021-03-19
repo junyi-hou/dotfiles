@@ -60,6 +60,8 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
     "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
   This function should not bu ran manually."
     (when gatsby:tangle-should-triggle-home-switch
+      (with-current-buffer (get-buffer-create "*home-manager*")
+        (special-mode))
       (make-process
        :name "home-manager"
        :buffer "*home-manager*"
@@ -67,23 +69,14 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
        :filter (lambda (process output)
                  (when (buffer-live-p (process-buffer process))
                    (with-current-buffer (process-buffer process)
-                     (let ((moving (= (point) (process-mark process))))
+                     (let ((moving (= (point) (process-mark process)))
+                           (inhibit-read-only t))
                        (save-excursion
                          (goto-char (process-mark process))
                          (insert (xterm-color-filter output))
                          (set-marker (process-mark process) (point)))
-                       (if moving (goto-char (process-mark process)))))))
-
-       :sentinel (lambda (process msg)
-                   (unless (eq (process-status process) 'run)
-                     (let ((exit-code (process-exit-status process)))
-                       (when (and (y-or-n-p
-                                   (format "home-manager exits with status %d (%s), exit?"
-                                           exit-code
-                                           (s-chomp msg)))
-                                  (eq (buffer-name) "*home-manager*"))
-                         (kill-buffer-and-window))))))
-      (switch-to-buffer-other-window (get-buffer-create "*home-manager*"))))
+                       (if moving (goto-char (process-mark process))))))))
+      (switch-to-buffer-other-window "*home-manager*")))
 
   (advice-add #'org-babel-tangle :after #'gatsby:core--switch-home)
 #+end_src
