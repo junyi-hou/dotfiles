@@ -46,20 +46,20 @@
 
 Normally, I need to run ~home-manager switch~ in the command line to update dotfiles declared in ~home.nix~. In addition, since all my configuration are inside this org file, I need to first ~tangle~ them to generate new to generate new ~home.nix~. This means that to update my dotfiles, I need to finish a two step procedure, and in different places as well (first inside ~emacs~ to tangle, then in shell to switch).
 
-To simplify this process, I define a function ~gatsby:core--switch-home~, which runs ~home-manager switch~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output from ~home-manager switch~. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle this file, I add a file-local variable ~gatsby:tangle-should-triggle-home-switch~, with value ~t~ in none but this file.
+To simplify this process, I define a function ~gatsby:core--switch-home~, which runs ~home-manager switch~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output from ~home-manager switch~. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle *this* file, I add a file-local variable ~gatsby:is-config-source-file~, with value ~t~ in none but this file.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref home-manager-switch-hook
-  (defcustom gatsby:tangle-should-triggle-home-switch nil
-    "Non-nil means to run `gatsby:core--switch-home' after `org-babel-tangle'."
+  (defcustom gatsby:is-config-source-file nil
+    "Non-nil means to run `home-manager' related functions before and after `org-babel-tangle'."
     :type 'boolean
     :group 'org)
 
-  (put 'gatsby:tangle-should-triggle-home-switch 'safe-local-variable #'booleanp)
+  (put 'gatsby:is-config-source-file 'safe-local-variable #'booleanp)
 
   (defun gatsby:core--switch-home (&rest _)
     "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
   This function should not bu ran manually."
-    (when gatsby:tangle-should-triggle-home-switch
+    (when gatsby:is-config-source-file
       (with-current-buffer (get-buffer-create "*home-manager*")
         (special-mode))
       (make-process
@@ -6945,5 +6945,5 @@ I use [[https://github.com/microsoft/pyright][pyright by Microsoft]] as python L
 
 
 # Local Variables:
-# gatsby:tangle-should-triggle-home-switch: t
+# gatsby:is-config-source-file: t
 # End:
