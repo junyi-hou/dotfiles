@@ -3734,6 +3734,7 @@ I specify the list of files that need to be ignore in all git repositories. Thes
 
 #+begin_src emacs-lisp
   (add-to-list 'evil-motion-state-modes 'magit-status-mode)
+  (add-to-list 'evil-motion-state-modes 'magit-diff-mode)
   (add-to-list 'evil-motion-state-modes 'magit-log-mode)
   (add-to-list 'evil-motion-state-modes 'magit-revision-mode)
 #+end_src
