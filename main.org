@@ -23,6 +23,52 @@
     - waybar-style  -- ~waybar~ CSS style file
     - wallpaper.jpg -- wallpaper
 
+** Applying Changes
+
+Normally, I need to run ~home-manager switch~ in the command line to update dotfiles declared in ~home.nix~. In addition, since all my configuration are inside this org file, I need to first ~tangle~ them to generate new to generate new ~home.nix~. This means that to update my dotfiles, I need to finish a two step procedure, and in different places as well (first inside ~emacs~ to tangle, then in shell to switch).
+
+To simplify this process, I define a function ~gatsby:core--switch-home~, which runs ~home-manager switch~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output from ~home-manager switch~. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle this file, I add a file-local variable ~gatsby:tangle-should-triggle-home-switch~, with value ~t~ in none but this file.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref home-manager-switch-hook
+  (defcustom gatsby:tangle-should-triggle-home-switch nil
+    "Non-nil means to run `gatsby:core--switch-home' after `org-babel-tangle'."
+    :type 'boolean
+    :group 'org)
+
+  (put 'gatsby:tangle-should-triggle-home-switch 'safe-local-variable #'booleanp)
+
+  (defun gatsby:core--switch-home (&rest _)
+    "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
+  This function should not bu ran manually."
+    (when gatsby:tangle-should-triggle-home-switch
+      (make-process
+       :name "home-manager"
+       :buffer "*home-manager*"
+       :command '("home-manager" "switch")
+       :filter (lambda (process output)
+                 (when (buffer-live-p (process-buffer process))
+                   (with-current-buffer (process-buffer process)
+                     (let ((moving (= (point) (process-mark process))))
+                       (save-excursion
+                         (goto-char (process-mark process))
+                         (insert (xterm-color-filter output))
+                         (set-marker (process-mark process) (point)))
+                       (if moving (goto-char (process-mark process)))))))
+
+       :sentinel (lambda (process msg)
+                   (unless (eq (process-status process) 'run)
+                     (let ((exit-code (process-exit-status process)))
+                       (when (and (y-or-n-p
+                                   (format "home-manager exits with status %d (%s), exit?"
+                                           exit-code
+                                           (s-chomp msg)))
+                                  (eq (buffer-name) "*home-manager*"))
+                         (kill-buffer-and-window))))))
+      (switch-to-buffer-other-window (get-buffer-create "*home-manager*"))))
+
+  (advice-add #'org-babel-tangle :after #'gatsby:core--switch-home)
+#+end_src
+
 * ~home-manager~ Initialization
 
 The following snippet initialize my ~home.nix~ file that feed into ~home-manager switch~ command that updates my dotfiles. It contains two fields:
@@ -2458,12 +2504,14 @@ Another way that ~org~ can "export" to other file is by "tangling" source blocks
 
 A problem with the builtin ~org-tangle~ is that it can be slow. Part of the problem is that it runs the appropriate major-mode function and the hooks on every source code block. I disable this behavior.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (defun gatsby:org--fast-tangle (fn &rest args)
     (cl-letf (((symbol-function 'org-src-get-lang-mode) (lambda (&rest _) #'ignore)))
       (apply fn args)))
 
   (advice-add #'org-babel-tangle :around #'gatsby:org--fast-tangle)
+
+  <<home-manager-switch-hook>>
 #+end_src
 
 *** org-babel and literate programming
@@ -6854,3 +6902,8 @@ check out https://developers.google.com/calendar/v3/reference/events/insert
 ** integrate pyright
 
 I use [[https://github.com/microsoft/pyright][pyright by Microsoft]] as python LSP. The process of installing ~pyright~ is less than straightforward: ~pyright~ is distributed using ~node.js~, one of the build system ~nix~ does not have good support for. I use ~node2nix~ package to first build a pseudo-package that contains the nix expression for building ~pyright~, and then import that expression to build it.
+
+
+# Local Variables:
+# gatsby:tangle-should-triggle-home-switch: t
+# End:
