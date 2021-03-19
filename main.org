@@ -2119,7 +2119,9 @@ Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get
     "a" #'gatsby:vterm-append
     "A" #'gatsby:vterm-append-line
     [remap evil-first-non-blank-of-visual-line] #'gatsby:vterm-bol
-    [remap evil-end-of-visual-line] #'gatsby:vterm-eol)
+    [remap evil-end-of-visual-line] #'gatsby:vterm-eol
+    [remap evil-backward-char] #'vterm-send-left
+    [remap evil-forward-char] #'vterm-send-right)
 #+end_src
 
 The other two major evil operations are change and delete. ~evil-collection~ also has appropriate codes that allow me to mimic their behavior.
@@ -6831,7 +6833,7 @@ Make sure to load those configuration in the main ~home.nix~ file.
   ./system-specific-config.nix
 #+end_src
 
-** Linux with Wayland
+** Linux (Wayland)
 
 ~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
