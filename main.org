@@ -2226,29 +2226,16 @@ The other two major evil operations are change and delete. ~evil-collection~ als
 I also need to translate evil-paste, as it also modifies the cursor position and insert text.
 
 #+begin_src emacs-lisp
-  (evil-define-command gatsby:vterm-paste-after (count &optional register yank-handler)
-    "Paste after the point"
-    :suppress-operator t
-    (interactive "*P<x>")
-    (cl-letf (((symbol-function 'insert-for-yank) #'vterm-insert)
-              (inhibit-read-only t))
-      (when (evil-visual-state-p)
-        (vterm-delete-region (region-beginning) (region-end)))
-      (evil-paste-after count register yank-handler)))
+  (defun gatsby:vterm--yank-region (fn &rest args)
+    (when (evil-visual-state-p)
+      (vterm-delete-region (region-beginning) (region-end)))
+    (apply fn args))
 
-  (evil-define-command gatsby:vterm-paste-before (count &optional register yank-handler)
-    "Paste before the point"
-    :suppress-operator t
-    (interactive "*P<x>")
-    (cl-letf (((symbol-function 'insert-for-yank) #'vterm-insert)
-              (inhibit-read-only t))
-      (when (evil-visual-state-p)
-        (vterm-delete-region (region-beginning) (region-end)))
-      (evil-paste-before count register yank-handler)))
+  (advice-add #'vterm-yank :around #'gatsby:vterm--yank-region)
 
   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual)
-    "p" #'gatsby:vterm-paste-after
-    "P" #'gatsby:vterm-paste-before)
+    "p" #'vterm-yank
+    "P" #'vterm-yank)
 #+end_src
 
 Finally, I include bindings that are consistent with other REPL modes: going back and forth in prompts and clear buffer.
