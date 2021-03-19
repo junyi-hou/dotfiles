@@ -6123,19 +6123,26 @@ Set the ~tab-width~ to 2  in ~elisp-mode~, as lisp do not look good with too man
 
 Although I have ~eval-last-sexp~ to evaluate lisp expressions, it is useful sometime to have a real REPL. ~ielm~ fills this hole.
 
-#+begin_src emacs-lisp
-  (use-package ielm :straight (:type built-in))
+#+begin_src emacs-lisp :noweb yes
+  (use-package ielm
+    :straight (:type built-in)
+    :hook
+    <<ielm-hook>>
+    :init
+    <<ielm-init>>
+    :config
+    <<ielm-config>>)
 #+end_src
 
 Enable autocompletion in the REPL buffer.
 
-#+begin_src emacs-lisp
-  (add-hook 'ielm-mode-hook #'company-mode)
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-hook
+  (ielm-mode . company-mode)
 #+end_src
 
 ~ielm~ is derived from ~comint~ mode, so I only need to register the REPL function to ~gatsby:comint-repl-function-alist~ variable.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-init
   (defun gatsby:ielm-repl ()
     "Start an ielm REPL."
     (interactive)
@@ -6154,7 +6161,7 @@ Enable autocompletion in the REPL buffer.
 
 ~ielm~ uses a different ~send-input~ function, I need to accommodate it here.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-config
   (defun gatsby:ielm--eval-input ()
     (ielm-eval-input ielm-input))
 
@@ -6170,7 +6177,7 @@ Enable autocompletion in the REPL buffer.
 
 In most of the time, it makes more sense to evaluate the sexp around point, rather than the line at point. Therefore, instead of calling ~eval-region-or-line~, I define a new function ~eval-region-or-sexp~ for this purpose.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-config
   (defun gatsby:lisp-eval-region-or-sexp ()
     "Evaluate the selected region if in visual state. Otherwise evaluate the sexp before point."
     (interactive)
@@ -6183,7 +6190,7 @@ In most of the time, it makes more sense to evaluate the sexp around point, rath
 
 Finally, define the entry point of REPL.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-config
   (general-define-key :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map) :states '(motion normal visual) :prefix "SPC"
     "rr" #'gatsby:lisp-eval-region-or-sexp
     "rb" #'gatsby:comint-eval-buffer
@@ -6262,26 +6269,42 @@ Register the package.
 
 I use the builtin ~python-mode~, together with ~emacs-jupyter~ and ~eglot~ for REPL/LSP support.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package python
     :mode ("\\.py'" . python-mode)
-    :init
-    (defun gatsby:python--set-indent-width ()
-      (setq-local tab-width 4)
-      (setq python-indent-offset 4))
-
-    (setf (alist-get 'python-mode eglot-server-programs)
-          '("pyright-langserver" "--stdio"))
     :hook
-    (python-mode . gatsby:python--set-indent-width)
-    (python-mode . eglot-ensure)
+    <<python-hook>>
+    :init
+    <<python-init>>
+    :config
+    <<python-config>>
+    :general
+    <<python-binding>>)
+#+end_src
+
+Indentation is part of the syntax, and it must be 4.
+
+#+begin_src emacs-lisp
+  (setq python-indent-offset 4)
+#+end_src
+
+Also set ~tab-width~ for all python buffers.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref python-init
+  (defun gatsby:python--set-indent-width ()
+    (setq-local tab-width 4))
+#+end_src
+
+Enable LSP and the local tab width when loading python files.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref python-hook
+  (python-mode . gatsby:python--set-indent-width)
+  (python-mode . eglot-ensure)
 #+end_src
 
 Register python with ~emacs-jupyter~ to enable REPL for python.
 
-#+begin_src emacs-lisp
-  :config
-
+#+begin_src emacs-lisp :tangle no :noweb-ref python-config
   (defun gatsby:python-start-repl ()
     "Infer python versions from shebang.  If there is no shebang, promote the user for python's version."
     (let* ((shebang (save-excursion (goto-char 1) (thing-at-point 'line)))
@@ -6296,7 +6319,7 @@ Register python with ~emacs-jupyter~ to enable REPL for python.
 
 Python is different as indentation is part of the syntax. The following functions deal with this feature when sending indented code to REPL.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref python-config
   (defun gatsby:python--dedent-string (string)
     "remove the comment indentation of STRING."
     (let ((strings (split-string string "\n")))
@@ -6327,8 +6350,7 @@ Python is different as indentation is part of the syntax. The following function
 
 Now define keybindings.
 
-#+begin_src emacs-lisp
-  :general
+#+begin_src emacs-lisp :tangle no :noweb-ref python-binding
   (:states '(motion normal visual)
    :keymaps 'python-mode-map
    :prefix "SPC"
@@ -6337,7 +6359,7 @@ Now define keybindings.
    "ro" 'gatsby:jupyter-start-or-switch-to-repl
 
    "rz" 'jupyter-repl-associate-buffer
-   "rZ" 'jupyter-repl-restart-kernel))
+   "rZ" 'jupyter-repl-restart-kernel)
 #+end_src
 
 ** STATA
@@ -6435,19 +6457,25 @@ STATA is a package that can conduct statistical analysis using its own script-li
 
 There is no official major mode for stata ~do~ script files. ~ess~ (emacs speak statistics) used to offer an integrated development environment for STATA (in addition to R and other statistical packages). Yet, ~ess-stata-mode~ became [[http://ess.r-project.org/Manual/news.html][obsolete]] since version 19.03. I use a stripped down version of ~stata-mode~ to work in STATA script files.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package stata-mode
     :straight (stata-mode :repo "junyi-hou/stata-mode" :host github)
     :mode ("\\.do'" . stata-mode)
+    :config
+    <<stata-config>>
+    :general
+    <<stata-binding>>)
 #+end_src
 
 STATA has a very useful jupyter [[https://kylebarron.dev/stata_kernel/][kernel]] which allows me to run STATA do script in a jupyter console/notebook. I use ~stata_kernel~ in conjuncture with ~emacs-jupyter~, so I can send codes from my ~do~ script buffers to a inferior jupyter process.
 
-#+begin_src emacs-lisp
-  :config
+#+begin_src emacs-lisp :tangle no :noweb-ref stata-config
   (add-to-list 'gatsby:jupyter-repl-function-alist '(stata-mode . "stata"))
+#+end_src
 
-  :general
+Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref stata-binding
   (:states '(motion normal visual)
    :keymaps 'stata-mode-map
    :prefix "SPC"
@@ -6456,7 +6484,7 @@ STATA has a very useful jupyter [[https://kylebarron.dev/stata_kernel/][kernel]]
    "ro" 'gatsby:jupyter-start-or-switch-to-repl
 
    "rz" 'jupyter-repl-associate-buffer
-   "rZ" 'jupyter-repl-restart-kernel))
+   "rZ" 'jupyter-repl-restart-kernel)
 #+end_src
 
 ** Nix
@@ -6465,14 +6493,20 @@ I use nix to manage my dotfiles and development environments. nix uses its own l
 
 There are several useful packages for day-to-day and development with ~nix~:
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package nix-mode
     :straight (nix-mode :host github :repo "nixOS/nix-mode"
                         :files (:defaults "*.el"))
     :mode ("\\.nix\\'" "\\.nix.in\\'")
+    :hook
+    <<nix-hook>>
+    :init
+    <<nix-init>>
+    :config
+    <<nix-config>>)
 #+end_src
 
-nix community offers a basic LSP server for linting .nix file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
+Nix community offers a basic LSP server for linting .nix file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
 
 #+begin_src nix :noweb-ref home-manager
   {
@@ -6484,15 +6518,17 @@ nix community offers a basic LSP server for linting .nix file. I register it wit
   }
 #+end_src
 
-#+begin_src emacs-lisp
-  :config
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-init
   (add-to-list 'eglot-server-programs '(nix-mode . ("rnix-lsp")))
-  (add-hook 'nix-mode-hook #'eglot-ensure)
+#+end_src
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-hook
+(nix-mode . eglot-ensure)
 #+end_src
 
 nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Since ~nix-repl~ is a derived mode from ~comint-mode~, configuring ~nix-repl~ is relatively easy:
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
   (add-to-list 'gatsby:comint-repl-function-alist '(nix-mode gatsby:nix-repl))
   (add-to-list 'gatsby:comint-repl-mode-alist '(nix-mode . nix-repl-mode))
 
@@ -6507,12 +6543,12 @@ nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Sinc
     "ro" #'gatsby:comint-start-or-pop-to-repl
     "rr" #'gatsby:comint-eval-region-or-line
     "rb" #'gatsby:comint-eval-buffer
-    "rz" #'gatsby:comint-associate-nix-repl))
+    "rz" #'gatsby:comint-associate-nix-repl)
 #+end_src
 
 Sometimes I would like to check out package files located at ~nix-store~. To ensure reproducible environment, nix installs packages to a unique path in ~nix-store~ by prefixing the package name with a hash. This makes it difficult to quickly navigate to the path where a particular package is installed. Luckily, I have ~selectrum~ and ~prescient~. And the following function will make it super easy in finding the path in ~nix-store~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-init
   (defun gatsby:nix-shell-in-storage (storage)
     "Open an eshell/vterm in the directory of STORAGE."
     (interactive (list (read-file-name "Select the package directory: "
@@ -6538,7 +6574,7 @@ I use ~nixpkgs-fmt~ to format my nix code before save.
   }
 #+end_src
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
   (setq nix-nixfmt-bin "nixpkgs-fmt")
 
   (defun gatsby:nix--fmt-before-save ()
@@ -6568,40 +6604,11 @@ Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get t
 
 Furthermore, I can use ~emacs~ to read system logs using ~journalctl~ and ~syslogd~.
 
-** System Journal
-
-#+begin_src emacs-lisp
-  (use-package journalctl-mode
-    :if (executable-find "journalctl")
-    :commands journalctl)
-
-  (use-package syslog-mode
-    :if (executable-find "syslogd"))
-#+end_src
-
-~journalctl-mode~ offers an interactive way to read the journal file. Since it is still an early stage project, it needs some tuning.
-
-#+begin_src emacs-lisp
-  (defun gatsby:journalctl--set-options (fn &rest args)
-    (if args
-        (apply fn args)
-      (funcall fn "-x -n 1000")))
-
-  (advice-add #'journalctl :around #'gatsby:journalctl--set-options)
-
-  (setq journalctl-chunk-size 1000)
-
-  (general-define-key :keymaps 'journalctl-mode-map :states 'normal
-    "<" #'journalctl-previous-chunk
-    ">" #'journalctl-next-chunk
-    "q" #'kill-buffer-and-window)
-#+end_src
-
 ** Man-Page Integration
 
 I can also read man page from within ~emacs~ and even in ~eshell~. The builtin ~man~ mode offers good integration of reading man page.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package man
     :hook
     (man-mode . outline-minor-mode)
@@ -6611,12 +6618,14 @@ I can also read man page from within ~emacs~ and even in ~eshell~. The builtin ~
      :states 'motion
      "zc" 'outline-hide-entry
      "zo" 'outline-show-entry)
+
+    :config
+    <<man-config>>)
 #+end_src
 
 My only issue of ~man~ mode is that it always opens a new window to display man page. Sometimes I want it to display using the existing window (e.g., when calling from ~eshell~). Therefore, I advice ~man~ to use the ~eshell~ window when called from ~eshell~.
 
-#+begin_src emacs-lisp
-  :config
+#+begin_src emacs-lisp :tangle no :noweb-ref man-config
   (defun gatsby:man--maybe-use-current-window (fn &rest args)
     "Use the current window to display the man buffer if in eshell mode. Respect `Man-notify-method' otherwise."
     (if (eq major-mode 'eshell-mode)
@@ -6627,11 +6636,7 @@ My only issue of ~man~ mode is that it always opens a new window to display man 
   (advice-add #'man :around #'gatsby:man--maybe-use-current-window)
 #+end_src
 
-This concludes the configuration for ~man~
-
-#+begin_src emacs-lisp
-  )
-#+end_src
+This concludes the configuration for ~man~.
 
 ** LaTeX
 
@@ -6654,37 +6659,53 @@ First install ~textlive~ and the LSP ~digestif~ via ~home-manager~.
 
 AUCTeX is a gigantic package that aims at providing a tex IDE for ~emacs~. Although I already use a tex LSP ([[https://github.com/astoff/digestif][digestif]]) to handles label, autocomplete, etc. I still need AUCTeX to conveniently interact with tex command line utilities (mainly via ~TeX-command-sequence~ function)
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package tex
     :straight auctex
+    :custom
+    <<tex-custom>>
+    :custom-face
+    <<tex-custom-face>>
+    :hook
+    <<tex-hook>>
+    :init
+    <<tex-init>>
+    :config
+    <<tex-config>>
+    :general
+    <<tex-binding>>)
 #+end_src
 
-AUCTeX tries to be smart and increase the font size of (sub)section titles, move up or down the super/subscripts, etc. I do not particularly such efforts:
+AUCTeX tries to be smart and increase the font size of (sub)section titles, move up or down the super/subscripts, etc. I do not particularly appreciate such efforts:
 
-#+begin_src emacs-lisp
-  :custom-face
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-custom-face
   (font-latex-italic-face ((t (:underline nil :inherit 'italic))))
   (font-latex-slide-title-face ((t (:height 1.0 :inherit 'font-lock-function-name-face))))
   (font-latex-sectioning-5-face ((t (:inherit 'default))))
+#+end_src
 
-  :custom
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-custom
   (tex-fontify-script nil)
   (font-latex-fontify-script nil)
-  (font-latex-fontify-sectioning 1.0))
+  (font-latex-fontify-sectioning 1.0)
 #+end_src
 
 Make sure that I load LSP and folding mode when I open an ~.tex~ file.
 
-#+begin_src emacs-lisp
-  (add-hook 'LaTeX-mode-hook #'eglot-ensure)
-  (add-hook 'LaTeX-mode-hook #'company-mode)
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . eglot-ensure)
+  (LaTeX-mode . company-mode)
 #+end_src
 
-Load ~TeX-PDF-mode~, which allows me to use ~PDFTeX~ as the main tex engine. Also make sure that I enable synctex search and shell-escape.
+Load ~TeX-PDF-mode~, which allows me to use ~PDFTeX~ as the main tex engine.
 
-#+begin_src emacs-lisp
-  (add-hook 'LaTeX-mode-hook #'TeX-PDF-mode)
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . TeX-PDF-mode)
+#+end_src
 
+Make sure that I enable synctex search and shell-escape.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq TeX-parse-self t
         TeX-auto-save t
         TeX-source-correlate-mode t
@@ -6696,30 +6717,36 @@ Load ~TeX-PDF-mode~, which allows me to use ~PDFTeX~ as the main tex engine. Als
 
 Load ~outline-minor-mode~ to enable code folding.
 
-#+begin_src emacs-lisp
-  (add-hook 'LaTeX-mode-hook #'outline-minor-mode)
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . outline-minor-mode)
+#+end_src
 
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq TeX-outline-extra '(("^\\(% \\)?\\\\begin{frame}" 3)))
 #+end_src
 
 Properly format tex file can be done as simple as running ~(indent-region (point-min) (point-max))~. But I need to turn off ~LaTeX-syntactic-comments~ and ~LaTeX-item-indent~, because they mess up the indent level for commented blocks and lists, respectively.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-init
   (defun gatsby:latex--setup ()
     "Setup tab width and indentation rule for `LaTeX-mode'."
     (setq-local tab-width 2)
     (add-hook 'before-save-hook
               (lambda () (indent-region (point-min) (point-max))) nil t))
+#+end_src
 
-  (add-hook 'LaTeX-mode-hook #'gatsby:latex--setup)
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . gatsby:latex--setup)
+#+end_src
 
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq LaTeX-syntactic-comments nil
         LaTeX-item-indent 0)
 #+end_src
 
 Furthermore, tex has many wired pairs (like $). It does not play well with ~electric-pair-mode~. AUCTeX has a builtin replacement of ~electric-pair-mode~ which, although usable, not "electric" enough for me. In particular, it misses a function that allows me to delete the closing pair after point with ~delete~ if there is nothing between the matching pairs. I add this function to it.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq TeX-electric-math (cons "$" "$")
         LaTeX-electric-left-right-brace t
         LaTeX-syntactic-comments nil)
@@ -6775,14 +6802,14 @@ Finally, I use ~Zathura~ as pdf viewer.
   }
 #+end_src
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq TeX-view-program-selection '((output-pdf "Zathura")))
 #+end_src
 
 I add quick key bindings to complie tex file and do forward search (for tex sorce code to the pdf). Backwards search needs to be configured in ~Zathurarc~.
 
-#+begin_src emacs-lisp
-  (general-define-key :keymaps 'LaTeX-mode-map :states 'normal :prefix "SPC"
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-binding
+  (:keymaps 'LaTeX-mode-map :states 'normal :prefix "SPC"
     "rr" (lambda ()
            (interactive)
            (TeX-command-sequence '("LaTeX" "BibTeX" "LaTeX" "LaTeX" "View") t))
