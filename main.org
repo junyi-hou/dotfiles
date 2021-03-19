@@ -2092,7 +2092,7 @@ Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get
   (defun gatsby:vterm-append ()
     "Append character after cursor."
     (interactive)
-    (vterm-goto-char (point))
+    (vterm-goto-char (1+ (point)))
     (call-interactively #'evil-append))
 
   (defun gatsby:vterm-append-line ()
