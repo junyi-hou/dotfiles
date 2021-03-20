@@ -5709,17 +5709,6 @@ Updating the reminder after fetching/synchronizing requires using ~emacs-deferre
   (advice-add #'org-gcal-sync :override #'gatsby:org-gcal-sync)
 #+end_src
 
-Similarly, I advice ~org-gcal~ to close file after archiving old events.
-
-#+begin_src emacs-lisp
-  (defun gatsby:gcal--close-after-archive (fn &rest args)
-    (cl-letf (((symbol-function #'save-buffer)
-               (lambda () (save-buffer) (kill-buffer))))
-      (apply fn args)))
-
-  (advice-add #'org-gcal--archive-old-event :around #'gatsby:gcal--close-after-archive)
-#+end_src
-
 Now load ~appt~ package and overrides how to show reminder.
 
 #+begin_src emacs-lisp
