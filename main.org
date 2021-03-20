@@ -4402,12 +4402,6 @@ To receive and send emails from the comfort in ~emacs~, I use
 
 + ~mbsync~ (registered as ~isync~ in many package managers) to fetch and sync maildir with the remote server.
 
-  #+begin_src nix :noweb account-setting
-    {
-      programs.mbsync.enable = true;
-    }
-  #+end_src
-
   To deal with the security requirement of GMail, I use a ~xoauth2~ plugins for ~cryus~ library. [[http://blog.onodera.asia/2020/06/how-to-use-google-g-suite-oauth2-with.html][This blog]] provides a good summary on how to enable ~xoauth2~ for ~mbsync~, which involves installing a ~cryus~ plugin. ~cryus~ requires all plugins to live in the same directory, which is difficult for a ~nix~-based system, as ~cryus~ plugins lives in different ~nix~ storage. I use a hack which consists of three steps:
 
   1. build a copy of ~cyrus_sasl~ since it is a dependency of xoauth2 plugin
@@ -4474,23 +4468,24 @@ To receive and send emails from the comfort in ~emacs~, I use
               <<account-setting>>
             ];
 
-            nixpkgs.overlays =
-              [
-                (
-                  self: super:
-                  {
-                    cyrus_sasl = super.cyrus_sasl.overrideAttrs (div: rec {
-                      postInstall = ''
+            nixpkgs.overlays = [
+              (
+                self: super:
+                {
+                  cyrus_sasl = super.cyrus_sasl.overrideAttrs (div: rec {
+                    postInstall = ''
                 for lib in ${oauth2Lib}/lib/sasl2/*; do
                   ln -sf $lib $out/lib/sasl2/
                 done
               '';
-                    });
-                  }
-                )
-              ];
+                  });
+                }
+              )
+            ];
 
-            home.packages = [ pkgs.isync gmail-oauth2-tools ];
+            programs.mbsync.enable = true;
+
+            home.packages = [ gmail-oauth2-tools ];
 
             services = {
               mbsync = {
@@ -4823,7 +4818,7 @@ I then export my account information to ~emacs~.
 **** UC Berkeley account
 
 #+begin_src nix :noweb-ref uc-berkeley-account
-  uc-berkeley = {
+  berkeley = {
     realName = realUser;
     userName = "junyi.hou@berkeley.edu";
     address = "junyi.hou@berkeley.edu";
