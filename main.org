@@ -6350,7 +6350,7 @@ Now define keybindings.
    :keymaps 'python-mode-map
    :prefix "SPC"
    "rb" 'jupyter-eval-buffer
-   "rr" 'gatsby:python-eval-line-or-region
+   "rr" 'gatsby:python-eval-region-or-line
    "ro" 'gatsby:jupyter-start-or-switch-to-repl
 
    "rz" 'jupyter-repl-associate-buffer
