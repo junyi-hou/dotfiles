@@ -62,8 +62,12 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
     "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
   This function should not bu ran manually."
     (when gatsby:is-config-source-file
-      (with-current-buffer (get-buffer-create "*home-manager*")
-        (special-mode))
+      (if (buffer-live-p (get-buffer "*home-manager*"))
+          (with-current-buffer (get-buffer-create "*home-manager*")
+            (let ((inhibit-read-only t))
+              (delete-region (point-min) (point-max))))
+        (with-current-buffer (get-buffer-create "*home-manager*")
+          (special-mode)))
       (make-process
        :name "home-manager"
        :buffer "*home-manager*"
