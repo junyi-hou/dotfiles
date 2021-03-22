@@ -16,11 +16,26 @@
 
   # Usage
 
-  Make sure the `nix` package manager, `home-manager` and `emacs` are available. The current `$USER` will also need to be a trusted user of `nix`. To install this configuration, run
+  ## Initialization
+
+  Make sure the `nix` package manager, `home-manager` are available. The current `$USER` will also need to be a trusted user of `nix`. To install this configuration, clone this repository. In its root directory, run
+  ```
+  update-user-config
+  ```
+
+  ## Update
+
+  In command line, run
 
   ```
   emacs -Q --batch main.org -f org-babel-tangle
-  home-manager switch
+  ```
+
+  In `emacs`, run
+
+  ```
+  M-x find-file ./main.org
+  M-x org-babel-tangle
   ```
 
   # License
@@ -44,11 +59,11 @@
     - waybar-style  -- ~waybar~ CSS style file
     - wallpaper.jpg -- wallpaper
 
-** Applying Changes
+* Applying Changes
 
 Normally, I need to run ~home-manager switch~ in the command line to update dotfiles declared in ~home.nix~. In addition, since all my configuration are inside this org file, I need to first ~tangle~ them to generate new to generate new ~home.nix~. This means that to update my dotfiles, I need to finish a two step procedure, and in different places as well (first inside ~emacs~ to tangle, then in shell to switch).
 
-To simplify this process, I define a function ~gatsby:core--switch-home~, which runs ~home-manager switch~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output from ~home-manager switch~. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle *this* file, I add a file-local variable ~gatsby:is-config-source-file~, with value ~t~ in none but this file.
+To simplify this process, I define a function ~gatsby:switch-home~, which runs a custom script ~update-user-config~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle *this* file, I add a file-local variable ~gatsby:is-config-source-file~, with value ~t~ in none but this file.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref home-manager-switch-hook
   (defcustom gatsby:is-config-source-file nil
@@ -68,23 +83,35 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
               (delete-region (point-min) (point-max))))
         (with-current-buffer (get-buffer-create "*home-manager*")
           (special-mode)))
-      (make-process
-       :name "home-manager"
-       :buffer "*home-manager*"
-       :command '("home-manager" "switch")
-       :filter (lambda (process output)
-                 (when (buffer-live-p (process-buffer process))
-                   (with-current-buffer (process-buffer process)
-                     (let ((moving (= (point) (process-mark process)))
-                           (inhibit-read-only t))
-                       (save-excursion
-                         (goto-char (process-mark process))
-                         (insert (xterm-color-filter output))
-                         (set-marker (process-mark process) (point)))
-                       (if moving (goto-char (process-mark process))))))))
-      (switch-to-buffer-other-window "*home-manager*")))
+      (let ((exec-path `(,default-directory ,@exec-path)))
+        (make-process
+         :name "home-manager"
+         :buffer "*home-manager*"
+         :command '("update-user-config")
+         :filter
+         (lambda (proc msg)
+           (when (buffer-live-p (process-buffer proc))
+             (with-current-buffer (process-buffer proc)
+               (let ((moving (= (point) (process-mark proc)))
+                     (inhibit-read-only t))
+                 (save-excursion
+                   (goto-char (process-mark proc))
+                   (insert (xterm-color-filter msg))
+                   (set-marker (process-mark proc) (point)))
+                 (if moving (goto-char (process-mark proc)))))))))
+      (pop-to-buffer "*home-manager*")))
 
   (advice-add #'org-babel-tangle :after #'gatsby:switch-home)
+#+end_src
+
+The script ~update-user-config~ is also used to initialize configuration for the first time (see [[Overview]]). This script does two things. First, it runs any commands that might need to be ran before ~home-manager~ (e.g., generating nix-expression of ~node.js~ packages via ~node2nix~). Second, it runs ~home-manager switch~ to implement changes in ~home.nix~.
+
+#+begin_src shell :shebang "#!/usr/bin/env nix-shell" :tangle update-user-config :noweb yes
+  #! nix-shell -i bash -p bash
+
+  <<update-user-config-hook>>
+
+  home-manager switch
 #+end_src
 
 * ~home-manager~ Initialization
