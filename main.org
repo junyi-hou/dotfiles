@@ -58,7 +58,7 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
 
   (put 'gatsby:is-config-source-file 'safe-local-variable #'booleanp)
 
-  (defun gatsby:core--switch-home (&rest _)
+  (defun gatsby:switch-home (&rest _)
     "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
   This function should not bu ran manually."
     (when gatsby:is-config-source-file
@@ -84,7 +84,7 @@ To simplify this process, I define a function ~gatsby:core--switch-home~, which 
                        (if moving (goto-char (process-mark process))))))))
       (switch-to-buffer-other-window "*home-manager*")))
 
-  (advice-add #'org-babel-tangle :after #'gatsby:core--switch-home)
+  (advice-add #'org-babel-tangle :after #'gatsby:switch-home)
 #+end_src
 
 * ~home-manager~ Initialization
