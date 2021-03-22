@@ -6252,7 +6252,7 @@ Register the package.
 #+begin_src nix :noweb-ref home-manager
   {
     home.packages = with pkgs; [
-      (python3.withPackages (p: with p; [ jupyter ]))
+      (python3.withPackages (p: with p; [ jupyter xlrd openpyxl pandas ]))
       nodePackages.pyright
     ];
   }
