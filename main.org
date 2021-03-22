@@ -3732,6 +3732,7 @@ I specify the list of files that need to be ignore in all git repositories. Thes
   (add-to-list 'evil-motion-state-modes 'magit-diff-mode)
   (add-to-list 'evil-motion-state-modes 'magit-log-mode)
   (add-to-list 'evil-motion-state-modes 'magit-revision-mode)
+  (add-to-list 'evil-motion-state-modes 'magit-process-mode)
 #+end_src
 
 On the other hand, I want to start in the insert state in ~git-commit-mode~, as ~git-commit-mode~ only responsible for writing commit message.
