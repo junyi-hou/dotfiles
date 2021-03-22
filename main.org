@@ -1,3 +1,5 @@
+# -*- gatsby:is-config-source-file: t; -*-
+
 #+title: Personal Dotfiles
 #+author: Junyi Hou
 #+property: header-args:emacs-lisp :tangle ./emacs.d/init.el :mkdirp yes
@@ -6247,6 +6249,7 @@ Register the package.
   {
     home.packages = with pkgs; [
       (python3.withPackages (p: with p; [ jupyter ]))
+      nodePackages.pyright
     ];
   }
 #+end_src
@@ -6284,6 +6287,10 @@ Enable LSP and the local tab width when loading python files.
 #+begin_src emacs-lisp :tangle no :noweb-ref python-hook
   (python-mode . gatsby:python--set-indent-width)
   (python-mode . eglot-ensure)
+#+end_src
+
+#+begin_src emacs-lisp :tangle no :noweb-ref python-init
+  (setf (cdr (assq 'python-mode eglot-server-programs)) '("pyright-langserver" "--stdio"))
 #+end_src
 
 Register python with ~emacs-jupyter~ to enable REPL for python.
@@ -6923,11 +6930,3 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
-** integrate pyright
-
-I use [[https://github.com/microsoft/pyright][pyright by Microsoft]] as python LSP. The process of installing ~pyright~ is less than straightforward: ~pyright~ is distributed using ~node.js~, one of the build systems ~nix~ does not have good support for. I use ~node2nix~ package to first build a pseudo-package that contains the nix expression for building ~pyright~, and then import that expression to build it.
-
-
-# Local Variables:
-# gatsby:is-config-source-file: t
-# End:
