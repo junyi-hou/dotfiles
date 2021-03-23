@@ -2139,12 +2139,31 @@ Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get
   (defun gatsby:vterm-bol ()
     "Move to the beginning of line."
     (interactive)
-    (vterm-goto-char (vterm--get-prompt-point)))
+    (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
+      (if (> (point) true-prompt)
+          (vterm-goto-char true-prompt)
+        (evil-first-non-blank-of-visual-line))))
 
   (defun gatsby:vterm-eol ()
     "Move to the end of line."
     (interactive)
     (vterm-goto-char (vterm-end-of-line)))
+
+  (defun gatsby:vterm-left ()
+    "Move one character left."
+    (interactive)
+    (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
+      (if (> (point) true-prompt)
+          (call-interactively #'vterm-send-left)
+        (evil-backward-char))))
+
+  (defun gatsby:vterm-right ()
+    "Move one character right"
+    (interactive)
+    (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
+      (if (> (point) true-prompt)
+          (call-interactively #'vterm-send-right)
+        (evil-forward-char))))
 
   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual motion)
     "i" #'gatsby:vterm-insert
@@ -2153,8 +2172,8 @@ Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get
     "A" #'gatsby:vterm-append-line
     [remap evil-first-non-blank-of-visual-line] #'gatsby:vterm-bol
     [remap evil-end-of-visual-line] #'gatsby:vterm-eol
-    [remap evil-backward-char] #'vterm-send-left
-    [remap evil-forward-char] #'vterm-send-right)
+    [remap evil-backward-char] #'gatsby:vterm-left
+    [remap evil-forward-char] #'gatsby:vterm-right)
 #+end_src
 
 The other two major evil operations are change and delete. ~evil-collection~ also has appropriate codes that allow me to mimic their behavior.
