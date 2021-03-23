@@ -2896,6 +2896,26 @@ I also don't want ~eglot~ to change my ~company-backends~ setting.
   (setq eglot-stay-out-of '(company))
 #+end_src
 
+*** unified documentation-displaying mechanism: help-childframe
+
+I rely mostly on [[helpful mode]] and [[LSP: eglot]] to provide documentation. I wrote a small package ~help-childframe~ to display documentation retrieved by those backends in a child frame.
+
+#+begin_src emacs-lisp :noweb yes
+  (use-package help-childframe
+    :straight
+    (help-childframe :host github :repo "junyi-hou/help-childframe.el")
+    :general
+    (:keymaps '(normal visual motion)
+     :prefix "SPC"
+     "rh" #'help-childframe-show))
+#+end_src
+
+Enable ~help-childframe-mode~ globally.
+
+#+begin_src emacs-lisp
+  (add-hook 'after-init-hook #'global-help-childframe-mode)
+#+end_src
+
 *** REPL
 
 Read-Evaluate-Print-Loop (REPL) is a convenient way to do try-and-error programming. It allows me to
