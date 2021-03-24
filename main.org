@@ -953,7 +953,8 @@ Enable ~ligature~ globally.
 ~eldoc~ is a nice builtin package that displays useful information in the mini-window. Since I limits the size of mini-window to 1 in [[mini-window size]], multi-line messages will get truncated and not display in its full. ~eldoc-box~ solves this problem by displaying ~eldoc~ messages in a separate child frame.
 
 #+begin_src emacs-lisp
-  (use-package eldoc-box :hook ((text-mode prog-mode) . eldoc-box-hover-mode))
+  (use-package eldoc-box
+    :hook ((text-mode prog-mode) . eldoc-box-hover-mode))
 #+end_src
 
 I fix the display position of ~eldoc-box~ at the bottom right corner of the current window, which is almost always out of my immediate focus in the main window, but still very easy to find and skim its information.
@@ -968,10 +969,11 @@ I fix the display position of ~eldoc-box~ at the bottom right corner of the curr
   (setq eldoc-box-position-function #'gatsby:eldoc-box--position)
 #+end_src
 
-I allow the frame to disappear 0.5 seconds after I move the cursor.
+Hide ~eldoc-box~ frame 0.5 seconds after I move the cursor. Also enable hiding it using ~C-g~
 
 #+begin_src emacs-lisp
-  (setq eldoc-box-cleanup-interval 0.5)
+  (setq eldoc-box-cleanup-interval 0.5
+        eldoc-box-clear-with-C-g t)
 #+end_src
 
 I limit the maximum height of the ~eldoc-box~ to 400 pixel so it won't grow too high to clutter the main window.
