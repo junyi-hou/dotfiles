@@ -6870,7 +6870,7 @@ Finally, I use ~Zathura~ as pdf viewer.
   (setq TeX-view-program-selection '((output-pdf "Zathura")))
 #+end_src
 
-I add quick key bindings to complie tex file and do forward search (for tex sorce code to the pdf). Backwards search needs to be configured in ~Zathurarc~.
+I add quick key bindings to complie tex file and do forward search (for tex sorce code to the pdf). Backwards search needs to be configured in ~.zathurarc~.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref tex-binding
   (:keymaps 'LaTeX-mode-map :states 'normal :prefix "SPC"
@@ -6880,6 +6880,14 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
     "ro" (lambda ()
            (interactive)
            (TeX-command-sequence "View" t)))
+#+end_src
+
+Apart from the ability of folding sections, enabling ~outline-minor-mode~ also allows me to navigate quickly between different sections.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-binding
+  (:keymap 'LaTeX-mode-map :states '(normal visual motion)
+   "<" #'outline-previous-heading
+   ">" #'outline-next-heading)
 #+end_src
 
 * Miscellaneous Tools
