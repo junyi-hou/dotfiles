@@ -962,9 +962,11 @@ I fix the display position of ~eldoc-box~ at the bottom right corner of the curr
 #+begin_src emacs-lisp
   (defun gatsby:eldoc-box--position (width height)
     "Display `eldoc-box' in the bottom right corner of the `selected-window'."
-    (let* ((edge (window-inside-pixel-edges))
-           (y (- (nth 3 edge) 5 height))
-           (x (- (nth 2 edge) 2 width)))
+    (let* ((edge (window-pixel-edges))
+           (modeline-height (- (nth 3 (window-pixel-edges))
+                               (nth 3 (window-inside-pixel-edges))))
+           (y (- (nth 3 edge) 5 height modeline-height))
+           (x (- (nth 2 edge) 5 width)))
       (cons x y)))
   (setq eldoc-box-position-function #'gatsby:eldoc-box--position)
 #+end_src
