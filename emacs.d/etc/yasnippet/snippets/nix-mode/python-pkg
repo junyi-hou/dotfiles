@@ -1,9 +1,0 @@
-# -*- mode: snippet -*-
-# name: python-pkg
-# key: python
-# expand-env: ((yas-indent-line 'fixed))
-# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?buildInputs[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?];[[:space:]\n]+" nil 'no-error)))
-
-# --
-pyright (python38.withPackages (p: with p; [ jupyter $1 ]))
-$0

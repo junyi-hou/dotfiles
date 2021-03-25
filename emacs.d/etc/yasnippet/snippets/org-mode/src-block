@@ -8,5 +8,5 @@ ${1:#+name: $2
     (setq-local gatsby:org-babel-available-interpreters
                 `(,@gatsby:org-babel-available-interpreters ,val)))
   val)}
-${4:$$(progn (org-edit-special) "")}
+${4:$$(progn (org-edit-special) (yas-abort-snippet))}
 #+end_src

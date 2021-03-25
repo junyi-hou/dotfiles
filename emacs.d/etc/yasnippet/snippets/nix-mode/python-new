@@ -1,0 +1,19 @@
+# -*- mode: snippet -*-
+# name: python-new
+# key: python
+# expand-env: ((yas-indent-line 'fixed))
+# --
+{ pkgs ? import <nixpkgs> {} }:
+
+let
+  pythonEnv = pkgs.python${1:39};
+  pythonEnvPackages = pkgs.python$1Packages;
+in
+
+pkgs.mkShell {
+  buildInputs = [
+    (pythonEnv.withPackages (p: with p; [ $2 ]))
+    pkgs.nodePackages.pyright
+  ];
+  $0
+}

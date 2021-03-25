@@ -116,10 +116,7 @@ The script ~update-user-config~ is also used to initialize configuration for the
 
 * ~home-manager~ Initialization
 
-The following snippet initialize my ~home.nix~ file that feed into ~home-manager switch~ command that updates my dotfiles. It contains two fields:
-
-- ~<<version-info>>~ to control package versions (e.g., python version)
-- ~<<home-manager>>~ to import relevant home-manager configurations from different segment.
+The following snippet initialize my ~home.nix~ file that feed into ~home-manager switch~ command that updates my dotfiles.
 
 #+begin_src nix :tangle home.nix :noweb yes
   { pkgs, lib, config, ... }:
@@ -132,8 +129,6 @@ The following snippet initialize my ~home.nix~ file that feed into ~home-manager
     lispDir = ''${homeDir}/.emacs.d/site-lisp'';
     projectDir = ''${homeDir}/projects'';
     researchDir = ''${homeDir}/research'';
-
-    <<version-info>>
   in
 
   {
@@ -194,85 +189,6 @@ The following snippet initialize my ~home.nix~ file that feed into ~home-manager
 This section contains the code and explanation of my personal configuration for ~emacs~ editor. This configuration is meant to be used with the native comp branch and a running emacs server (with ~server-start~).
 
 In lieu of a proper namespace, I prefix all custom functions, variables with ~gatsby:~, which is the name of my dog.
-
-** The Main ~emacs~ Package
-
-I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on child frame border is made. I put the relevant ~emacs-overlay~ version below:
-
-#+begin_src nix :noweb-ref version-info
-  emacsOverlayHash = "a1c89c95cf659512f72f6ec51c764c03801f890d";
-#+end_src
-
-The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
-
-#+begin_src nix :noweb-ref emacs-package
-  (
-    let
-      libPath = with pkgs; lib.concatStringsSep ":" [
-        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
-        "${lib.getLib stdenv.cc.cc}/lib"
-        "${lib.getLib stdenv.glibc}/lib"
-      ];
-
-      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
-        old: {
-          configureFlags = (lib.remove "--with-xft" old.configureFlags)
-                           ++ lib.singleton "--with-ns";
-        }
-      );
-
-      emacsGccDarwin = pkgs.symlinkJoin {
-        name = "emacsGccDarwin";
-        paths = [ emacsNsGcc ];
-        buildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/emacs \
-          --set LIBRARY_PATH ${libPath}
-        '';
-        meta.platforms = pkgs.stdenv.lib.platforms.linux;
-        passthru.nativeComp = true;
-        src = emacsNsGcc.src;
-      };
-
-    in
-
-      (if pkgs.stdenv.isLinux then pkgs.emacsPgtkGcc else emacsGccDarwin)
-  )
-#+end_src
-
-Putting them together.
-
-#+begin_src nix :noweb-ref home-manager :noweb yes
-  {
-    nixpkgs.overlays = [
-      (import (builtins.fetchTarball {
-        url = "https://github.com/nix-community/emacs-overlay/archive/" + emacsOverlayHash + ".tar.gz";
-      }))
-    ];
-
-    programs.emacs = {
-      enable = true;
-      package =
-        <<emacs-package>>;
-    };
-
-    home = {
-      file.".emacs.d" = {
-        source = ./emacs.d;
-        recursive = true;
-      };
-      sessionVariables = {
-        EDITOR = "emacsclient -c";
-        VISUAL = "emacsclient -c";
-      };
-    };
-
-    services.emacs = {
-      enable = true;
-      client.enable = true;
-    };
-  }
-#+end_src
 
 ** Lexical Binding
 
@@ -3133,9 +3049,11 @@ When shutting down REPL buffers, clean up the ~gatsby:comint-repl-buffer~ variab
 
 This concludes the configuration for ~comint~ mode.
 
-**** jupyter
+**** emacs-jupyter
 
-The builtin ~comint~ mode lacks some features important for data scientists. For example, there is no easy way to display graph in the REPL buffer. ~jupyter~ provides a nice REPL platform for almost all data science-y languages that addresses those shortcomings of ~comint~ mode. There are two attempts to integrate ~jupyter~ with ~emacs~: the first is the ~ein~ package, which provides a fully-fledged ~jupyter~ notebook frontend. the second is the ~emacs-jupyter~ package, which is less ambitious in its scope and provide mainly the REPL thought a dedicated REPL mode (that works like ~jupyter-console~) and an org-babel integration. Since I do not need the fancy features of the notebook, I use the ~emacs-jupyter~ package.
+The builtin ~comint~ mode lacks some features important for data scientists. For example, there is no easy way to display graph in the REPL buffer. ~jupyter~ provides a nice REPL platform for almost all data-science-y languages that addresses those shortcomings of ~comint~.
+
+There are two attempts to integrate ~jupyter~ with ~emacs~: the first is the ~ein~ package, which provides a fully-fledged ~jupyter~ notebook frontend. the second is the ~emacs-jupyter~ package, which is less ambitious in its scope and provide only the REPL thought a dedicated REPL mode (that works like ~jupyter-console~) and an org-babel integration. Since I do not need the fancy features of the notebook, I use the ~emacs-jupyter~ package.
 
 #+begin_src emacs-lisp
   (use-package jupyter
@@ -3202,12 +3120,11 @@ I make necessary changes to the aforementioned points to ensure that ~emacs-jupy
 #+begin_src emacs-lisp
   (advice-add #'jupyter-command :around #'envrc-propagate-environment)
 
-  (defun gatsby:jupyter--maybe-update-kernelspecs (&rest _)
-    "Update kernelspecs if necessary."
-    (when (envrc--find-env-dir)
-      (jupyter-available-kernelspecs 'refresh)))
+  (defun gatsby:jupyter--update-kernelspecs (&rest _)
+    "Update kernelspecs before running any REPL."
+    (jupyter-available-kernelspecs 'refresh))
 
-  (advice-add #'jupyter-run-repl :before #'gatsby:jupyter--maybe-update-kernelspecs)
+  (advice-add #'jupyter-run-repl :before #'gatsby:jupyter--update-kernelspecs)
 #+end_src
 
 Second, the customization. I want to have the code I send to REPL displayed on it.
@@ -3329,15 +3246,7 @@ Enable ligature in jupyter REPL mode:
 
 ~emacs-jupyter~ also provides a better integration with ~org-babel~ than the builtin ~ob-ipython~. However, it requires some setup due to my localized environment.
 
-First, according to the [[https://github.com/nnicandro/emacs-jupyter#org-mode-source-blocks][documentation]], I need to load all languages that I want to use jupyter kernel for first, and then ~jupyter~ at the last position, so it can overshadow some function defined in those libraries.
-
-To accommodate this requirement, I first append ~jupyter~ to the end of ~org-babel-load-languages~.
-
-#+begin_src emacs-lisp
-  (add-to-list 'org-babel-load-languages '(jupyter . t) 'append)
-#+end_src
-
-Second, I want to add any missing kernels to ~org-babel-load-languages~ before ~jupyter~ if I find the kernel available in the current local environment. As I alluded to in [[org-babel]], I do not need to take it out if those kernels become unavailable in other environments.
+First, according to the [[https://github.com/nnicandro/emacs-jupyter#org-mode-source-blocks][documentation]], I need to load all languages that I want to use jupyter kernel for first, and then ~jupyter~ at the last position, so it can overshadow some function defined in those libraries. To do so, I need to add any missing kernels to ~org-babel-load-languages~ before ~jupyter~ if I find the kernel available in the current local environment. As I alluded to in [[org-babel]], I do not need to take it out if those kernels become unavailable in other environments.
 
 #+begin_src emacs-lisp
   (defun gatsby:jupyter--register-local-kernels (kernel-names)
@@ -3347,9 +3256,16 @@ Second, I want to add any missing kernels to ~org-babel-load-languages~ before ~
       (setq inferior-STA-program-name "stata-mp"))
 
     ;; load languages
-    (let ((interpreters `(,@(butlast org-babel-load-languages)
-                          ,@(--map `(,(intern it) . t) kernel-names)
-                          ,@(last org-babel-load-languages))))
+    (let* ((kernel-names '("python3" "stata"))
+           (jupyter '(jupyter . t))
+           (kernels `(,@(--map `(,(intern it) . t) kernel-names)))
+           (interpreters (if (assq 'jupyter org-babel-load-languages)
+                             `(,@(butlast org-babel-load-languages)
+                               ,@kernels
+                               ,jupyter)
+                           `(,@org-babel-load-languages
+                             ,@kernels
+                             ,jupyter))))
       (org-babel-do-load-languages 'org-babel-load-languages interpreters)))
 #+end_src
 
@@ -3384,11 +3300,12 @@ Putting them together, ~gatsby:jupyter--prepare-local-env-for-org~ will check th
 
 #+begin_src emacs-lisp
   (defun gatsby:jupyter--pre-are-local-env-for-org ()
-    (let* ((_kernels (jupyter-available-kernelspecs 'refresh))
-           (kernel-names (--map (plist-get (cddr it) :language) _kernels)))
-      (gatsby:jupyter--register-local-kernels kernel-names)
-      (gatsby:jupyter--update-available-interpreters kernel-names)
-      (gatsby:jupyter--enable-async-block kernel-names)))
+    (when (executable-find "jupyter")
+      (let* ((_kernels (jupyter-available-kernelspecs 'refresh))
+             (kernel-names (--map (plist-get (cddr it) :language) _kernels)))
+        (gatsby:jupyter--register-local-kernels kernel-names)
+        (gatsby:jupyter--update-available-interpreters kernel-names)
+        (gatsby:jupyter--enable-async-block kernel-names))))
 
   (add-hook 'gatsby:org-babel-hook #'gatsby:jupyter--pre-are-local-env-for-org)
 #+end_src
@@ -3785,6 +3702,12 @@ I specify the list of files that need to be ignore in all git repositories. Thes
   #+begin_src conf :noweb-ref gitignore
     "**/.org-latex-imgcache/"
     "**/ltximg/"
+  #+end_src
+
++ ~stata-kernel~ config files
+
+  #+begin_src conf :noweb-ref gitignore
+    ".stata_kernel.conf"
   #+end_src
 
 *** magit
@@ -4310,7 +4233,8 @@ I include the following functions to quickly modify or initialize a ~.envrc~ and
                (y-or-n-p (format "%s is not allowed by direnv, allowing it?")))
       (envrc-allow))
     (find-file-other-window (format "%sshell.nix" root))
-    (yas-expand-snippet (yas-lookup-snippet "new-shell")))
+    (yas-expand-snippet (yas-lookup-snippet "new-shell"))
+    (evil-insert-state))
 #+end_src
 
 I want to refer to the ~*envrc*~ buffer to check out direnv status.
@@ -6165,6 +6089,88 @@ Finally, add key bindings for reactions.
 * Production Environment
 ** Emacs-Lisp
 
+Register ~emacs~ with ~home-manager~
+
+#+begin_src nix :noweb yes :noweb-ref home-manager
+  (
+    { pkgs, ... }:
+    let
+      <<emacsOverlayVersion>>
+    in
+      {
+        nixpkgs.overlays = [
+          (import (builtins.fetchTarball {
+            url = "https://github.com/nix-community/emacs-overlay/archive/" + emacsOverlayHash + ".tar.gz";
+          }))
+        ];
+
+        programs.emacs = {
+          enable = true;
+          package =
+            <<emacs-package>>;
+        };
+
+        home = {
+          file.".emacs.d" = {
+            source = ./emacs.d;
+            recursive = true;
+          };
+          sessionVariables = {
+            EDITOR = "emacsclient -c";
+            VISUAL = "emacsclient -c";
+          };
+        };
+
+        services.emacs = {
+          enable = true;
+          client.enable = true;
+        };
+      }
+  )
+#+end_src
+
+I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on child frame border is made. I put the relevant ~emacs-overlay~ version below:
+
+#+begin_src nix :noweb-ref emacsOverlayVersion
+  emacsOverlayHash = "a1c89c95cf659512f72f6ec51c764c03801f890d";
+#+end_src
+
+The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
+
+#+begin_src nix :noweb-ref emacs-package
+  (
+    let
+      libPath = with pkgs; lib.concatStringsSep ":" [
+        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
+        "${lib.getLib stdenv.cc.cc}/lib"
+        "${lib.getLib stdenv.glibc}/lib"
+      ];
+
+      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
+        old: {
+          configureFlags = (lib.remove "--with-xft" old.configureFlags)
+                           ++ lib.singleton "--with-ns";
+        }
+      );
+
+      emacsGccDarwin = pkgs.symlinkJoin {
+        name = "emacsGccDarwin";
+        paths = [ emacsNsGcc ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/emacs \
+          --set LIBRARY_PATH ${libPath}
+        '';
+        meta.platforms = pkgs.stdenv.lib.platforms.linux;
+        passthru.nativeComp = true;
+        src = emacsNsGcc.src;
+      };
+
+    in
+      (if pkgs.stdenv.isLinux then pkgs.emacsPgtkGcc else emacsGccDarwin)
+  )
+#+end_src
+
 The builtin ~elisp-mode~ is, of course, good enough for editing ~elisp~ file.
 
 #+begin_src emacs-lisp
@@ -6309,25 +6315,7 @@ It is difficult to read regexp in ~elisp~, since I need to escape the escape cha
 
 ** Python
 
-Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel. I use version 3.9 and 2.7 of python.
-
-#+begin_src nix :noweb-ref version-info
-  python3 = pkgs.python39;
-  python2 = pkgs.python27;
-  python3Packages = pkgs.python39Packages;
-  python2Packages = pkgs.python27Packages;
-#+end_src
-
-Register the package.
-
-#+begin_src nix :noweb-ref home-manager
-  {
-    home.packages = with pkgs; [
-      (python3.withPackages (p: with p; [ jupyter xlrd openpyxl pandas ]))
-      nodePackages.pyright
-    ];
-  }
-#+end_src
+Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel.
 
 I use the builtin ~python-mode~, together with ~emacs-jupyter~ and ~eglot~ for REPL/LSP support.
 
@@ -6432,94 +6420,51 @@ Now define keybindings.
 
 STATA is a package that can conduct statistical analysis using its own script-like language. It has two main advantages for me: it is widely used in economics community, and therefore has a large array of packages to perform different statistical analyses. I am also more familiar with it than the R package.
 
+Install STATA with ~home-manager~.
+
 #+begin_src nix :noweb-ref home-manager
-  (
-    let
-      stata = with pkgs; stdenv.mkDerivation {
-        name = "stata-14";
-        src = /home/lactaid/Downloads/stata;
-        # FIXME: still complaining not finding the following libraries
-        # installing from arch for now
-        # (libpng12; ncurses5-compat-libs)
-        propagatedBuildInputs = [ ncurses5 libpng12 ];
-        installPhase = ''
-          export plat=linux.64
+  {
+    home.packages = [
+      (
+        let
+          stata = pkgs.stdenv.mkDerivation {
+            name = "stata-14";
+            src = /home/lactaid/Downloads/stata;
+            # FIXME: still complaining not finding the following libraries
+            # installing from arch for now
+            # (libpng12; ncurses5-compat-libs)
+            propagatedBuildInputs = with pkgs; [ ncurses5 libpng12 ];
+            installPhase = ''
+              export plat=linux.64
 
-          buildDir=$(pwd)
-          mkdir -p $out
-          cp unix/linux.64/ado.taz $out/ado.tar.Z
-          cp unix/linux.64/base.taz $out/base.tar.Z
-          cp unix/linux.64/bins.taz $out/bins.tar.Z
-          cp unix/linux.64/docs.taz $out/docs.tar.Z
-          cp unix/linux.64/setrwxp $out/setrwxp
-          cp unix/linux.64/inst2 $out/inst2
+              buildDir=$(pwd)
+              mkdir -p $out
+              cp unix/linux.64/ado.taz $out/ado.tar.Z
+              cp unix/linux.64/base.taz $out/base.tar.Z
+              cp unix/linux.64/bins.taz $out/bins.tar.Z
+              cp unix/linux.64/docs.taz $out/docs.tar.Z
+              cp unix/linux.64/setrwxp $out/setrwxp
+              cp unix/linux.64/inst2 $out/inst2
 
-          cd $out
-          ./inst2 now
+              cd $out
+              ./inst2 now
 
-          # install license file
-          cp $buildDir/stata.lic ./
-        '';
-      };
-
-      kernelFile = {
-        display_name = "Stata";
-        language = "stata";
-        argv = ["python" "-m" "stata_kernel" "-f" "{connection_file}"];
-      };
-
-      stataKernel = with pkgs; python3.pkgs.buildPythonPackage rec {
-        pname = "stata_kernel";
-        version = "1.12.2";
-        src = builtins.fetchTarball {
-          url = https://github.com/kylebarron/stata_kernel/archive/v1.12.2.tar.gz;
-        };
-        propagatedBuildInputs = [
-          python3
-          python3Packages.beautifulsoup4
-          python3Packages.jupyter
-          python3Packages.pandas
-          python3Packages.packaging
-          python3Packages.pillow
-          python3Packages.pexpect
-          python3Packages.pygments
-          python3Packages.requests
-          stata
-        ];
-        doCheck = false;
-        postInstall = ''
-          # install kernel files
-          mkdir -p $out/kernels/stata_kernel
-          echo '${builtins.toJSON kernelFile}' > $out/kernels/stata_kernel/kernel.json
-        '';
-      };
-
-    in
-
-      {
-        home = {
-          packages = [ stata stataKernel ];
-
-          file = {
-            ".stata_kernel.conf".text = ''
-              [stata_kernel]
-              stata_path = \${stata}/stata-mp
-              execution_mode = console
-              cache_directory = ~/.cache/stata_kernel_cache
-              autocomplete_closing_symbol = False
-              graph_format = svg
-              graph_scale = 1
-              user_graph_keywords = coefplot,vioplot
+              # install license file
+              cp $buildDir/stata.lic ./
             '';
           };
-
-          sessionVariables = {
-            JUPYTER_PATH = ''$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}'';
-          };
-        };
-      }
-  )
+        in
+          (
+            pkgs.writeShellScriptBin "stata-bin" ''
+              ${stata}/stata-mp
+            ''
+          )
+      )
+    ];
+  }
 #+end_src
+
+I'd like to use ~emacs~ to replace STATA's builtin IDE. To do so, I need to be able to send codes from my ~emacs~ to an underlying STATA process. ~stata_kernel~ implements a STATA kernel for jupyter REPL, for which I can interacting from within ~emasc~ using the [[emacs-jupyter]] package.
 
 There is no official major mode for stata ~do~ script files. ~ess~ (emacs speak statistics) used to offer an integrated development environment for STATA (in addition to R and other statistical packages). Yet, ~ess-stata-mode~ became [[http://ess.r-project.org/Manual/news.html][obsolete]] since version 19.03. I use a stripped down version of ~stata-mode~ to work in STATA script files.
 
@@ -6919,19 +6864,15 @@ I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-w
 
 Initializing system-specific configuration using the ~lib.mkIf~ function:
 
-#+begin_src nix :tangle ./system-specific-config.nix :noweb yes
-  { pkgs, lib, config, ...}:
+#+begin_src nix :noweb-ref home-manager :noweb yes
+  (
+    { pkgs, lib, config, ...}:
 
-  lib.mkMerge [
-    <<linux-config>>
-    <<macos-config>>
-  ]
-#+end_src
-
-Make sure to load those configuration in the main ~home.nix~ file.
-
-#+begin_src nix :noweb-ref home-manager
-  ./system-specific-config.nix
+    lib.mkMerge [
+      <<linux-config>>
+      <<macos-config>>
+    ]
+  )
 #+end_src
 
 ** Linux (Wayland)
