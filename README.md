@@ -19,7 +19,7 @@ In command line, run
 emacs -Q --batch main.org -f org-babel-tangle
 ```
 
-In `emacs`, run
+Or in `emacs`, run
 
 ```
 M-x find-file ./main.org
