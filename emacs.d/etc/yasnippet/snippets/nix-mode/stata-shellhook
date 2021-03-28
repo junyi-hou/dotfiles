@@ -1,0 +1,19 @@
+# -*- mode: snippet -*-
+# key: stata
+# name: stata-shellhook
+# expand-env: ((yas-indent-line 'fixed))
+# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?shellHook[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?;[[:space:]\n]+" nil 'no-error)))
+# --
+cat > ${projectRoot}/.stata_kernel.conf <<EOF
+[stata_kernel]
+stata_path = stata-bin
+execution_mode = console
+cache_directory = ~/.cache/stata_kernel_cache
+graph_format = svg
+graph_scale = 1
+user_graph_keywords = coefplot,vioplot
+EOF
+
+export STATA_KERNEL_USER_CONFIG_PATH=${projectRoot}/.stata_kernel.conf
+export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}
+$0

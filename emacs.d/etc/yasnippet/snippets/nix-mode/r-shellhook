@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# key: r
+# name: r-shellhook
+# expand-env: ((yas-indent-line 'fixed))
+# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?shellHook[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?;[[:space:]\n]+" nil 'no-error)))
+# --
+export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}
+$0

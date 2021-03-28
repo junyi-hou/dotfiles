@@ -2,6 +2,7 @@
 # name: python-new
 # key: python
 # expand-env: ((yas-indent-line 'fixed))
+# condition: (string= (buffer-string) "python")
 # --
 { pkgs ? import <nixpkgs> {} }:
 
@@ -14,6 +15,7 @@ pkgs.mkShell {
   buildInputs = [
     (pythonEnv.withPackages (p: with p; [ $2 ]))
     pkgs.nodePackages.pyright
+    $3
   ];
   $0
 }

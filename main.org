@@ -4573,7 +4573,7 @@ To receive and send emails from the comfort in ~emacs~, I use
 
     To define the last filter, I utilize the ~python~ interface ~afew~ offers:
 
-    #+begin_src jupyter-python :noweb-ref OnlyAllowListFilter
+    #+begin_src python :noweb-ref OnlyAllowListFilter
       import os
       import json
 
@@ -6496,6 +6496,70 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
 
    "rz" 'jupyter-repl-associate-buffer
    "rZ" 'jupyter-repl-restart-kernel)
+#+end_src
+
+** R
+
+~R~ is an open source statistical package, which makes it attractive to people outside of economists. ~emacs~ can edit ~R~ files.
+
+#+begin_src emacs-lisp :noweb yes
+  (use-package ess
+    :hook
+    <<r-hook>>
+    :config
+    <<r-config>>
+    :general
+    <<r-binding>>)
+#+end_src
+
+Make sure to run ~eglot~ along with R to enable the language server when editing R files.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-hook
+  (ess-r-mode . eglot-ensure)
+#+end_src
+
+Instead of using the ~ess-r-mode~ to run ~R~ REPL, I use ~emacs-jupyter~ for REPL. To do so, I first register ~irkernel~ with ~gatsby:jupyter-repl-function-alist~.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-config
+  (add-to-list 'gatsby:jupyter-repl-function-alist '(ess-r-mode . "irkernel"))
+#+end_src
+
+Setup keybindings for using ~emacs-jupyter~.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-binding
+  (:keymaps 'ess-r-mode-map
+   :states '(motion normal visual)
+   :prefix "SPC"
+   "rb" #'jupyter-eval-buffer
+   "rr" #'jupyter-eval-line-or-region
+   "ro" #'gatsby:jupyter-start-or-switch-to-repl
+
+   "rz" #'jupyter-repl-associate-buffer
+   "rZ" #'jupyter-repl-restart-kernel)
+#+end_src
+
+~R~ has two special operators, assign ("~<-~") and pipe ("~%>%~"). For the former, ~ess~ has a builtin ~ess-insert-assign~ function. For the latter, I define my own function to do that.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-config
+  (defun gatsby:r-pipe ()
+    "Insert tidyverse pipe symbol %>%."
+    (interactive)
+    (insert "%>%")
+    (reindent-then-newline-and-indent))
+#+end_src
+
+I bind ~ess-insert-assign~ and ~gatsby:r-pipe~ both to ~M-RET~, with a helper function ~gatsby:r-assign-or-pipe~ to determine which one should be applied based on whether there is a ~=~ before the point.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-config
+  (defun gatsby:r-assign-or-pipe ()
+    "If the last non space character before `point' is \"=\", replace the equal sign with the assign operator. Otherwise insert a pipe operator."
+    (interactive)
+    (if (re-search-backward "[[:space:]*]=[[:space:]*]\\=" (line-beginning-position) t)
+        (progn (replace-match "") (call-interactively #'ess-insert-assign))
+      (gatsby:r-pipe)))
+
+  (general-define-key :keymaps 'ess-r-mode-map :states 'insert
+    "M-RET" #'gatsby:r-assign-or-pipe)
 #+end_src
 
 ** Nix

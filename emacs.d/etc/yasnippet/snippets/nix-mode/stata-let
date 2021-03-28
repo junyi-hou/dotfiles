@@ -1,0 +1,36 @@
+# -*- mode: snippet -*-
+# key: stata
+# name: stata-let
+# expand-env: ((yas-indent-line 'fixed))
+# condition: (and (save-excursion (re-search-backward "^[[:space:]]*?let[[:space:]\n]+" nil 'no-error)) (save-excursion (re-search-forward "^[[:space:]]*?in[[:space:]\n]+" nil 'no-error)))
+# --
+stataKernelFile = {
+  display_name = "Stata";
+  language = "stata";
+  argv = [ "python" "-m" "stata_kernel" "-f" "{connection_file}" ];
+};
+stataKernel = pythonEnv.pkgs.buildPythonPackage rec {
+  pname = "stata_kernel";
+  version = "1.12.2";
+  src = pythonEnv.pkgs.fetchPypi {
+    inherit pname version;
+    sha256 = "23cd0d89e691a138906ea68a12663cb1301b82d1af8db6883c5495708d2e58fa";
+  };
+  propagatedBuildInputs = with pythonEnvPackages; [
+    beautifulsoup4
+    jupyter
+    pandas
+    packaging
+    pillow
+    pexpect
+    pygments
+    requests
+  ];
+  doCheck = false;
+  postInstall = ''
+    mkdir -p $out/kernels/stata_kernel
+    echo '${builtins.toJSON stataKernelFile}' > $out/kernels/stata_kernel/kernel.json
+  '';
+};
+projectRoot = builtins.toString ./.;
+$0
