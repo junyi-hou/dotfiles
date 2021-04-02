@@ -4138,8 +4138,10 @@ An big advantage of ~nix~ is that it can create reproducible isolate production 
 
 To address this problem, I use ~envrc~, which makes ~process-environment~ a buffer-local variable. I first need to enable ~direnv~ and ~nix-direnv~ support in ~home-manager~.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref home-manager :noweb yes
   {
+    <<nix-direnv-overlays>>
+
     programs.direnv = {
       enable = true;
       enableNixDirenvIntegration = true;
@@ -4149,11 +4151,28 @@ To address this problem, I use ~envrc~, which makes ~process-environment~ a buff
           prefix = [ projectDir researchDir ];
         };
         global = {
-          strict_env = false;
+          strict_env = true;
         };
       };
     };
   }
+#+end_src
+
+There is a [[https://github.com/nix-community/nix-direnv/issues/70][bug]] in the current version of the ~nix-direnv~ cannot support the ~strict_env~ setting in ~direnv~, as it will leave ~NIX_BIN_PREFIX~ variable unset. The following snippet taken from the same discussion fix this.
+
+#+begin_src nix :noweb-ref nix-direnv-overlays
+  nixpkgs.overlays = [
+    (self: super: {
+      nix-direnv = super.nix-direnv.overrideAttrs (oldAttrs: rec {
+        # Substitute instead of wrapping because the resulting file is getting sourced, not executed:
+        postPatch = ''
+            substituteInPlace direnvrc \
+              --replace "\''${NIX_BIN_PREFIX}" "\''${NIX_BIN_PREFIX:-${super.nix}/bin/}" \
+              --replace "grep" "${super.gnugrep}/bin/grep"
+          '';
+      });
+    })
+  ];
 #+end_src
 
 Then register ~envrc~ within ~emacs~.
