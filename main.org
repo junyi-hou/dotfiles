@@ -2440,6 +2440,18 @@ I rarely use ~<RET>~ to change line in the normal state, so I bind it to open li
     "RET" #'org-open-at-point)
 #+end_src
 
+*** org-appear
+
+Org-mode automatically renders links like [[org-appear][this]]. ~org-appear~ expands those links when the cursor is on them to make editing them easier.
+
+#+begin_src emacs-lisp
+  (use-package org-appear
+    :straight (org-appear :type git :host github :repo "awth13/org-appear")
+    :hook (org-mode . org-appear-mode))
+
+  (setq org-appear-autolinks t)
+#+end_src
+
 *** org-export
 
 ~org-mode~ includes a simple dispatch function to translate org files into other popular formats. In particular, I use the following backends: ~ascii~, ~html~, ~latex~, ~md~, and ~odt~. The only one worth mentioning is ~odt~, which is compatible with Google Docs.
