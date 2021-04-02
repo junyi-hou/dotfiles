@@ -2545,7 +2545,7 @@ To use ~org-babel~ to evaluate source code blocks, I need to register the interp
   (defconst gatsby:org-babel-default-interpreters '("emacs-lisp" "shell")
     "List of interpreters that should be available at all environments.")
 
-  (defvar gatsby:org-babel-available-interpreters gatsby:org-babel-default-interpreters
+  (defvar gatsby:org-babel-available-interpreters '("emacs-lisp" "shell")
     "List of interpreters available in the current environment.")
 
   (make-variable-buffer-local 'gatsby:org-babel-available-interpreters)
