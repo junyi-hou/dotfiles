@@ -687,6 +687,79 @@ I defer configuring evil state, slack, mail and envrc segments when I load those
                       '(:eval (gatsby:format-right-mode-line))))
 #+end_src
 
+*** font
+
+To make this configuration portable, I define a font specifically for ~emacs~ using ~home-manager~. The vanilla ~home-manager~ do not have a module to install fonts. There is a [[https://github.com/nix-community/home-manager/issues/520#issuecomment-451759097][comment]] that adds a custom module to ~home-manager~, which I include below.
+
+#+begin_src nix :noweb-ref home-manager
+  (
+    {config, pkgs, lib, ...}:
+
+    let
+      cfg = config.fonts;
+    in
+
+      with lib;
+
+      {
+        options = {
+          fonts.fonts = mkOption {
+            type = types.listOf types.package;
+            default = [];
+            example = literalExample "[ pkgs.dejavu_fonts ]";
+            description = "List of fonts.";
+          };
+        };
+
+        config = {
+          home.packages = cfg.fonts ++ (if config.fonts.fontconfig.enable then [ pkgs.fontconfig ] else []);
+
+          home.file."${config.xdg.cacheHome}/hm-fonts" = let
+            getHash = drv: builtins.elemAt (builtins.match "${builtins.storeDir}/([a-z0-9]{32})-.*.drv" drv.drvPath) 0;
+          in {
+            text = concatMapStringsSep "\n" getHash cfg.fonts;
+            onChange = ''
+          echo "Caching fonts"
+          $DRY_RUN_CMD fc-cache -f
+        '';
+          };
+        };
+      }
+  )
+#+end_src
+
+With the help of this module, I can now configure the fonts for ~emacs~.
+#+begin_src nix :noweb-ref home-manager :noweb yes
+  {
+    fonts = {
+      fonts = [];
+      fontconfig.enable = true;
+    };
+    home.file.".config/fontconfing/conf.d/90-emacs-fonts".text = ''
+    <<emacs-font-config>>
+    '';
+  }
+#+end_src
+
+I use ~fontconfig~ to "glue" different fonts together to cover different character sets. Specifically, I define a font named ~emacs-font~ and aliasing all other fonts (covering different character sets) I plan to use in ~emacs~ under it.
+
+#+begin_src xml :noweb-ref emacs-font-config
+  <?xml version='1.0'?>
+  <fontconfig>
+    <alias binding="same">
+      <family>emacs-font</family>
+      <prefer>
+        <family>Iosevka Term</family>
+        <family>SourceHanSansCN</family>
+        <family>SourceHanSansTW</family>
+        <family>SourceHanSansJP</family>
+        <family>SourceHanSansKR</family>
+        <family>UbuntuMono Nerd Font</family>
+      </prefer>
+    </alias>
+  </fontconfig>
+#+end_src
+
 *** font size
 
 I use a resolution-based scale method to determine font size. Specifically, I first define a base font size (in ~gatsby:base-font-size~) for a 1080p monitor. The actual font size is determined by the resolution of the monitor at the time of creating frame. For example, if a frame is made on a 1440p monitor, then the actual font size will be 180 (= 135 * 1440/1080).
@@ -6976,8 +7049,8 @@ Initializing system-specific configuration using the ~lib.mkIf~ function:
 
 + display services (~wayland~, ~sway~)
 + notification services (~libnotify~, ~mako~)
-+ fonts
 + network services (~networkmanager~, ~bluez~)
++ system fonts
 
 Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
 
@@ -6986,18 +7059,16 @@ Notwithstanding this shortcoming, ~home-manager~ can still be used to manage the
     lib.mkIf (pkgs.stdenv.isLinux) {
       home = {
         file = {
-          ".config/fontconfig" = {
-            source = ./linux/fontconfig;
-            recursive = true;
-          };
           ".config/sway/config".source = ./linux/sway;
           ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
           ".config/waybar/config".source = ./linux/waybar;
           ".config/waybar/style.css".source = ./linux/waybar-style;
+          ".config/fontconfig" = {
+            source = ./linux/fontconfig;
+            recursive = true;
+          };
         };
       };
-
-      fonts.fontconfig.enable = true;
 
       <<extra-linux-packages>>
       <<extra-linux-setup>>
@@ -7035,10 +7106,6 @@ In addition, I include some Linux-wayland specific packages.
 ** MacOS
 
 On MacOS system, those components are builtin, and I don't need to worry about it.
-
-#+begin_src nix :noweb-ref macos-config
-
-#+end_src
 
 * TODO
 ** vterm: implement ~evil-surround~.
