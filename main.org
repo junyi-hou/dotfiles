@@ -238,7 +238,7 @@ mini-window is a window at the bottom of the screen. It is used to display messa
   (setq max-mini-window-height 1)
 #+end_src
 
-*** replace yes-or-no-p
+*** abbreviate yes-or-no-p
 
 Sometimes, ~emacs~ asks me for a yes/no answer. But instead of typing "yes" or "no", I can simply use "y" or "n" to answer those questions.
 
@@ -735,7 +735,7 @@ With the help of this module, I can now configure the fonts for ~emacs~.
       fonts = [];
       fontconfig.enable = true;
     };
-    home.file.".config/fontconfing/conf.d/90-emacs-fonts".text = ''
+    home.file.".config/fontconfig/conf.d/90-emacs-fonts".text = ''
     <<emacs-font-config>>
     '';
   }
@@ -769,7 +769,7 @@ I use a resolution-based scale method to determine font size. Specifically, I fi
 
   (set-face-attribute
    'default nil
-   :family "monospace"
+   :family "Monospace"
    :width 'normal
    :weight 'Light)
 
@@ -6518,6 +6518,11 @@ Now define keybindings.
 
    "rz" #'jupyter-repl-associate-buffer
    "rZ" #'jupyter-repl-restart-kernel)
+
+  (:states 'visual
+   :keymaps 'python-mode-map
+   [remap evil-shift-left] #'python-indent-shift-left
+   [remap evil-shift-right] #'python-indent-shift-right)
 #+end_src
 
 ** STATA
@@ -6762,6 +6767,17 @@ I use ~nixpkgs-fmt~ to format my nix code before save.
   (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
 #+end_src
 
+~nix-format-buffer~ moves point to ~point-min~. This behavior is annoying since I hook ~nix-format-buffer~ to the ~before-save-hool~, which means I have to move back to the last-modified position after each save. The following advice fix this issue.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
+  (defun gatsby:nix--save-excrusion (fn &rest args)
+    (let ((ori-point (point)))
+      (apply fn args)
+      (goto-char ori-point)))
+
+  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
+#+end_src
+
 Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get the hash value of source codes that I can feed to the ~fetcher~ function later.
 
 #+begin_src nix :noweb-ref home-manager
@@ -6795,8 +6811,10 @@ I can also read man page from within ~emacs~ and even in ~eshell~. The builtin ~
     :general
     (:keymaps 'Man-mode-map
      :states 'motion
-     "zc" 'outline-hide-entry
-     "zo" 'outline-show-entry)
+     "zc" #'outline-hide-entry
+     "zo" #'outline-show-entry
+     ">" #'outline-next-heading
+     "<" #'outline-previous-heading)
 
     :config
     <<man-config>>)
@@ -7000,7 +7018,7 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
 Apart from the ability of folding sections, enabling ~outline-minor-mode~ also allows me to navigate quickly between different sections.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref tex-binding
-  (:keymap 'LaTeX-mode-map :states '(normal visual motion)
+  (:keymaps 'LaTeX-mode-map :states 'normal
    "<" #'outline-previous-heading
    ">" #'outline-next-heading)
 #+end_src
@@ -7108,9 +7126,8 @@ In addition, I include some Linux-wayland specific packages.
 On MacOS system, those components are builtin, and I don't need to worry about it.
 
 * TODO
-** vterm: implement ~evil-surround~.
+** vterm: iron out quirks in integrating with ~evil~
 ** langtool: write my own languagetool integration?
-** jupyter: save repl log history when exit
 ** org-gcal: support invite people
 
 check out https://developers.google.com/calendar/v3/reference/events/insert
