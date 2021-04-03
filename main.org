@@ -6439,12 +6439,12 @@ Now define keybindings.
   (:states '(motion normal visual)
    :keymaps 'python-mode-map
    :prefix "SPC"
-   "rb" 'jupyter-eval-buffer
-   "rr" 'gatsby:python-eval-region-or-line
-   "ro" 'gatsby:jupyter-start-or-switch-to-repl
+   "rb" #'jupyter-eval-buffer
+   "rr" #'gatsby:python-eval-region-or-line
+   "ro" #'gatsby:jupyter-start-or-switch-to-repl
 
-   "rz" 'jupyter-repl-associate-buffer
-   "rZ" 'jupyter-repl-restart-kernel)
+   "rz" #'jupyter-repl-associate-buffer
+   "rZ" #'jupyter-repl-restart-kernel)
 #+end_src
 
 ** STATA
@@ -6521,12 +6521,12 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
   (:states '(motion normal visual)
    :keymaps 'stata-mode-map
    :prefix "SPC"
-   "rb" 'jupyter-eval-buffer
-   "rr" 'jupyter-eval-line-or-region
-   "ro" 'gatsby:jupyter-start-or-switch-to-repl
+   "rb" #'jupyter-eval-buffer
+   "rr" #'jupyter-eval-line-or-region
+   "ro" #'gatsby:jupyter-start-or-switch-to-repl
 
-   "rz" 'jupyter-repl-associate-buffer
-   "rZ" 'jupyter-repl-restart-kernel)
+   "rz" #'jupyter-repl-associate-buffer
+   "rZ" #'jupyter-repl-restart-kernel)
 #+end_src
 
 ** R
