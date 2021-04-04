@@ -525,6 +525,12 @@ I turn on ~visual-fill-column-mode~ only for ~text-mode~, while using the builti
   (add-hook 'text-mode-hook #'visual-fill-column-mode)
 #+end_src
 
+By default, ~visual-fill-column-mode~ places the text on the left side of the window. I want to adjust the margin so the text is in the center of the window.
+
+#+begin_src emacs-lisp
+  (setq-default visual-fill-column-center-text t)
+#+end_src
+
 **** auto-fill-mode
 
 ~auto-fill-mode~ is a little bit tricky. On the one hand, I do not want it to mess up with my code formatting. For that, I can set ~comment-auto-fill-only-comments~ to non-nil to prevent ~auto-fill~ to wrap code.
@@ -2734,7 +2740,8 @@ With the help of ~nerd-font~, I could have fancy prefix to indicate the type of 
 ~company~ is an autocomplete engine for ~emacs~.
 
 #+begin_src emacs-lisp
-  (use-package company)
+  (use-package company
+    :straight (company :files (:defaults "icons")))
   (add-hook 'prog-mode-hook #'company-mode)
 #+end_src
 
@@ -2847,12 +2854,9 @@ Now the backends.
   (setq company-dabbrev-downcase nil
         company-dabbrev-ignore-case nil
         company-dabbrev-code-other-buffers nil
-        company-backends '((company-semantic company-capf :with company-yasnippet)
+        company-backends '((company-capf :with company-yasnippet)
                            company-files
-                           (company-dabbrev-code
-                            company-keywords
-                            company-abbrev)
-                           company-dabbrev))
+                           (company-dabbrev-code company-keywords company-abbrev company-dabbrev)))
 #+end_src
 
 Finally, ~prescient~ (introduced in the [[prescient]] section) provides a nice sorting mechanism for ~company~ depend on selection history and other stuffs.
@@ -6991,11 +6995,14 @@ Furthermore, tex has many wired pairs (like $). It does not play well with ~elec
     "DEL" #'gatsby:latex-delete)
 #+end_src
 
-Finally, I use ~Zathura~ as pdf viewer.
+Finally, I use ~Zathura~ as my pdf viewer.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref home-manager :noweb yes
   {
-    programs.zathura.enable = true;
+    programs.zathura = {
+      enable = true;
+      <<zathura-options>>
+    };
   }
 #+end_src
 
@@ -7014,6 +7021,20 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
            (interactive)
            (TeX-command-sequence "View" t)))
 #+end_src
+
+~Zathura~ supports inverse search via default keybinding ~<C-left-button>~, and it seems there is [[https://unix.stackexchange.com/questions/423091/how-to-remap-an-existing-keybinding-in-zathura][no way to change this binding]]. Therefore, I bind a custom script that first move the cursor to the center of the ~zathura~ window. It then sends a ~<C-left-button>~ event to ~Zathura~ to conduct inverse search. I named this script ~zathuraInverseSearch~.
+
+#+begin_src nix :noweb-ref zathura-options
+  options = {
+    synctex = true;
+    synctex-editor-command = "emacsclient +%{line} +{input}";
+  };
+  extraConfig = ''
+    map <C-r> exec zathuraInverseSearch
+  '';
+#+end_src
+
+Unfortunately, ~zathuraInverseSearch~ is system-specific. In Linux, I use ~ydotool~ to mimic mouse movement and ~swaymsg~ to detect current window setup. In MacOS, I use the builtin ~AppleScript~ for it.
 
 Apart from the ability of folding sections, enabling ~outline-minor-mode~ also allows me to navigate quickly between different sections.
 
@@ -7127,6 +7148,7 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 
 * TODO
 ** vterm: iron out quirks in integrating with ~evil~
+** zathura: finish inverse search
 ** langtool: write my own languagetool integration?
 ** org-gcal: support invite people
 
