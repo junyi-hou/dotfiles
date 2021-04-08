@@ -3613,7 +3613,6 @@ First, I include ~GPG~ in my ~home-manager~ system.
     };
 
     home = {
-      packages = [ pkgs.openssh ];
       sessionVariables.SSH_AUTH_SOCK = "$(gpgconf --list-dirs agent-ssh-socket)";
       activation = {
         setGpgPermission = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -3626,8 +3625,6 @@ First, I include ~GPG~ in my ~home-manager~ system.
     services = {
       gpg-agent = {
         enable = true;
-        enableSshSupport = true;
-        sshKeys = [ "6E818AFD37FF53D40D410CEED290B5EC7D476683" ];
         defaultCacheTtl = 720000; # 200 hours
         maxCacheTtl = 720000;
         defaultCacheTtlSsh = 720000;
@@ -3724,6 +3721,31 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 
 #+begin_src emacs-lisp
   (add-hook 'after-init-hook #'sudo-edit-indicator-mode)
+#+end_src
+
+* Remote Editing
+
+First enable ssh.
+
+#+begin_src nix :noweb-ref home-manager :noweb yes
+  {
+    programs.ssh = {
+      enable = true;
+      matchBlocks = {
+        <<host-alias>>
+      };
+    };
+  }
+#+end_src
+
+Add ~aws~ host for testing.
+
+#+begin_src nix :noweb-ref host-alias
+  "aws" = {
+    hostname = "18.191.139.209";
+    user = "ubuntu";
+    identityFile = "~/.ssh/aws-key.pem";
+  };
 #+end_src
 
 * Project Management
