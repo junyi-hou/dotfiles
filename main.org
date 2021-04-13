@@ -736,34 +736,68 @@ To make this configuration portable, I define a font specifically for ~emacs~ us
 
 With the help of this module, I can now configure the fonts for ~emacs~.
 #+begin_src nix :noweb-ref home-manager :noweb yes
-  {
-    fonts = {
-      fonts = [];
-      fontconfig.enable = true;
-    };
-    home.file.".config/fontconfig/conf.d/90-emacs-fonts".text = ''
-    <<emacs-font-config>>
-    '';
-  }
+  (
+    let
+      pragmataPro = with pkgs; stdenv.mkDerivation {
+        pname = "PragmataPro";
+        version = "0.828";
+        src = /home/lactaid/Downloads/PragmataPro0.828-2.zip;
+        nativeBuildInputs = [ unzip ];
+        installPhase = ''
+          mkdir -p $out/share/fonts/PragmataPro
+          cp *.ttf $out/share/fonts/PragmataPro
+        '';
+      };
+    in
+      {
+        fonts = {
+          fonts = [ pragmataPro ];
+          fontconfig.enable = true;
+        };
+      }
+  )
 #+end_src
 
-I use ~fontconfig~ to "glue" different fonts together to cover different character sets. Specifically, I define a font named ~emacs-font~ and aliasing all other fonts (covering different character sets) I plan to use in ~emacs~ under it.
+*** ligature
 
-#+begin_src xml :noweb-ref emacs-font-config
-  <?xml version='1.0'?>
-  <fontconfig>
-    <alias binding="same">
-      <family>emacs-font</family>
-      <prefer>
-        <family>Iosevka Term</family>
-        <family>SourceHanSansCN</family>
-        <family>SourceHanSansTW</family>
-        <family>SourceHanSansJP</family>
-        <family>SourceHanSansKR</family>
-        <family>UbuntuMono Nerd Font</family>
-      </prefer>
-    </alias>
-  </fontconfig>
+Ligatures are multi-byte characters (like Chinese) that represent some commonly used mathematical symbols (e.g., != and >=). Displaying ligatures properly is not only aesthetically pleasing, but also makes the code easier to read. Before this package, only the ~emacs-plus~ build on macOS supports universal ligature. Now I can have ligatures on GNU version of the emacs as well.
+
+#+begin_src emacs-lisp
+  (use-package ligature :straight (ligature :host github :repo "mickeynp/ligature.el"))
+#+end_src
+
+Different font offers different ligatures, and I need to register the proper ligatures that are compatible with the font that I am using. I follow the example configuration for ~Pragmata Pro~ in the [[https://github.com/mickeynp/ligature.el/issues/8#issuecomment-685015141][ligature repository]] to register ligatures.
+
+#+begin_src emacs-lisp
+  (ligature-set-ligatures
+   'prog-mode
+   '("!!" "!=" "!==" "!!!" "!≡" "!≡≡" "!>" "!=<" "#("
+     "#_" "#{" "#?" "#>" "##" "#_(" "%=" "%>" "%>%" "%<%"
+     "&%" "&&" "&*" "&+" "&-" "&/" "&=" "&&&" "&>" "$>"
+     "***" "*=" "*/" "*>" "++" "+++" "+=" "+>" "++=" "--"
+     "-<" "-<<" "-=" "->" "->>" "---" "-->" "-+-" "-\\/"
+     "-|>" "-<|" ".." "..." "..<" ".>" ".~" ".=" "/*" "//"
+     "/>" "/=" "/==" "///" "/**" ":::" "::" ":=" ":≡" ":>"
+     ":=>" ":(" ":-(" ":)" ":-)" ":/" ":\\" ":3" ":D" ":P"
+     ":>:" ":<:" "<$>" "<*" "<*>" "<+>" "<-" "<<" "<<<" "<<="
+     "<=" "<=>" "<>" "<|>" "<<-" "<|" "<=<" "<~" "<~~" "<<~"
+     "<$" "<+" "<!>" "<@>" "<#>" "<%>" "<^>" "<&>" "<?>" "<.>"
+     "</>" "<\\>" "<\">" "<:>" "<~>" "<**>" "<<^" "<!" "<@"
+     "<#" "<%" "<^" "<&" "<?" "<." "</" "<\\" "<\"" "<:" "<->"
+     "<!--" "<--" "<~<" "<==>" "<|-" "<<|" "<-<" "<-->" "<<=="
+     "<==" "=<<" "==" "===" "==>" "=>" "=~" "=>>" "=/=" "=~="
+     "==>>" "≡≡" "≡≡≡" "≡:≡" ">-" ">=" ">>" ">>-" ">>=" ">>>"
+     ">=>" ">>^" ">>|" ">!=" ">->" "??" "?~" "?=" "?>" "???"
+     "?." "^=" "^." "^?" "^.." "^<<" "^>>" "^>" "\\\\" "\\>"
+     "\\/-" "@>" "|=" "||" "|>" "|||" "|+|" "|->" "|-->" "|=>"
+     "|==>" "|>-" "|<<" "||>" "|>>" "|-" "||-" "~=" "~>" "~~>"
+     "~>>" "[[" "]]" "\">" "_|_"))
+#+end_src
+
+Enable ~ligature~ globally.
+
+#+begin_src emacs-lisp
+  (add-hook 'after-init-hook #'global-ligature-mode)
 #+end_src
 
 *** font size
@@ -775,9 +809,9 @@ I use a resolution-based scale method to determine font size. Specifically, I fi
 
   (set-face-attribute
    'default nil
-   :family "Monospace"
+   :family "PragmataPro Mono Liga"
    :width 'normal
-   :weight 'Light)
+   :weight 'Regular)
 
   (defun gatsby:theme-fontsize-up (&optional size)
     "Increase the font size in the current frame by SIZE.  If SIZE is nil, default to 5."
@@ -911,36 +945,6 @@ By default, line numbers in ~display-line-numbers~ are left-align. The following
 
 #+begin_src emacs-lisp
   (setq display-line-numbers-width-start t)
-#+end_src
-
-*** ligature
-
-Ligatures are multi-byte characters (like Chinese) that represent some commonly used mathematical symbols (e.g., != and >=). Displaying ligatures properly is not only aesthetically pleasing, but also makes the code easier to read. Before this package, only the ~emacs-plus~ build on macOS supports universal ligature. Now I can have ligatures on GNU version of the emacs as well.
-
-#+begin_src emacs-lisp
-  (use-package ligature :straight (ligature :host github :repo "mickeynp/ligature.el"))
-#+end_src
-
-Different font offers different ligatures, and I need to register the proper ligatures that are compatible with the font that I am using. I follow the example configuration for ~Iosevka~ in the [[https://github.com/mickeynp/ligature.el][ligature repository]] to register ligatures.
-
-#+begin_src emacs-lisp
-  (ligature-set-ligatures
-   'prog-mode
-   '("<--" "<---" "<<-" "<-" "<->" "->" "->>" "-->" "--->"
-     "<!--" "-<<" "-<" "-<-" "->-" ">-" ">>-" "<-->" "<--->"
-     "<---->" "<==" "<===" "<<=" "<=" "<=>" "=>" "=>>" "==>"
-     "===>" "<!---" "=<<" "=<" "=<=" "=>=" ">=" ">>=" "<==>"
-     "<===>" "<====>" "<-------" "------->" "<======>" "<~~"
-     "<~" "~>" "~~>" "\\/" "/\\" "==" "!=" "/=" "~=" "<>"
-     "===" "!==" "=/=" "=!=" ":=" ":-" ":+" "<*" "<*>" "*>"
-     "<|" "<|>" "|>" "+:" "-:" "=:" "::" ":::" "<." "<.>"
-     ".>" "(*" "*)" ":>" "++" "+++" "|-" "-|"))
-#+end_src
-
-Enable ~ligature~ globally.
-
-#+begin_src emacs-lisp
-  (add-hook 'after-init-hook #'global-ligature-mode)
 #+end_src
 
 *** eldoc-box
@@ -3742,8 +3746,8 @@ Add ~aws~ host for testing.
 
 #+begin_src nix :noweb-ref host-alias
   "aws" = {
-    hostname = "18.191.139.209";
-    user = "ubuntu";
+    hostname = "18.219.125.103";
+    user = "root";
     identityFile = "~/.ssh/aws-key.pem";
   };
 #+end_src
@@ -4165,8 +4169,8 @@ The first two are accomplished by my own small package ~project-plus~, which bui
 
   (use-package project-plus
     :straight (project-plus :repo "junyi-hou/project-plus.el" :host github)
-  :config
-  (project-plus-mode 1)
+    :config
+    (project-plus-mode 1)
     :general
     (:keymaps '(normal motion visual)
      :prefix "SPC"
