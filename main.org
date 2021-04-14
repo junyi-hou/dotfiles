@@ -2723,6 +2723,13 @@ As mentioned in [[fringe bitmaps]], I reserve those real estates for indicating 
     (set-face-attribute face nil :underline nil))
 #+end_src
 
+I also want to turn off ~eldoc~ integration and use ~flymake-childframe~ instead.
+
+#+begin_src emacs-lisp
+  (advice-add #'flymake-eldoc-function :override #'ignore)
+#+end_src
+
+
 Instead of using underline and a dedicate buffer ~flymake-diagnostics~ , I write a small package that display syntax error in a child frame.
 
 #+begin_src emacs-lisp
