@@ -652,9 +652,9 @@ I defer configuring evil state, slack, mail and envrc segments when I load those
                (str (format "%s:%s "
                             repo
                             (substring vc-mode (+ (if (eq backend 'Hg) 2 3) 2)))))
-          (propertize (if (> (length str) 15)
+          (propertize (if (> (length str) 25)
                           (concat
-                           (substring str 0 (- 15 3))
+                           (substring str 0 (- 25 3))
                            "...")
                         str)
                       'mouse-face 'mode-line-highlight))
@@ -2731,12 +2731,15 @@ Instead of using underline and a dedicate buffer ~flymake-diagnostics~ , I write
     :hook (flymake-mode . flymake-childframe-mode))
 #+end_src
 
-With the help of ~nerd-font~, I could have fancy prefix to indicate the type of syntax issue/error that I have.
+With the help of ~ligagture.el~ and ~Pragmata Pro~ fonts, I could have fancy prefix to indicate the type of syntax issue/error that I have.
 
 #+begin_src emacs-lisp
-  (setq flymake-childframe-prefix '((note . "\uf059 ")
-                                    (warning . "\uf06a ")
-                                    (error . "\uf071 ")))
+  (setq flymake-childframe-prefix '((note . "[INFO]")
+                                    (warning . "[WARN]")
+                                    (error . "[ERR]")))
+
+  (ligature-set-ligatures 'flymake-childframe-buffer-mode
+                          '("[INFO]" "[WARN]" "[ERR]"))
 #+end_src
 
 *** auto-completion: company
