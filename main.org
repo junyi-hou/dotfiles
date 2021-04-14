@@ -525,12 +525,6 @@ I turn on ~visual-fill-column-mode~ only for ~text-mode~, while using the builti
   (add-hook 'text-mode-hook #'visual-fill-column-mode)
 #+end_src
 
-By default, ~visual-fill-column-mode~ places the text on the left side of the window. I want to adjust the margin so the text is in the center of the window.
-
-#+begin_src emacs-lisp
-  (setq-default visual-fill-column-center-text t)
-#+end_src
-
 **** auto-fill-mode
 
 ~auto-fill-mode~ is a little bit tricky. On the one hand, I do not want it to mess up with my code formatting. For that, I can set ~comment-auto-fill-only-comments~ to non-nil to prevent ~auto-fill~ to wrap code.
