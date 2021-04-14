@@ -6721,7 +6721,7 @@ There are several useful packages for day-to-day and development with ~nix~:
     <<nix-config>>)
 #+end_src
 
-Nix community offers a basic LSP server for linting .nix file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
+Nix community offers a basic LSP server for linting ~.nix~ file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
 
 #+begin_src nix :noweb-ref home-manager
   {
@@ -6825,10 +6825,8 @@ Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get t
 ~emacs~ is also useful to edit and read non-code text as well. The first of which is ~markdown~ files.
 
 #+begin_src emacs-lisp
-(use-package markdown-mode :mode ("\\.markdown\\'" "\\.md\\'"))
+(use-package markdown-mode)
 #+end_src
-
-Furthermore, I can use ~emacs~ to read system logs using ~journalctl~ and ~syslogd~.
 
 ** Man-Page Integration
 
