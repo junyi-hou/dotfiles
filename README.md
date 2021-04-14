@@ -26,6 +26,22 @@ M-x find-file ./main.org
 M-x org-babel-tangle
 ```
 
+# Repository Structure
+
++ project-root
+  - main.org        -- the org file that generates all configuration
+  - emacs.d
+    - debug-init.el -- the minimal init file for debug purpose
+    - etc
+      - eshell      -- eshell alias
+      - yasnippet   -- snippet files
+  - linux
+    - fontconfig    -- ~fontconfig~ files
+    - sway          -- ~sway~ configuration file
+    - waybar        -- ~waybar~ configuration file
+    - waybar-style  -- ~waybar~ CSS style file
+    - wallpaper.jpg -- wallpaper
+
 # License
 
 GPL

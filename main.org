@@ -38,26 +38,26 @@
   M-x org-babel-tangle
   ```
 
+  # Repository Structure
+
+  + project-root
+    - main.org        -- the org file that generates all configuration
+    - emacs.d
+      - debug-init.el -- the minimal init file for debug purpose
+      - etc
+        - eshell      -- eshell alias
+        - yasnippet   -- snippet files
+    - linux
+      - fontconfig    -- ~fontconfig~ files
+      - sway          -- ~sway~ configuration file
+      - waybar        -- ~waybar~ configuration file
+      - waybar-style  -- ~waybar~ CSS style file
+      - wallpaper.jpg -- wallpaper
+
   # License
 
   GPL
 #+end_src
-
-** Repository Structure
-
-+ project-root
-  - main.org        -- the org file that generates all configuration
-  - emacs.d
-    - debug-init.el -- the minimal init file for debug purpose
-    - etc
-      - eshell      -- eshell alias
-      - yasnippet   -- snippet files
-  - linux
-    - fontconfig    -- ~fontconfig~ files
-    - sway          -- ~sway~ configuration file
-    - waybar        -- ~waybar~ configuration file
-    - waybar-style  -- ~waybar~ CSS style file
-    - wallpaper.jpg -- wallpaper
 
 * Applying Changes
 
@@ -1530,9 +1530,7 @@ Finally, ~consult~ provides a compatibility patch to use with ~selectrum~, which
 
 #+begin_src emacs-lisp
   (use-package consult-selectrum
-
     :straight (:type built-in)
-
     :after (consult selectrum))
 #+end_src
 
@@ -2728,7 +2726,6 @@ I also want to turn off ~eldoc~ integration and use ~flymake-childframe~ instead
 #+begin_src emacs-lisp
   (advice-add #'flymake-eldoc-function :override #'ignore)
 #+end_src
-
 
 Instead of using underline and a dedicate buffer ~flymake-diagnostics~ , I write a small package that display syntax error in a child frame.
 
