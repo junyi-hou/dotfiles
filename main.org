@@ -1253,15 +1253,10 @@ minibuffer is a mechanism in ~emacs~ to query user input interactively. For this
 
 #+begin_src emacs-lisp
   (use-package selectrum
-
     :straight (selectrum :host github :repo "raxod502/selectrum")
-
-    :defines (selectrum-minibuffer-bindings selectrum-should-sort-p)
-
-    :custom (selectrum-fix-minibuffer-height t)
-
+    :defines (selectrum-minibuffer-bindings selectrum-should-sort)
+    :custom (selectrum-fix-vertical-window-height t)
     :init (selectrum-mode 1)
-
     :general
     (:keymaps '(motion normal visual)
      :prefix "SPC"
@@ -1316,7 +1311,7 @@ Furthermore, by default, ~selectrum~ do not cycle back to the first (last) candi
     (when selectrum--current-candidate-index
       (setq selectrum--current-candidate-index
             (if (= selectrum--current-candidate-index (1- (length selectrum--refined-candidates)))
-                (if selectrum--match-required-p 0 -1)
+                (if (selectrum--match-strictly-required-p) 0 -1)
               (1+ selectrum--current-candidate-index)))))
 
   (defun gatsby:selectrum-previous-candidate-cycle ()
@@ -1324,7 +1319,7 @@ Furthermore, by default, ~selectrum~ do not cycle back to the first (last) candi
     (interactive)
     (when selectrum--current-candidate-index
       (setq selectrum--current-candidate-index
-            (if (= selectrum--current-candidate-index (if selectrum--match-required-p 0 -1))
+            (if (= selectrum--current-candidate-index (if (selectrum--match-strictly-required-p) 0 -1))
                 (1- (length selectrum--refined-candidates))
               (1- selectrum--current-candidate-index)))))
 
@@ -1406,7 +1401,7 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 
 #+begin_src emacs-lisp
   (defcustom selectrum-become-command-context-list
-    '((helpful-variable helpful-function helpful-callable)
+    '((helpful-variable helpful-function)
       (consult-outline consult-line consult-flymake)
       (find-file switch-to-buffer project-plus-switch-project
                  project-plus-find-file consult-buffer))
@@ -1433,7 +1428,8 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
                        (let ((selectrum--repeat t)
                              (selectrum--previous-input-string input))
                          (call-interactively (intern new-cmd))
-                         (setq selectrum--current-candidate-index 0))))
+                         (setq selectrum--current-candidate-index 0
+                               selectrum--last-command (intern new-cmd)))))
         (abort-recursive-edit))))
 
   (general-define-key :keymaps #'selectrum-minibuffer-map
@@ -1682,14 +1678,15 @@ Now I define useful functions to interact with ~eshell~. First, I implement ~bas
   (defun gatsby:eshell-history ()
     "Search history"
     (interactive)
-    (let* ((selectrum-should-sort-p nil)
+    (let* ((selectrum-should-sort nil)
            (eshell-bol (save-excursion (eshell-bol) (point)))
-           (command (selectrum-read
+           (command (completing-read
                      "History: "
                      (if eshell-history-ring
                          (-distinct (ring-elements eshell-history-ring))
                        '())
-                     :initial-input (buffer-substring eshell-bol (point)))))
+                     nil nil
+                     (buffer-substring eshell-bol (point)))))
       (delete-region eshell-bol (point))
       (insert command)))
 #+end_src
@@ -3452,7 +3449,7 @@ When in ~text-mode~, I want the spelling checker to check all my text. But when 
     "Run `completing-read' for the given CANDIDATES
 
   List of CANDIDATES is given by flyspell for the WORD."
-    (let* ((selectrum-should-sort-p nil)
+    (let* ((selectrum-should-sort nil)
            (save "[SAVE]")
            (accept-session "[ACCEPT (session)]")
            (accept-buffer "[ACCEPT (buffer)]")
@@ -5544,7 +5541,7 @@ To query the date and time of an event, I take advantage of ~selectrum~ framewor
   (defun gatsby:gcal-select-time ()
     "Read time from the minibuffer. Return (sec min hour) of the selected time."
     (interactive)
-    (let ((selectrum-should-sort-p nil))
+    (let ((selectrum-should-sort nil))
       (gatsby:gcal--parse-time
        (completing-read "Select time: " (-interleave (--map (format "%s:00" it) (-iota 24))
                                                      (--map (format "%s:30" it) (-iota 24)))))))
@@ -5552,7 +5549,7 @@ To query the date and time of an event, I take advantage of ~selectrum~ framewor
   (defun gatsby:gcal-select-duration (&optional start-time)
     "Read duration from the minibuffer. If START-TIME is non-nil, return the end-time (start-time + duration)."
     (interactive)
-    (let* ((selectrum-should-sort-p nil)
+    (let* ((selectrum-should-sort nil)
            (duration (gatsby:gcal--parse-time
                       (completing-read "Duration: "
                                        (-interleave (--map (format "%s:15" it) (-iota 10))
@@ -5566,7 +5563,7 @@ To query the date and time of an event, I take advantage of ~selectrum~ framewor
   (defun gatsby:gcal-select-date ()
     "Select a date from a list of next 7 dates. Return (0 0 0 day month year) of the selected time."
     (interactive)
-    (let* ((selectrum-should-sort-p nil)
+    (let* ((selectrum-should-sort nil)
            (date-alist
             (--map
              (let ((emacs-time (time-add (current-time) (days-to-time it))))
@@ -5677,7 +5674,7 @@ To address the last point, I need to have a function ~gatsby:gcal-select-timezon
   (defun gatsby:gcal-select-timezone ()
     "Select a time zone from `gatsby:timezone-alist', return its offset with respect to `gatsby:local-timezone-offset'."
     (interactive)
-    (let* ((selectrum-should-sort-p nil)
+    (let* ((selectrum-should-sort nil)
            (tz (completing-read "Select TZ: " gatsby:timezone-alist)))
       (cl-map 'list '+ (cdr (assoc tz gatsby:timezone-alist)) gatsgy:local-timezone-offset)))
 #+end_src
@@ -6264,10 +6261,10 @@ Register ~emacs~ with ~home-manager~
   )
 #+end_src
 
-I use an ~emacs~ commit before 01/26/2021, as it is before a broken changes on child frame border is made. I put the relevant ~emacs-overlay~ version below:
+I pin the commit of ~nix-community/emacs-overlay~ below in order to not randomly updating and rebuilding ~emacs~ when I run ~home-manager switch~.
 
 #+begin_src nix :noweb-ref emacsOverlayVersion
-  emacsOverlayHash = "a1c89c95cf659512f72f6ec51c764c03801f890d";
+  emacsOverlayHash = "3f8a3e6f49d2ba4ce6ca03d7c359550d53ab5de7";
 #+end_src
 
 The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
@@ -7180,3 +7177,5 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
+** ~consult-line~: start from evil-ex-search
+** fix ~i3-mode~ bug
