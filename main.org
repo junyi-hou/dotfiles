@@ -6335,8 +6335,6 @@ Although I have ~eval-last-sexp~ to evaluate lisp expressions, it is useful some
 #+begin_src emacs-lisp :noweb yes
   (use-package ielm
     :straight (:type built-in)
-    :hook
-    <<ielm-hook>>
     :init
     <<ielm-init>>
     :config
@@ -6345,8 +6343,8 @@ Although I have ~eval-last-sexp~ to evaluate lisp expressions, it is useful some
 
 Enable autocompletion in the REPL buffer.
 
-#+begin_src emacs-lisp :tangle no :noweb-ref ielm-hook
-  (ielm-mode . company-mode)
+#+begin_src emacs-lisp :tangle no :noweb-ref ielm-config
+  (add-hook 'inferior-emacs-lisp-mode-hook #'company-mode)
 #+end_src
 
 ~ielm~ is derived from ~comint~ mode, so I only need to register the REPL function to ~gatsby:comint-repl-function-alist~ variable.
