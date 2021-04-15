@@ -3267,29 +3267,22 @@ Third, I want to have consistent interface to the REPL buffer as in ~eshell~ and
     (goto-char (point-max))
     (evil-insert 1))
 
-  (defun gatsby:jupyter-clear-buffer ()
-    "Jupyter REPL version of `cls'."
-    (interactive)
-    (let ((inhibit-read-only t))
-      (erase-buffer)
-      (jupyter-send-input)))
-
   (general-define-key :keymaps 'jupyter-repl-mode-map :states '(normal visual motion)
-    "A" 'gatsby:jupyter-goto-last-prompt
-    "<" 'jupyter-repl-backward-cell
-    ">" 'jupyter-repl-forward-cell
+    "A" #'gatsby:jupyter-goto-last-prompt
+    "<" #'jupyter-repl-backward-cell
+    ">" #'jupyter-repl-forward-cell
     "SPC" nil)
 
   (general-define-key :keymaps 'jupyter-repl-mode-map :states '(normal visual motion) :prefix "C-c"
-    "C-c" 'jupyter-repl-interrupt-kernel
-    "C-l" 'jupyter-repl-clear-cells)
+    "C-c" #'jupyter-repl-interrupt-kernel
+    "C-l" #'jupyter-repl-clear-cells)
 
   (general-define-key :keymaps 'jupyter-repl-mode-map :states '(normal visual motion) :prefix "SPC"
-    "q" 'kill-buffer-and-window)
+    "q" #'kill-buffer-and-window)
 
   (general-define-key :keymaps 'jupyter-repl-mode-map :states 'insert
-    "<up>" 'jupyter-repl-history-previous-matching
-    "<down>" 'jupyter-repl-history-next-matching)
+    "<up>" #'jupyter-repl-history-previous-matching
+    "<down>" #'jupyter-repl-history-next-matching)
 #+end_src
 
 Similar to the ~comint~ mode, I provide an uniform entry point for creating and switching to ~jupyter~ REPL. To do so, I first define a variable that associates major-modes to the jupyter kernel that should be called.
@@ -7178,4 +7171,3 @@ check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
 ** ~consult-line~: start from evil-ex-search
-** fix ~i3-mode~ bug
