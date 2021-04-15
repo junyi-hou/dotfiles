@@ -48,10 +48,10 @@
         - eshell      -- eshell alias
         - yasnippet   -- snippet files
     - linux
-      - fontconfig    -- ~fontconfig~ files
-      - sway          -- ~sway~ configuration file
-      - waybar        -- ~waybar~ configuration file
-      - waybar-style  -- ~waybar~ CSS style file
+      - fontconfig    -- `fontconfig` files
+      - sway          -- `sway` configuration file
+      - waybar        -- `waybar` configuration file
+      - waybar-style  -- `waybar` CSS style file
       - wallpaper.jpg -- wallpaper
 
   # License
@@ -277,6 +277,16 @@ Sometimes, ~emacs~ asks me for a yes/no answer. But instead of typing "yes" or "
       t))
 
   (add-hook 'kill-buffer-query-functions #'gatsby:core--unkillable-message)
+#+end_src
+
+If I do need a fresh ~*Message*~ buffer, I can use the following function (bound in [[messages-buffer-mode]] section) to clear the content of the ~*Message*~ buffer.
+
+#+begin_src emacs-lisp
+  (defun gatsby:core-refresh-message-buffer ()
+    "Clear `*Message*' buffer."
+    (interactive)
+    (let ((inhibit-read-only t))
+      (erase-buffer)))
 #+end_src
 
 *** no useless GUI
@@ -543,11 +553,18 @@ I set the auto fill column uniformly to 80.
 
 **** messages-buffer-mode
 
-The normal ~messages-buffer-mode~ binding will be shadowed by the evil mode. Therefore, I need to restore it:
+The normal ~messages-buffer-mode~ binding will be shadowed by the evil mode. Therefore, I need to restore it.
 
 #+begin_src emacs-lisp
   (general-define-key :keymaps 'messages-buffer-mode-map :states 'normal
     "q" #'delete-window)
+#+end_src
+
+I also add a key to refresh the ~*Message*~ buffer.
+
+#+begin_src emacs-lisp
+  (general-define-key :keymaps 'messages-buffer-mode-map :states 'normal :prefix "C-c"
+    "C-l" #'gatsby:core-refresh-message-buffer)
 #+end_src
 
 *** whitespace
