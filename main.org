@@ -6472,10 +6472,11 @@ I use the builtin ~python-mode~, together with ~emacs-jupyter~ and ~eglot~ for R
     <<python-binding>>)
 #+end_src
 
-Indentation is part of the syntax, and it must be 4.
+Indentation is part of the syntax, and it must be 4. Also, do not spam me with the "guess indent offset" message.
 
 #+begin_src emacs-lisp
-  (setq python-indent-offset 4)
+  (setq python-indent-offset 4
+        python-indent-guess-indent-offset-verbose nil)
 #+end_src
 
 Also set ~tab-width~ for all python buffers.
