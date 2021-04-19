@@ -36,10 +36,10 @@ M-x org-babel-tangle
       - eshell      -- eshell alias
       - yasnippet   -- snippet files
   - linux
-    - fontconfig    -- ~fontconfig~ files
-    - sway          -- ~sway~ configuration file
-    - waybar        -- ~waybar~ configuration file
-    - waybar-style  -- ~waybar~ CSS style file
+    - fontconfig    -- `fontconfig` files
+    - sway          -- `sway` configuration file
+    - waybar        -- `waybar` configuration file
+    - waybar-style  -- `waybar` CSS style file
     - wallpaper.jpg -- wallpaper
 
 # License

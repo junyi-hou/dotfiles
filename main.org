@@ -2873,9 +2873,9 @@ Now the backends.
   (setq company-dabbrev-downcase nil
         company-dabbrev-ignore-case nil
         company-dabbrev-code-other-buffers nil
-        company-backends '((company-capf :with company-yasnippet)
+        company-backends '((:separate company-capf company-yasnippet)
                            company-files
-                           (company-dabbrev-code company-keywords company-abbrev company-dabbrev)))
+                           (company-dabbrev-code company-dabbrev)))
 #+end_src
 
 Finally, ~prescient~ (introduced in the [[prescient]] section) provides a nice sorting mechanism for ~company~ depend on selection history and other stuffs.
@@ -4224,7 +4224,7 @@ Second, refining existing searches:
     "k" #'deadgrep-backward
     "K" #'deadgrep-backward-filename
     "r" #'deadgrep-restart
-    "s" #'gatsby:deadgrep-refind-search)
+    "s" #'gatsby:deadgrep-refine-search)
 #+end_src
 
 Since the keybindings I define are in the motion state, make sure ~deadgrep~ starts in the motion state
