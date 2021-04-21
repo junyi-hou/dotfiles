@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+":"; exec emacs --quick --script "$0" "$@" # -*- mode: emacs-lisp; lexical-binding: t; -*-
+
+(message "updating README.org...")
+(let* ((source-file (car argv))
+       (readme-file (cadr argv))
+       (org-mode-hook nil))
+  (save-excursion
+    (find-file source-file)
+    (goto-char (org-find-exact-headline-in-buffer "Overview"))
+    (let* ((elem (org-element-at-point))
+           (beg (org-element-property :begin elem))
+           (end (org-element-property :contents-end elem)))
+      (write-region beg end readme-file))))
+(message "done")

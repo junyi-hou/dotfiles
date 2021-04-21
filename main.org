@@ -9,55 +9,52 @@
 
 * Overview
 
-#+begin_src markdown :tangle ./README.md
-  # Dotfile
+  This repository contains my personal configuration for using ~home-manager~ and ~emacs~.
 
-  This repository contains my personal configuration for using `home-manager` and `emacs`.
+** Usage
 
-  # Usage
+*** Initialization
 
-  ## Initialization
+  Make sure the ~nix~ package manager and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
-  Make sure the `nix` package manager, `home-manager` are available. The current `$USER` will also need to be a trusted user of `nix`. To install this configuration, clone this repository. In its root directory, run
-  ```
-  update-user-config
-  ```
+  #+begin_src shell
+    update-user-config
+  #+end_src
 
-  ## Update
+*** Update
 
-  In command line, run
+In command line, run
 
-  ```
-  emacs -Q --batch main.org -f org-babel-tangle
-  ```
+#+begin_src shell
+emacs -Q --batch main.org -f org-babel-tangle
+#+end_src
 
-  Or in `emacs`, run
+Or inside ~emacs~, run
 
-  ```
+#+begin_src shell
   M-x find-file ./main.org
   M-x org-babel-tangle
-  ```
-
-  # Repository Structure
-
-  + project-root
-    - main.org        -- the org file that generates all configuration
-    - emacs.d
-      - debug-init.el -- the minimal init file for debug purpose
-      - etc
-        - eshell      -- eshell alias
-        - yasnippet   -- snippet files
-    - linux
-      - fontconfig    -- `fontconfig` files
-      - sway          -- `sway` configuration file
-      - waybar        -- `waybar` configuration file
-      - waybar-style  -- `waybar` CSS style file
-      - wallpaper.jpg -- wallpaper
-
-  # License
-
-  GPL
 #+end_src
+
+** Repository Structure
+
++ project-root
+  - main.org        -- the org file that generates all configuration
+  - emacs.d
+    - debug-init.el -- the minimal init file for debug purpose
+    - etc
+      - eshell      -- eshell alias
+      - yasnippet   -- snippet files
+  - linux
+    - fontconfig    -- ~fontconfig~ files
+    - sway          -- ~sway~ configuration file
+    - waybar        -- ~waybar~ configuration file
+    - waybar-style  -- ~waybar~ CSS style file
+    - wallpaper.jpg -- wallpaper
+
+** License
+
+GPL
 
 * Applying Changes
 
@@ -77,8 +74,10 @@ To simplify this process, I define a function ~gatsby:switch-home~, which runs a
     "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
   This function should not bu ran manually."
     (when gatsby:is-config-source-file
+      (when (process-live-p "home-manager")
+        (user-error "Another home-manager process is currently running, exiting"))
       (if (buffer-live-p (get-buffer "*home-manager*"))
-          (with-current-buffer (get-buffer-create "*home-manager*")
+          (with-current-buffer "*home-manager*"
             (let ((inhibit-read-only t))
               (delete-region (point-min) (point-max))))
         (with-current-buffer (get-buffer-create "*home-manager*")
@@ -112,6 +111,31 @@ The script ~update-user-config~ is also used to initialize configuration for the
   <<update-user-config-hook>>
 
   home-manager switch
+#+end_src
+
+~org-refile~ functions can be used to update ~README.org~ alongside with the whole ~dotfile~ repository.
+
+#+begin_src shell :tangle update-readme :tangle-mode (identity #o755)  :shebang "#!/usr/bin/env sh"
+  ":"; exec emacs --quick --script "$0" "$@" # -*- mode: emacs-lisp; lexical-binding: t; -*-
+
+  (message "updating README.org...")
+  (let* ((source-file (car argv))
+         (readme-file (cadr argv))
+         (org-mode-hook nil))
+    (save-excursion
+      (find-file source-file)
+      (goto-char (org-find-exact-headline-in-buffer "Overview"))
+      (let* ((elem (org-element-at-point))
+             (beg (org-element-property :begin elem))
+             (end (org-element-property :contents-end elem)))
+        (write-region beg end readme-file))))
+  (message "done")
+#+end_src
+
+Automatically update ~README.org~ when updating ~dotfile~.
+
+#+begin_src shell :noweb-ref update-user-config-hook
+  ./update-readme main.org README.org
 #+end_src
 
 * ~home-manager~ Initialization

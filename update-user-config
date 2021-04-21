@@ -1,6 +1,6 @@
 #!/usr/bin/env nix-shell
 #! nix-shell -i bash -p bash
 
-
+./update-readme main.org README.org
 
 home-manager switch
