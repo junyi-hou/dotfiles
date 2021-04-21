@@ -1484,15 +1484,12 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 
 ~consult~ is a package providing some useful functions by using the query framework offered by ~selectrum~. The ones that I use on a daily basis are ~consult-line~, ~consult-outline~, ~consult-flymake~ (since I use the builtin ~flymake~).
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package consult
-
     :commands
-    (consult-buffer consult-line consult-outline)
-
+    <<consult-autoloads>>
     :custom
     (consult-preview-key nil)
-
     :general
     (:keymaps '(motion normal visual)
      :prefix "SPC"
@@ -1502,40 +1499,34 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 I like ~#~ and ~*~ commands in vim, which search the current word under the cursor forwards/backwards. ~consult-line~ and ~consult-outline~ provide a more powerful mechanism for searching. I also implement a "visual" version of the command to search visually-selected text using ~consult-line~ and ~consult-outline~
 
 #+begin_src emacs-lisp
+  (defun gatsby:consult-outline (&optional initial)
+    "Override `consult-outline' to enable optional initial INPUT."
+    (interactive)
+    (let ((cands (consult--with-increased-gc (consult--outline-candidates))))
+      (consult--read
+       cands
+       :prompt "Go to heading: "
+       :annotate (consult--line-prefix)
+       :category 'consult-location
+       :sort nil
+       :require-match t
+       :add-history (thing-at-point 'symbol)
+       :history '(:input consult--line-history)
+       :lookup #'consult--line-match
+       :initial initial
+       :state (consult--jump-state))))
+
+  (advice-add #'consult-outline :override #'gatsby:consult-outline)
+
   (defun gatsby:consult-search-visual-line (beg end)
     (interactive "r")
     (evil-exit-visual-state)
-    (let ((target-length (1- (- end beg)))
-          (target (buffer-substring beg end)))
-      (consult--jump
-       (consult--read (consult--with-increased-gc (consult--line-candidates))
-                      :prompt "Go to line: "
-                      :category 'consult-location
-                      :sort nil
-                      :default-top nil
-                      :require-match t
-                      :add-history (list (thing-at-point 'symbol) isearch-string)
-                      :history '(:input consult--line-history)
-                      :lookup #'consult--line-match
-                      :initial target
-                      :state (consult--jump-state)))))
+    (consult-line (buffer-substring-no-properties beg end)))
 
   (defun gatsby:consult-search-visual-outline (beg end)
     (interactive "r")
     (evil-exit-visual-state)
-    (let ((target-length (1- (- end beg)))
-          (target (buffer-substring beg end)))
-      (consult--jump
-       (consult--read (consult--with-increased-gc (consult--outline-candidates))
-                      :prompt "Go to heading: "
-                      :category 'consult-location
-                      :sort nil
-                      :require-match t
-                      :lookup #'consult--line-match
-                      :history '(:input consult--line-history)
-                      :add-history (thing-at-point 'symbol)
-                      :initial target
-                      :state (consult--jump-state)))))
+    (consult-outline (buffer-substring-no-properties beg end)))
 
   (general-define-key :keymaps '(motion normal)
     "*" #'consult-line
@@ -1544,6 +1535,35 @@ I like ~#~ and ~*~ commands in vim, which search the current word under the curs
   (general-define-key :keymaps 'visual
     "*" #'gatsby:consult-search-visual-line
     "#" #'gatsby:consult-search-visual-outline)
+#+end_src
+
+Overriding ~consult-outline~ use unexposed internal function ~consult--read~, so I asks ~use-package~ to add it to the autoload list of ~consult~ package.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref consult-autoloads
+  (consult--read)
+#+end_src
+
+It is also useful to call ~consult-line~/~consult-outline~ during ~evil-search~. To do so, first make sure that ~evil-search-module~ is set to ~isearch~ (meaning ~evil-search~ will use ~isearch~ functionality)
+
+#+begin_src emacs-lisp
+  (setq evil-search-module 'isearch)
+#+end_src
+
+Then define commands that takes current ~isearch-string~ and put it in ~consult-line~/~consult-outline~.
+
+#+begin_src emacs-lisp
+  (defun gatsby:consult-line-from-evil (arg)
+    "Take current search string and run `consult-line' on it.
+  If ARG is non-nil, run `consult-outline' instead."
+    (interactive "P")
+    (let ((str isearch-string)
+          (enable-recursive-minibuffers t)
+          (fn (if arg #'consult-outline #'consult-line)))
+      (run-at-time 0 nil fn str)
+      (abort-recursive-edit)))
+
+  (general-define-key :keymaps 'isearch-mode-map
+    "<C-return>" #'gatsby:consult-line-from-evil)
 #+end_src
 
 Finally, ~consult~ provides a compatibility patch to use with ~selectrum~, which is included below.
@@ -7192,11 +7212,10 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 
 * TODO
 ** vterm: iron out quirks in integrating with ~evil~
-** zathura: finish inverse search
-** langtool: write my own languagetool integration?
 ** org-gcal: support invite people
 
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
-** ~consult-line~: start from evil-ex-search
+** check consult native-comp status
+ see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=47868 and https://github.com/minad/vertico/issues/15
