@@ -2996,6 +2996,39 @@ Enable ~help-childframe-mode~ globally.
   (add-hook 'after-init-hook #'global-help-childframe-mode)
 #+end_src
 
+*** incremental syntax tree parsing: tree-sitter
+
+~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~.
+
+#+begin_src emacs-lisp :noweb yes
+  (use-package tree-sitter
+    :hook
+    <<tree-sitter-hook>>
+    )
+
+  (use-package tree-sitter-langs)
+#+end_src
+
+~tree-sitter~ can be enable by adding ~tree-sitter-mode~ to the relevant mode hook.
+
+On its own, ~tree-sitter-mode~ does not provide any direct benefits since all it does is parsing the syntax tree. ~tree-sitter-hl-mode~ builds on top of ~tree-sitter-mode~ and provide high-performance syntax highlight. I enable ~tree-sitter-hl-mode~ whenever ~tree-sitter-mode~ is enabled.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tree-sitter-hook
+  (tree-sitter-mode . tree-sitter-hl-mode)
+#+end_src
+
+~tree-sitter~ can also be used to fold code. ~tree-sitter-fold~ package can be use to achieve this goal.
+
+#+begin_src emacs-lisp
+  (use-package tree-sitter-fold
+    :straight (:host github :repo "junyi-hou/tree-sitter-fold"))
+#+end_src
+
+I enable ~tree-sitter-fold-mode~ whenever ~tree-sitter-mode~ is enabled.
+#+begin_src emacs-lisp :tangle no :noweb-ref tree-sitter-hook
+  (tree-sitter-mode . tree-sitter-fold-mode)
+#+end_src
+
 *** REPL
 
 Read-Evaluate-Print-Loop (REPL) is a convenient way to do try-and-error programming. It allows me to
@@ -6519,11 +6552,12 @@ Also set ~tab-width~ for all python buffers.
     (setq-local tab-width 4))
 #+end_src
 
-Enable LSP and the local tab width when loading python files.
+Enable LSP, ~tree-sitter~ mode, and the local tab width when loading python files.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref python-hook
   (python-mode . gatsby:python--set-indent-width)
   (python-mode . eglot-ensure)
+  (python-mode . tree-sitter-mode)
 #+end_src
 
 #+begin_src emacs-lisp :tangle no :noweb-ref python-init
