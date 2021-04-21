@@ -1243,20 +1243,9 @@ I write multi-line comments a lot, so I advice ~newline~ command to automaticall
   (advice-add 'newline :around #'gatsby:evil-better-newline)
 #+end_src
 
-**** center at cursor after moving
-
-When I jump to a new location via search, ~G~, or ~g*~, I want my cursor position right at the middle of the screen. The following advises accomplish this.
+**** center at cursor after moving to end of buffer.
 
 #+begin_src emacs-lisp
-  (defun gatsby:evil--center-cursor-line (&rest _)
-      "Thin wrapper around `evil-scroll-line-to-center' for advice purpose."
-      (recenter nil))
-
-  (advice-add #'evil-search-next :after #'gatsby:evil--center-cursor-line)
-  (advice-add #'evil-search-previous :after #'gatsby:evil--center-cursor-line)
-  (advice-add #'gatsby:evil-search-visually-forward :after #'gatsby:evil--center-cursor-line)
-  (advice-add #'gatsby:evil-search-visually-backward :after #'gatsby:evil--center-cursor-line)
-
   (defun gatsby:evil--recenter-after-goto-point-max (count)
     "Thin wrapper around `evil-scroll-line-to-center' so center the end-of-buffer after a G motion."
     (unless count
