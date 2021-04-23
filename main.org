@@ -3002,11 +3002,20 @@ Enable ~help-childframe-mode~ globally.
 
 #+begin_src emacs-lisp :noweb yes
   (use-package tree-sitter
+    :straight
+    (:files (:defaults "langs/*.el" "langs/bin" "langs/queries"))
     :hook
     <<tree-sitter-hook>>
     )
 
-  (use-package tree-sitter-langs)
+  (use-package tree-sitter-langs
+    :straight (:type built-in))
+
+  ;; overriding `:files' attribute breaks hard-coded variable
+  ;; `tree-sitter-langs-git-dir', which points to
+  ;; `straight/repos/tree-sitter-langs/'. Move it to the correct location
+  ;; `straight/repos/emacs-tree-sitter/langs/' instead.
+  (setq tree-sitter-langs-git-dir (straight--repos-dir "emacs-tree-sitter/langs"))
 #+end_src
 
 ~tree-sitter~ can be enable by adding ~tree-sitter-mode~ to the relevant mode hook.
