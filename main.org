@@ -6882,6 +6882,32 @@ Nix community offers a basic LSP server for linting ~.nix~ file. I register it w
 (nix-mode . eglot-ensure)
 #+end_src
 
+Download and install ~tree-sitter~ Nix grammar
+
+#+begin_src emacs-lisp
+  (defun gatsby:tree-sitter-install-and-load-nix ()
+    "Download, compile, and register nix grammar for tree-sitter if haven't done so."
+    (condition-case _
+        (tree-sitter-langs--repo-status 'nix)
+      (error
+       (let ((default-directory tree-sitter-langs-git-dir))
+         (tree-sitter-langs--call
+          "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix"))))
+
+    (unless (--filter (string= (f-base it) "nix") (f-entries (tree-sitter-langs--bin-dir)))
+      (tree-sitter-langs-compile 'nix))
+
+    (unless (assq 'nix-mode tree-sitter-major-mode-language-alist)
+      (add-to-list 'tree-sitter-major-mode-language-alist '(nix-mode . nix)))
+
+    (tree-sitter-require 'nix)
+    (tree-sitter-mode))
+#+end_src
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-hook
+(nix-mode . gatsby:tree-sitter-install-and-load-nix)
+#+end_src
+
 nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Since ~nix-repl~ is a derived mode from ~comint-mode~, configuring ~nix-repl~ is relatively easy:
 
 #+begin_src emacs-lisp :tangle no :noweb-ref nix-config
