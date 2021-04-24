@@ -6728,8 +6728,6 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
   (use-package ess
     :hook
     <<r-hook>>
-    :init
-    <<r-init>>
     :config
     <<r-config>>
     :general
@@ -6772,8 +6770,8 @@ Make sure to run ~eglot~ along with R to enable the language server when editing
 
 Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ from github and compile it.
 
-#+begin_src emacs-lisp :tangle no :noewb-ref r-init
-  (defun gatsby:install-and-load-tree-sitter-r ()
+#+begin_src emacs-lisp
+  (defun gatsby:tree-sitter--install-and-load-r ()
     ;; pull tree-sitter R source code
     (condition-case _
         (tree-sitter-langs--repo-status 'r)
@@ -6786,6 +6784,10 @@ Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ 
     (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
       (tree-sitter-langs-compile 'r))
 
+    ;; register ess-r-mode with r grammar
+    (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
+      (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
+
     ;; register tree-sitter
     (tree-sitter-require 'r)
     (tree-sitter-mode))
@@ -6794,7 +6796,7 @@ Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ 
 Enable ~tree-sitter-mode~ when loading ~R~ files.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref r-hook
-  (ess-r-mode . gatsby:install-and-load-tree-sitter-r)
+  (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
 #+end_src
 
 Instead of using the ~ess-r-mode~ to run ~R~ REPL, I use ~emacs-jupyter~ for REPL. To do so, I first register ~irkernel~ with ~gatsby:jupyter-repl-function-alist~.
