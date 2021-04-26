@@ -6349,7 +6349,7 @@ Register ~emacs~ with ~home-manager~
 I pin the commit of ~nix-community/emacs-overlay~ below in order to not randomly updating and rebuilding ~emacs~ when I run ~home-manager switch~.
 
 #+begin_src nix :noweb-ref emacsOverlayVersion
-  emacsOverlayHash = "3f8a3e6f49d2ba4ce6ca03d7c359550d53ab5de7";
+  emacsOverlayHash = "4d5abf7952918493d448f7dabd24156624c821e3";
 #+end_src
 
 The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
