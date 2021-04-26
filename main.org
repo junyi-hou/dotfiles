@@ -6780,6 +6780,7 @@ Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ 
 
     ;; compile using tree-sitter-cli tool
     (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
+      ;; do not open a new buffer to display compile information
       (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
         (tree-sitter-langs-compile 'r)))
 
@@ -6834,7 +6835,7 @@ I bind ~ess-insert-assign~ and ~gatsby:r-pipe~ both to ~M-RET~, with a helper fu
   (defun gatsby:r-assign-or-pipe ()
     "If the last non space character before `point' is \"=\", replace the equal sign with the assign operator. Otherwise insert a pipe operator."
     (interactive)
-    (if (re-search-backward "[[:space:]*]=[[:space:]*]\\=" (line-beginning-position) t)
+    (if (re-search-backward "[[:space:]]*=[[:space:]]*\\=" (line-beginning-position) t)
         (progn (replace-match "") (call-interactively #'ess-insert-assign))
       (gatsby:r-pipe)))
 
@@ -6893,6 +6894,7 @@ Download and install ~tree-sitter~ Nix grammar
          "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix")))
 
     (unless (--filter (string= (f-base it) "nix") (f-entries (tree-sitter-langs--bin-dir)))
+      ;; do not open a new buffer to display compile information
       (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
         (tree-sitter-langs-compile 'nix)))
 
