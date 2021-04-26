@@ -6773,29 +6773,28 @@ Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ 
 #+begin_src emacs-lisp
   (defun gatsby:tree-sitter--install-and-load-r ()
     ;; pull tree-sitter R source code
-    (condition-case _
-        (tree-sitter-langs--repo-status 'r)
-      (error
-       (let ((default-directory tree-sitter-langs-git-dir))
-         (tree-sitter-langs--call
-          "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r"))))
+    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/r"))
+      (let ((default-directory tree-sitter-langs-git-dir))
+        (tree-sitter-langs--call
+         "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r")))
 
     ;; compile using tree-sitter-cli tool
     (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
-      (tree-sitter-langs-compile 'r))
+      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
+        (tree-sitter-langs-compile 'r)))
 
     ;; register ess-r-mode with r grammar
     (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
       (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
 
     ;; register tree-sitter
-    (tree-sitter-require 'r)
-    (tree-sitter-mode))
+    (tree-sitter-require 'r))
 #+end_src
 
 Enable ~tree-sitter-mode~ when loading ~R~ files.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref r-hook
+  (ess-r-mode . tree-sitter-mode)
   (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
 #+end_src
 
@@ -6887,25 +6886,27 @@ Download and install ~tree-sitter~ Nix grammar
 #+begin_src emacs-lisp
   (defun gatsby:tree-sitter-install-and-load-nix ()
     "Download, compile, and register nix grammar for tree-sitter if haven't done so."
-    (condition-case _
-        (tree-sitter-langs--repo-status 'nix)
-      (error
-       (let ((default-directory tree-sitter-langs-git-dir))
-         (tree-sitter-langs--call
-          "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix"))))
+
+    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/nix"))
+      (let ((default-directory tree-sitter-langs-git-dir))
+        (tree-sitter-langs--call
+         "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix")))
 
     (unless (--filter (string= (f-base it) "nix") (f-entries (tree-sitter-langs--bin-dir)))
-      (tree-sitter-langs-compile 'nix))
+      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
+        (tree-sitter-langs-compile 'nix)))
 
     (unless (assq 'nix-mode tree-sitter-major-mode-language-alist)
       (add-to-list 'tree-sitter-major-mode-language-alist '(nix-mode . nix)))
 
-    (tree-sitter-require 'nix)
-    (tree-sitter-mode))
+    (tree-sitter-require 'nix))
 #+end_src
 
 #+begin_src emacs-lisp :tangle no :noweb-ref nix-hook
-(nix-mode . gatsby:tree-sitter-install-and-load-nix)
+  ;; the order is important: `tree-sitter-mode' needs to be after
+  ;; `install-and-load-nix'
+  (nix-mode . tree-sitter-mode)
+  (nix-mode . gatsby:tree-sitter-install-and-load-nix)
 #+end_src
 
 nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Since ~nix-repl~ is a derived mode from ~comint-mode~, configuring ~nix-repl~ is relatively easy:
