@@ -7348,5 +7348,3 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
-** check consult native-comp status
- see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=47868 and https://github.com/minad/vertico/issues/15
