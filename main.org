@@ -1450,9 +1450,9 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
           (enable-recursive-minibuffers t))
       (let ((new-cmd (completing-read "Select different command: "
                                       (->> selectrum-become-command-context-list
-                                           (--first (memq cmd it))
-                                           (--map (symbol-name it))
-                                           (--filter (not (eq (symbol-name cmd) it)))))))
+                                        (--first (memq cmd it))
+                                        (--map (symbol-name it))
+                                        (--filter (not (eq (symbol-name cmd) it)))))))
         (run-at-time 0 nil
                      (lambda ()
                        (let ((selectrum--repeat t)
