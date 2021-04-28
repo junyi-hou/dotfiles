@@ -4522,23 +4522,11 @@ A project is defined by a directory tree whose root is identified using special 
 + find file in a project
 + search text in projects
 
-The first two are accomplished by my own small package ~project-plus~, which builds on the builtin ~project~ package.
-
 #+begin_src emacs-lisp
   (use-package project
     :config
     (with-eval-after-load 'vc-hooks
       (setq vc-follow-symlinks t)))
-
-  (use-package project-plus
-    :straight (project-plus :repo "junyi-hou/project-plus.el" :host github)
-    :config
-    (project-plus-mode 1)
-    :general
-    (:keymaps '(normal motion visual)
-     :prefix "SPC"
-     "op" #'project-plus-switch-project
-     "of" #'project-plus-find-file))
 #+end_src
 
 I use ~deadgrep~ to search for text in projects. ~deadgrep~ use ~ripgrep~ as the backend to search text in project based on regexp.
@@ -4613,9 +4601,6 @@ To address this problem, I use ~envrc~, which makes ~process-environment~ a buff
       enableNixDirenvIntegration = true;
       enableBashIntegration = true;
       config = {
-        whitelist = {
-          prefix = [ projectDir researchDir ];
-        };
         global = {
           strict_env = true;
         };
