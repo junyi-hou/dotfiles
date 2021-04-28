@@ -2438,7 +2438,7 @@ Finally, define the entry point for ~vterm~.
 
 ~org-mode~ is builtin in ~emacs~. However, it is usually the old version and without extra packages included in the ~contrib~ repository. Instead of using this builtin version, I use the most reason version defined in the master branch.
 
-Historically, ~org-mode~ grew out of ~outline-mode~, which is used to fold text parts. ~org-mode~ inherit this functionality. Yet, the folding in ~org-mode~ depends on ~emacs overlays~, which can be very slow. [[https://github.com/yantar92/org/tree/6afe70e63509214b4c305f2d8f2d713056b165ed][this repository]] re-implement the folding mechanism by using ~text properties~.
+Historically, ~org-mode~ grew out of ~outline-mode~, which is used to fold text parts. ~org-mode~ inherit this functionality. Yet, the folding in ~org-mode~ depends on ~overlays~, which can be very slow. [[https://github.com/yantar92/org/tree/6afe70e63509214b4c305f2d8f2d713056b165ed][this repository]] re-implement the folding mechanism by using ~text properties~.
 
 #+begin_src emacs-lisp
   (use-package org
@@ -3007,8 +3007,7 @@ Enable ~help-childframe-mode~ globally.
     :straight
     (:files (:defaults "langs/*.el" "langs/bin" "langs/queries"))
     :hook
-    <<tree-sitter-hook>>
-    )
+    <<tree-sitter-hook>>)
 
   (use-package tree-sitter-langs
     :straight (:type built-in))
