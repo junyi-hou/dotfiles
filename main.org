@@ -2955,6 +2955,12 @@ Second, sometimes I need to go back to a (modified) snippet field and change its
   (general-define-key :keymaps 'yas-keymap "<backspace>" 'gatsby:yas-better-backspace)
 #+end_src
 
+I put ~completing-read~ on top to ~yas-prompt-functions~ so I can use [[selectrum]] in ~yas-choose-value~, which does not require match by default.
+
+#+begin_src emacs-lisp
+  (add-to-list 'yas-prompt-functions #'completing-read)
+#+end_src
+
 *** LSP: eglot
 
 ~eglot~ is an excellent light-weight LSP client that requires very little configuration. On the other hand, it does not provide the fancy UI like ~LSP~ mode does with document, peak definition, jump to definition/reference etc. But these functionalities are easy to implement with the help of ~eglot~.
