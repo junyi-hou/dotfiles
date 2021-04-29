@@ -7485,18 +7485,53 @@ I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-w
 #+end_src
 
 * System-specific Settings
+** Keyboard Firmware Loader
 
 Initializing system-specific configuration using the ~lib.mkIf~ function:
+I use [[https://drop.com/buy/drop-alt-mechanical-keyboard][drop-alt keyboard]], which supports custom layout via QMK firmware. To enable the custom layout, I first configure and download the layout file [[https://drop.com/mechanical-keyboards/configurator][here]]. The official firmware loader ~mdloader~ can be used to refresh the firmware. [[https://drop.com/talk/10343/how-to-configure-your-alt-keyboard][Here]] is a step-by-step tutorial.
 
 #+begin_src nix :noweb-ref home-manager :noweb yes
   (
     { pkgs, lib, config, ...}:
+The firmware loader supports both linux and macOS platform. However, the pre-built binary does not confirm with ~flake~ input format. Therefore I need to build it from source. To do so, first register ~mdloader~ with ~flake~.
 
     lib.mkMerge [
       <<linux-config>>
       <<macos-config>>
     ]
   )
+#+begin_src nix :noweb-ref flake-input
+  drop-keyboard-loader = {
+    url = "github:Massdrop/mdloader";
+    flake = false;
+  };
+#+end_src
+
+Then make sure it is installed by the ~home-manager~.
+
+#+begin_src nix :noweb-ref flake-module
+  drop-keyboard-loader-module = {
+    home.packages = [
+      (
+        pkgs.stdenv.mkDerivation {
+          name = "mdloader";
+          src = drop-keyboard-loader;
+          installPhase = ''
+            install -Dt $out/bin/ ./build/mdloader
+            cp applet-mdflash.bin $out/bin/
+          '';
+        }
+      )
+    ];
+  };
+#+end_src
+
+To refresh the keyboard firmware, connect it to the computer in DFU mode and run
+
+#+begin_src shell
+  mdloader --first --download /path/to/firmware/bin/file --restart
+#+end_src
+
 #+end_src
 
 ** Linux (Wayland)
