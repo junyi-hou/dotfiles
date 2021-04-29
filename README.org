@@ -1,6 +1,6 @@
 * Overview
 
-  This repository contains my personal configuration for using ~home-manager~ and ~emacs~.
+  This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flakes~ to make my development environment reproducible across different platforms.
 
 ** Usage
 
@@ -14,13 +14,13 @@
 
 *** Update
 
-In command line, run
+All updates should be made in ~main.org~. After such changes are made, run the following command in terminal:
 
 #+begin_src shell
 emacs -Q --batch main.org -f org-babel-tangle
 #+end_src
 
-Or inside ~emacs~, run
+Alternatively, if inside ~emacs~, run
 
 #+begin_src shell
   M-x find-file ./main.org

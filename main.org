@@ -9,7 +9,7 @@
 
 * Overview
 
-  This repository contains my personal configuration for using ~home-manager~ and ~emacs~.
+  This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flakes~ to make my development environment reproducible across different platforms.
 
 ** Usage
 
@@ -23,13 +23,13 @@
 
 *** Update
 
-In command line, run
+All updates should be made in ~main.org~. After such changes are made, run the following command in terminal:
 
 #+begin_src shell
 emacs -Q --batch main.org -f org-babel-tangle
 #+end_src
 
-Or inside ~emacs~, run
+Alternatively, if inside ~emacs~, run
 
 #+begin_src shell
   M-x find-file ./main.org
@@ -110,7 +110,17 @@ The script ~update-user-config~ is also used to initialize configuration for the
 
   <<update-user-config-hook>>
 
-  home-manager switch
+  x86_64_linux=`uname -a | grep -P "x86_64(.)+Linux"`
+
+  if [ -n "$x86_64_linux" ]; then
+      nix build .#homeConfigurations.x86_64-linux.activationPackage
+  fi
+
+  x86_64_darwin=`uname -a | grep -P "x86_64(.)+Darwin"`
+
+  if [ -n "$x86_64_darwin" ]; then
+      nix build .#homeConfigurations.x86_64-darwin.activationPackage
+  fi
 #+end_src
 
 ~org-refile~ functions can be used to update ~README.org~ alongside with the whole ~dotfile~ repository.
@@ -135,7 +145,11 @@ The script ~update-user-config~ is also used to initialize configuration for the
 Automatically update ~README.org~ when updating ~dotfile~.
 
 #+begin_src shell :noweb-ref update-user-config-hook
-  ./update-readme main.org README.org
+  if command -v emacs &> /dev/null; then
+      ./update-readme main.org README.org
+  else
+      echo "emacs not found in PATH, skip updating README."
+  fi
 #+end_src
 
 * ~home-manager~ Initialization
