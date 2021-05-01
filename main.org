@@ -1,9 +1,6 @@
-# -*- gatsby:is-config-source-file: t; -*-
-
 #+title: Personal Dotfiles
 #+author: Junyi Hou
 #+property: header-args:emacs-lisp :tangle ./emacs.d/init.el :mkdirp yes
-#+property: header-args:nix :mkdirp yes
 #+startup: show3levels
 #+options: toc:3
 
@@ -15,214 +12,194 @@
 
 *** Initialization
 
-  Make sure the ~nix~ package manager and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
+  Make sure the ~nix~ package manager, ~flake~, and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
   #+begin_src shell
-    update-user-config
+    ./update-user-config --init
   #+end_src
 
-*** Update
+*** Update Configuration
 
-All updates should be made in ~main.org~. After such changes are made, run the following command in terminal:
+The script ~update-user-config~ is used to initialize or update configuration. This script does two things. First, it start an new ~emacs~ process in batch mode and tangle ~main.org~, which updates all relevant NixOS modules and user configurations. Second, it runs ~nix build~ to implement those updates. Therefore, the preferred way of updating is to edit ~main.org~ and make changes as see fit, then call ~gatsby:switch-home~ in ~emacs~ or run ~./update-user-config~ in shell to automatically update (tangle) the new setting.
 
+Alternatively, one can manually edit ~*.nix~ and run
 #+begin_src shell
-emacs -Q --batch main.org -f org-babel-tangle
+  ./update-user-config --no-tangle
 #+end_src
-
-Alternatively, if inside ~emacs~, run
-
-#+begin_src shell
-  M-x find-file ./main.org
-  M-x org-babel-tangle
-#+end_src
+to commit updates. The ~--no-tangle~ flag is important: without this flag, ~update-user-config~ will restore the ~*.nix~ files and there will be no update made.
 
 ** Repository Structure
 
 + project-root
   - main.org        -- the org file that generates all configuration
-  - emacs.d
-    - debug-init.el -- the minimal init file for debug purpose
-    - etc
-      - eshell      -- eshell alias
-      - yasnippet   -- snippet files
-  - linux
-    - fontconfig    -- ~fontconfig~ files
-    - sway          -- ~sway~ configuration file
-    - waybar        -- ~waybar~ configuration file
-    - waybar-style  -- ~waybar~ CSS style file
-    - wallpaper.jpg -- wallpaper
+  - emacs.d         -- ~emacs~ configuration file
+  - modules         -- nixOS modules generated from ~main.org~
+  - linux           -- linux-specific configuration files
+  - darwin          -- macOS-specific configuration files
 
 ** License
 
 GPL
 
-* Applying Changes
+* ~flake~ Initialization
 
-Normally, I need to run ~home-manager switch~ in the command line to update dotfiles declared in ~home.nix~. In addition, since all my configuration are inside this org file, I need to first ~tangle~ them to generate new to generate new ~home.nix~. This means that to update my dotfiles, I need to finish a two step procedure, and in different places as well (first inside ~emacs~ to tangle, then in shell to switch).
+I use ~flake~ to manage my configuration files.
 
-To simplify this process, I define a function ~gatsby:switch-home~, which runs a custom script ~update-user-config~ asynchronously and pop up a buffer ~*home-manager*~ to run and report the output. I then hook this function after ~org-babel-tangle~ finishes. To make sure that this process runs only after I tangle *this* file, I add a file-local variable ~gatsby:is-config-source-file~, with value ~t~ in none but this file.
+#+begin_src nix :tangle flake.nix :noweb yes
+    {
+      description = "Junyi's configuration file";
 
-#+begin_src emacs-lisp :tangle no :noweb-ref home-manager-switch-hook
-  (defcustom gatsby:is-config-source-file nil
-    "Non-nil means to run `home-manager' related functions before and after `org-babel-tangle'."
-    :type 'boolean
-    :group 'org)
+      inputs = {
+        nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-  (put 'gatsby:is-config-source-file 'safe-local-variable #'booleanp)
+        home-manager = {
+          url = "github:nix-community/home-manager";
+          inputs.nixpkgs.follows = "nixpkgs";
+        };
 
-  (defun gatsby:switch-home (&rest _)
-    "Make an asynchronous process running `home-manager switch', and output information to `*home-manager*' buffer.
-  This function should not bu ran manually."
-    (when gatsby:is-config-source-file
-      (when (process-live-p "home-manager")
-        (user-error "Another home-manager process is currently running, exiting"))
-      (if (buffer-live-p (get-buffer "*home-manager*"))
-          (with-current-buffer "*home-manager*"
-            (let ((inhibit-read-only t))
-              (delete-region (point-min) (point-max))))
-        (with-current-buffer (get-buffer-create "*home-manager*")
-          (special-mode)))
-      (let ((exec-path `(,default-directory ,@exec-path)))
-        (make-process
-         :name "home-manager"
-         :buffer "*home-manager*"
-         :command '("update-user-config")
-         :filter
-         (lambda (proc msg)
-           (when (buffer-live-p (process-buffer proc))
-             (with-current-buffer (process-buffer proc)
-               (let ((moving (= (point) (process-mark proc)))
-                     (inhibit-read-only t))
-                 (save-excursion
-                   (goto-char (process-mark proc))
-                   (insert (xterm-color-filter msg))
-                   (set-marker (process-mark proc) (point)))
-                 (if moving (goto-char (process-mark proc)))))))))
-      (pop-to-buffer "*home-manager*")))
+        <<flake-input>>
+      };
 
-  (advice-add #'org-babel-tangle :after #'gatsby:switch-home)
+      outputs = { self, ... }@inputs: with inputs; {
+        realUser = "Junyi Hou";
+
+        homeModules = with builtins;
+          let
+            moduleDir = ./modules;
+            importFn = name: _: import (moduleDir + "/${name}");
+            filterAttrs = nixpkgs.lib.filterAttrs;
+            filterFn = name: _: nixpkgs.lib.hasSuffix ".nix" name;
+          in
+            mapAttrs importFn (filterAttrs filterFn (readDir moduleDir));
+
+        homeConfigurations = {
+          "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
+            system = "x86_64-linux";
+            homeDirectory = "/home/lactaid";
+            username = "lactaid";
+            configuration = ./linux/homeConfig.nix;
+          };
+
+          "x86_64-darwin" = home-manager.lib.homeManagerConfiguration rec {
+            system = "x86_64-darwin";
+            homeDirectory = "/Users/lactaid";
+            username = "lactaid";
+            configuration = ./darwin/homeConfig.nix;
+          };
+        };
+      };
+    }
 #+end_src
 
-The script ~update-user-config~ is also used to initialize configuration for the first time (see [[Overview]]). This script does two things. First, it runs any commands that might need to be ran before ~home-manager~ (e.g., generating nix-expression of ~node.js~ packages via ~node2nix~). Second, it runs ~home-manager switch~ to implement changes in ~home.nix~.
+** System-specific Settings
 
-#+begin_src shell :shebang "#!/usr/bin/env nix-shell" :tangle update-user-config :noweb yes
-  #! nix-shell -i bash -p bash
+*** common modules
 
-  <<update-user-config-hook>>
+I first include a set of common modules that should be enable for all platforms.
 
-  x86_64_linux=`uname -a | grep -P "x86_64(.)+Linux"`
-
-  if [ -n "$x86_64_linux" ]; then
-      nix build .#homeConfigurations.x86_64-linux.activationPackage
-  fi
-
-  x86_64_darwin=`uname -a | grep -P "x86_64(.)+Darwin"`
-
-  if [ -n "$x86_64_darwin" ]; then
-      nix build .#homeConfigurations.x86_64-darwin.activationPackage
-  fi
+#+begin_src conf :noweb-ref common-modules
+  self.homeModules."font.nix"
+  self.homeModules."vterm.nix"
+  self.homeModules."grammar.nix"
+  self.homeModules."gpg.nix"
+  (self.homeModules."pass.nix" homeDirectory)
+  self.homeModules."direnv.nix"
+  (self.homeModules."mail.nix" homeDirectory)
+  self.homeModules."calendar.nix"
+  (self.homeModules."nix-development.nix" system)
+  self.homeModules."latex.nix"
+  self.homeModules."cli.nix"
+  self.homeModules."emacs.nix"
+  self.homeModules."ssh.nix"
+  self.homeModules."git.nix"
+  self.homeModules."tree-sitter.nix"
+  self.homeModules."drop-keyboard-loader.nix"
 #+end_src
 
-~org-refile~ functions can be used to update ~README.org~ alongside with the whole ~dotfile~ repository.
+*** Linux (Wayland)
 
-#+begin_src shell :tangle update-readme :tangle-mode (identity #o755)  :shebang "#!/usr/bin/env sh"
-  ":"; exec emacs --quick --script "$0" "$@" # -*- mode: emacs-lisp; lexical-binding: t; -*-
-
-  (message "updating README.org...")
-  (let* ((source-file (car argv))
-         (readme-file (cadr argv))
-         (org-mode-hook nil))
-    (save-excursion
-      (find-file source-file)
-      (goto-char (org-find-exact-headline-in-buffer "Overview"))
-      (let* ((elem (org-element-at-point))
-             (beg (org-element-property :begin elem))
-             (end (org-element-property :contents-end elem)))
-        (write-region beg end readme-file))))
-  (message "done")
-#+end_src
-
-Automatically update ~README.org~ when updating ~dotfile~.
-
-#+begin_src shell :noweb-ref update-user-config-hook
-  if command -v emacs &> /dev/null; then
-      ./update-readme main.org README.org
-  else
-      echo "emacs not found in PATH, skip updating README."
-  fi
-#+end_src
-
-* ~home-manager~ Initialization
-
-The following snippet initialize my ~home.nix~ file that feed into ~home-manager switch~ command that updates my dotfiles.
-
-#+begin_src nix :tangle home.nix :noweb yes
-  { pkgs, lib, config, ... }:
-
-  let
-    user = builtins.getEnv "USER";
-    realUser = "Junyi Hou";
-    homeDir = builtins.getEnv "HOME";
-    mailDir = ''${homeDir}/.mail'';
-    lispDir = ''${homeDir}/.emacs.d/site-lisp'';
-    projectDir = ''${homeDir}/projects'';
-    researchDir = ''${homeDir}/research'';
-  in
-
-  {
+#+begin_src nix :tangle ./linux/homeConfig.nix :mkdirp yes :noweb yes
+  { pkgs, lib, config, ... }: {
     programs.home-manager.enable = true;
-
-    home = {
-      stateVersion = "21.03";
-      username = user;
-      homeDirectory = homeDir;
-      sessionVariables = {
-        NIX_PATH = ''$HOME/.nix-defexpr/channels''${NIX_PATH:+:}$NIX_PATH'';
-      };
-      activation = {
-        createProjectDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          $DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${projectDir}
-        '';
-        createResearchDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          $DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${researchDir}
-        '';
-      };
-    };
-
     imports = [
-      <<home-manager>>
+      <<linux-modules>>
+      <<common-modules>>
     ];
   }
 #+end_src
 
-* Cache Support
+~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
-#+begin_src nix :noweb-ref home-manager
++ display services (~wayland~, ~sway~)
++ notification services (~libnotify~, ~mako~)
++ network services (~networkmanager~, ~bluez~)
++ system fonts
+
+Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
+
+#+begin_src nix :noweb-ref linux-modules :noweb yes
   {
-    imports = [
-      (
-        let
-          declCachix = builtins.fetchTarball "https://github.com/jonascarpay/declarative-cachix/archive/master.tar.gz";
-        in
-          import "${declCachix}/home-manager.nix"
-      )
-    ];
-
-    caches.cachix = [
-      { name = "nix-community"; }
-    ];
-
-    home.file = {
-      nixConf.text = ''
-      experimental-features = nix-command flakes
-      keep-derivations = true
-      keep-outputs = true
-    '';
+    home = {
+      file = {
+        ".config/sway/config".source = ./linux/sway;
+        ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
+        ".config/waybar/config".source = ./linux/waybar;
+        ".config/waybar/style.css".source = ./linux/waybar-style;
+        ".config/fontconfig" = {
+          source = ./linux/fontconfig;
+          recursive = true;
+        };
+      };
     };
   }
 #+end_src
 
-*  ~emacs~ Configuration
+I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system packages (e.g., ~sway~).
+
+#+begin_src nix :noweb-ref linux-modules
+  {
+    home.sessionPath = [ "/usr/bin" ];
+  }
+#+end_src
+
+In addition, I include some Linux-wayland specific packages.
+
+#+begin_src nix :noweb-ref linux-modules
+  {
+    home.packages = with pkgs; [
+      bemenu
+      havoc # terminal
+    ];
+
+    home.file.".config/havoc.cfg" = {
+      text = ''
+        [child]
+        program=bash
+        [font]
+        size=25
+        [bind]
+        C-S-c=copy
+        C-S-v=paste
+      '';
+    };
+  }
+#+end_src
+
+*** MacOS
+
+On MacOS system, those components are builtin, and I don't need to worry about it.
+
+#+begin_src nix :tangle ./darwin/homeConfig.nix :mkdirp yes :noweb yes
+  { pkgs, lib, config, ... }: {
+    programs.home-manager.enable = true;
+    imports = [
+      <<darwin-modules>>
+      <<common-modules>>
+    ];
+  }
+#+end_src
+
+* ~emacs~ Configuration
 
 This section contains the code and explanation of my personal configuration for ~emacs~ editor. This configuration is meant to be used with the native comp branch and a running emacs server (with ~server-start~).
 
@@ -744,67 +721,85 @@ I defer configuring evil state, slack, mail and envrc segments when I load those
 
 *** font
 
-To make this configuration portable, I define a font specifically for ~emacs~ using ~home-manager~. The vanilla ~home-manager~ do not have a module to install fonts. There is a [[https://github.com/nix-community/home-manager/issues/520#issuecomment-451759097][comment]] that adds a custom module to ~home-manager~, which I include below.
+To make this configuration portable, I define a font specifically for ~emacs~ using ~home-manager~. The vanilla ~home-manager~ do not have a module to install fonts. There is a [[https://github.com/nix-community/home-manager/issues/520#issuecomment-451759097][comment]] that adds a custom font module to ~home-manager~, which I include below.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref font-config
   (
-    {config, pkgs, lib, ...}:
-
+    { config, pkgs, lib, ... }: with lib;
     let
       cfg = config.fonts;
     in
+    {
+      options = {
+        fonts.fonts = mkOption {
+          type = types.listOf types.package;
+          default = [ ];
+          example = literalExample "[ pkgs.dejavu_fonts ]";
+          description = "List of fonts.";
+        };
+      };
 
-      with lib;
-
-      {
-        options = {
-          fonts.fonts = mkOption {
-            type = types.listOf types.package;
-            default = [];
-            example = literalExample "[ pkgs.dejavu_fonts ]";
-            description = "List of fonts.";
+      config = {
+        home = {
+          packages = cfg.fonts ++ (if config.fonts.fontconfig.enable then [ pkgs.fontconfig ] else [ ]);
+          file = {
+            "${config.xdg.cacheHome}/hm-fonts" =
+              let
+                getHash = drv: builtins.elemAt
+                  (
+                    builtins.match "${builtins.storeDir}/([a-z0-9]{32})-.*.drv" drv.drvPath
+                  )
+                  0;
+              in
+              {
+                text = concatMapStringsSep "\n" getHash cfg.fonts;
+                onChange = ''
+                  echo "Caching fonts"
+                  $DRY_RUN_CMD fc-cache -f
+                '';
+              };
           };
         };
-
-        config = {
-          home.packages = cfg.fonts ++ (if config.fonts.fontconfig.enable then [ pkgs.fontconfig ] else []);
-
-          home.file."${config.xdg.cacheHome}/hm-fonts" = let
-            getHash = drv: builtins.elemAt (builtins.match "${builtins.storeDir}/([a-z0-9]{32})-.*.drv" drv.drvPath) 0;
-          in {
-            text = concatMapStringsSep "\n" getHash cfg.fonts;
-            onChange = ''
-          echo "Caching fonts"
-          $DRY_RUN_CMD fc-cache -f
-        '';
-          };
-        };
-      }
+      };
+    }
   )
 #+end_src
 
-With the help of this module, I can now configure the fonts for ~emacs~.
-#+begin_src nix :noweb-ref home-manager :noweb yes
-  (
-    let
-      pragmataPro = with pkgs; stdenv.mkDerivation {
-        pname = "PragmataPro";
-        version = "0.828";
-        src = /home/lactaid/Downloads/PragmataPro0.828-2.zip;
-        nativeBuildInputs = [ unzip ];
-        installPhase = ''
-          mkdir -p $out/share/fonts/PragmataPro
-          cp *.ttf $out/share/fonts/PragmataPro
-        '';
-      };
-    in
-      {
-        fonts = {
-          fonts = [ pragmataPro ];
-          fontconfig.enable = true;
-        };
-      }
-  )
+To install fonts, first register the source file in ~flake~.
+
+#+begin_src nix :noweb-ref flake-input
+  pragmata-pro = {
+    url = "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip";
+    flake = false;
+  };
+#+end_src
+
+Then install it using the custom module.
+
+#+begin_src nix :noweb yes :tangle ./modules/font.nix :mkdirp yes
+  { pkgs, ... }:
+  let
+    pragmataPro = pkgs.stdenv.mkDerivation {
+      pname = "PragmataPro";
+      version = "0.828";
+      src = pragmata-pro;
+      nativeBuildInputs = [ pkgs.unzip ];
+      installPhase = ''
+        mkdir -p $out/share/fonts/PragmataPro
+        cp *.ttf $out/share/fonts/PragmataPro
+      '';
+    };
+  in
+  {
+    imports = [
+      <<font-config>>
+    ];
+
+    fonts = {
+      fonts = [ pragmataPro ];
+      fontconfig.enable = true;
+    };
+  }
 #+end_src
 
 *** ligature
@@ -1726,7 +1721,7 @@ Like other shells, ~eshell~ support defining alias.
 
 Since I use ~bat~ to replace the builtin ~cat~, I need to make it available.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref cli-module-extra
   {
     home.packages = [ pkgs.bat ];
   }
@@ -2064,14 +2059,19 @@ I do not need to register ~libvterm~ with ~home-manager~. Rather, the recommende
 
 According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~ requires some shell-side configuration. Since I use ~bash~ by default, I need to add those shell-side configuration to my ~.bashrc~.
 
-#+begin_src nix :noweb-ref home-manager
-  {
+#+begin_src nix :noweb yes :tangle ./modules/vterm.nix :mkdirp yes
+  { pkgs, ... }: {
+
+    imports = [
+      <<vterm-module-extra>>
+    ];
+
     programs.bash = {
       enable = true;
 
       profileExtra = ''
         [[ -f ~/.bashrc ]] && . ~/.bashrc
-    '';
+      '';
 
       initExtra = ''
         alias ls="ls --color"
@@ -2121,7 +2121,7 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
 
 ~vterm_prompt_end~ function also depends on the ~hostname~ command line utility, which is provided by ~inetutils~ package.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref vterm-module-extra
   {
     home.packages = [ pkgs.inetutils ];
   }
@@ -2617,20 +2617,6 @@ Org-mode automatically renders links like [[org-appear][this]]. ~org-appear~ exp
     "re" #'org-export-dispatch)
 #+end_src
 
-Another way that ~org~ can "export" to other file is by "tangling" source blocks, which means extract the content from source code blocks with ~:tangle~ header, and put them in a separate file.
-
-A problem with the builtin ~org-tangle~ is that it can be slow. Part of the problem is that it runs the appropriate major-mode function and the hooks on every source code block. I disable this behavior.
-
-#+begin_src emacs-lisp :noweb yes
-  (defun gatsby:org--fast-tangle (fn &rest args)
-    (cl-letf (((symbol-function 'org-src-get-lang-mode) (lambda (&rest _) #'ignore)))
-      (apply fn args)))
-
-  (advice-add #'org-babel-tangle :around #'gatsby:org--fast-tangle)
-
-  <<home-manager-switch-hook>>
-#+end_src
-
 *** org-babel and literate programming
 
 A great feature ~org-mode~ provides is the ability to do literate programming. Literate programming means writing codes while explaining them in nature language. This paradigm can be powerful in making sure the programmer and the audience really understands what the code is trying to do.
@@ -3051,6 +3037,33 @@ On its own, ~tree-sitter-mode~ does not provide any direct benefits since all it
 I enable ~tree-sitter-fold-mode~ whenever ~tree-sitter-mode~ is enabled.
 #+begin_src emacs-lisp :tangle no :noweb-ref tree-sitter-hook
   (tree-sitter-mode . tree-sitter-fold-mode)
+#+end_src
+
+To compile tree-sitter grammars for different languages, I need to install the tree-sitter command-line utility. The tree-sitter repository provides pre-built binary of the command-line utility. However, before [[https://github.com/NixOS/nix/pull/4153][this pull request]] gets merged, ~flake~ do not support using plain binary files as inputs. As a workaround, I have to manually specific their checksums when building them:
+
+#+begin_src nix :tangle ./modules/tree-sitter.nix :mkdirp yes
+  { pkgs, ... }:
+  let
+    tree-sitter = pkgs.stdenv.mkDerivation {
+      pname = "tree-sitter";
+      version = "0.19.4";
+      src = builtins.fetchurl {
+        url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.19.4/tree-sitter-linux-x64.gz";
+        sha256 = "0z4l8sl89z1n4p0xjd89sd7lvs957hfzhsyirrkidx5ycr7dfj30";
+      };
+      unpackPhase = ''
+        cp $src tree-sitter.gz
+        gzip -df tree-sitter.gz
+      '';
+      installPhase = ''
+        mkdir -p $out/bin
+        install -t $out/bin *
+      '';
+    };
+  in
+  {
+    home.packages = [ tree-sitter pkgs.nodejs ];
+  }
 #+end_src
 
 *** REPL
@@ -3521,9 +3534,17 @@ Set ~ein:output-area-inlined-images~ to ~t~ so ~ein~ can display inline images.
 
 I am not a native speaker. This makes spelling and grammar checkers very helpful for my writing.
 
+#+begin_src nix :noweb yes :tangle ./modules/grammar.nix :mkdirp yes
+  { pkgs, ... }: {
+    imports = [
+      <<grammar-module>>
+    ];
+  }
+#+end_src
+
 To check spelling, I use ~flyspell~ and ~flyspell-correct~ frontend, which in turn rely on ~ispell~, ~aspell~, or ~hunspell~ command line utility.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref grammar-module
   {
     home.packages = with pkgs; [
       aspell aspellDicts.en aspellDicts.en-computers aspellDicts.en-science
@@ -3576,7 +3597,7 @@ When in ~text-mode~, I want the spelling checker to check all my text. But when 
 
 To check grammar, I use ~langtool~, which uses ~languagetool~ as backend. ~langtool~ is a fairly old package, and it does not support checking grammar on-the-go. So I am thinking about writing/updating a new ~languagetool~ integration.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref grammar-module
   {
     home.packages = [ pkgs.languagetool ];
   }
@@ -3627,6 +3648,7 @@ Finally, add key bindings for quick typo correction and grammar checking
     "cg" 'gatsby:langtool-toggle)
 #+end_src
 
+
 * Secret Management
 
 ~emacs~ is not only a text editor, it can also serve as the integrated interface between the user (me) and the computer, via its ability to spawn subprocesses and present them in text form. In particular, ~emacs~ can be used to manage secrets like passwords and tokens.
@@ -3646,15 +3668,13 @@ I use ~home-manager~ to configure my [[accounts][account information]] (email ad
 
 First, I include ~GPG~ in my ~home-manager~ system.
 
-#+begin_src nix :noweb-ref home-manager
-  {
+#+begin_src nix :tangle ./modules/gpg.nix :mkdirp yes
+  { lib, ... }: {
     programs = {
       gpg = {
         enable = true;
         settings.use-agent = true;
       };
-
-      ssh.enable = true;
     };
 
     home = {
@@ -3702,12 +3722,12 @@ Second, I enable ~epa~ package in ~emacs~.
 
 First, install the ~pass~ package using ~home-manager~.
 
-#+begin_src nix :noweb-ref home-manager
-  {
+#+begin_src nix :tangle ./modules/pass.nix :mkdirp yes
+  homeDirectory: {
     programs.password-store = {
       enable = true;
       settings = {
-        PASSWORD_STORE_DIR = "${homeDir}/.password-store";
+        PASSWORD_STORE_DIR = "${homeDirectory}/.password-store";
       };
     };
   }
@@ -3772,20 +3792,20 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 
 First enable ssh.
 
-#+begin_src nix :noweb-ref home-manager :noweb yes
+#+begin_src nix :noweb yes :tangle ./modules/ssh.nix :mkdirp yes
   {
     programs.ssh = {
       enable = true;
       matchBlocks = {
-        <<host-alias>>
+        <<ssh-servers>>
       };
     };
   }
 #+end_src
 
-Add ~aws~ host for testing.
+Include server location shortcuts.
 
-#+begin_src nix :noweb-ref host-alias
+#+begin_src nix :noweb-ref ssh-servers
   "aws" = {
     hostname = "18.219.125.103";
     user = "root";
@@ -3798,13 +3818,18 @@ Add ~aws~ host for testing.
 
 Register ~git~ with ~home-manager~ first.
 
-#+begin_src nix :noweb-ref account-setting :noweb yes
-  {
+#+begin_src nix :noweb yes :tangle ./modules/git.nix :mkdirp yes
+  { pkgs, config, ... }: {
+
+    imports = [
+      <<git-module-extra>>
+    ];
+
     programs = {
       git = {
         enable = true;
 
-        userName = realUser;
+        userName = self.realUser;
         userEmail =
           let
             defaultAcc = with builtins; head
@@ -3864,279 +3889,254 @@ I specify the list of files that need to be ignore in all git repositories. Thes
 
   #+begin_src conf :noweb-ref gitignore
     ## Core latex/pdflatex auxiliary files:
-    ,*.aux
-    ,*.lof
-    ,*.log
-    ,*.lot
-    ,*.fls
-    ,*.out
-    ,*.toc
-    ,*.fmt
-    ,*.fot
-    ,*.cb
-    ,*.cb2
-    .*.lb
+    "*.aux"
+    "*.lof"
+    "*.log"
+    "*.lot"
+    "*.fls"
+    "*.out"
+    "*.toc"
+    "*.fmt"
+    "*.fot"
+    "*.cb"
+    "*.cb2"
+    ".*.lb"
 
     ## Intermediate documents:
-    ,*.dvi
-    ,*.xdv
-    ,*-converted-to.*
+    "*.dvi"
+    "*.xdv"
+    "*-converted-to.*"
 
     ## Generated if empty string is given at "Please type another file name for output:"
-    .pdf
+    ".pdf"
 
     ## Bibliography auxiliary files (bibtex/biblatex/biber):
-    ,*.bbl
-    ,*.bcf
-    ,*.blg
-    ,*-blx.aux
-    ,*-blx.bib
-    ,*.run.xml
+    "*.bbl"
+    "*.bcf"
+    "*.blg"
+    "*-blx.aux"
+    "*-blx.bib"
+    "*.run.xml"
 
     ## Build tool auxiliary files:
-    ,*.fdb_latexmk
-    ,*.synctex
-    ,*.synctex(busy)
-    ,*.synctex.gz
-    ,*.synctex.gz(busy)
-    ,*.pdfsync
+    "*.fdb_latexmk"
+    "*.synctex"
+    "*.synctex(busy)"
+    "*.synctex.gz"
+    "*.synctex.gz(busy)"
+    "*.pdfsync"
 
     ## Build tool directories for auxiliary files
     # latexrun
-    latex.out/
+    "latex.out/"
 
     ## Auxiliary and intermediate files from other packages:
     # algorithms
-    ,*.alg
-    ,*.loa
+    "*.alg"
+    "*.loa"
 
     # achemso
-    acs-*.bib
+    "acs-*.bib"
 
     # amsthm
-    ,*.thm
+    "*.thm"
 
     # beamer
-    ,*.nav
-    ,*.pre
-    ,*.snm
-    ,*.vrb
+    "*.nav"
+    "*.pre"
+    "*.snm"
+    "*.vrb"
 
     # changes
-    ,*.soc
+    "*.soc"
 
     # comment
-    ,*.cut
+    "*.cut"
 
     # cprotect
-    ,*.cpt
+    "*.cpt"
 
     # elsarticle (documentclass of Elsevier journals)
-    ,*.spl
+    "*.spl"
 
     # endnotes
-    ,*.ent
+    "*.ent"
 
     # fixme
-    ,*.lox
+    "*.lox"
 
     # feynmf/feynmp
-    ,*.mf
-    ,*.mp
-    ,*.t[1-9]
-    ,*.t[1-9][0-9]
-    ,*.tfm
+    "*.mf"
+    "*.mp"
+    "*.t[1-9]"
+    "*.t[1-9][0-9]"
+    "*.tfm"
 
     #(r)(e)ledmac/(r)(e)ledpar
-    ,*.end
-    ,*.?end
-    ,*.[1-9]
-    ,*.[1-9][0-9]
-    ,*.[1-9][0-9][0-9]
-    ,*.[1-9]R
-    ,*.[1-9][0-9]R
-    ,*.[1-9][0-9][0-9]R
-    ,*.eledsec[1-9]
-    ,*.eledsec[1-9]R
-    ,*.eledsec[1-9][0-9]
-    ,*.eledsec[1-9][0-9]R
-    ,*.eledsec[1-9][0-9][0-9]
-    ,*.eledsec[1-9][0-9][0-9]R
+    "*.end"
+    "*.?end"
+    "*.[1-9]"
+    "*.[1-9][0-9]"
+    "*.[1-9][0-9][0-9]"
+    "*.[1-9]R"
+    "*.[1-9][0-9]R"
+    "*.[1-9][0-9][0-9]R"
+    "*.eledsec[1-9]"
+    "*.eledsec[1-9]R"
+    "*.eledsec[1-9][0-9]"
+    "*.eledsec[1-9][0-9]R"
+    "*.eledsec[1-9][0-9][0-9]"
+    "*.eledsec[1-9][0-9][0-9]R"
 
     # glossaries
-    ,*.acn
-    ,*.acr
-    ,*.glg
-    ,*.glo
-    ,*.gls
-    ,*.glsdefs
-    ,*.lzo
-    ,*.lzs
-
-    # uncomment this for glossaries-extra (will ignore makeindex's style files!)
-    # *.ist
+    "*.acn"
+    "*.acr"
+    "*.glg"
+    "*.glo"
+    "*.gls"
+    "*.glsdefs"
+    "*.lzo"
+    "*.lzs"
+    "*.ist"
 
     # gnuplottex
-    ,*-gnuplottex-*
+    "*-gnuplottex-*"
 
     # gregoriotex
-    ,*.gaux
-    ,*.gtex
+    "*.gaux"
+    "*.gtex"
 
     # htlatex
-    ,*.4ct
-    ,*.4tc
-    ,*.idv
-    ,*.lg
-    ,*.trc
-    ,*.xref
+    "*.4ct"
+    "*.4tc"
+    "*.idv"
+    "*.lg"
+    "*.trc"
+    "*.xref"
 
     # hyperref
-    ,*.brf
+    "*.brf"
 
     # knitr
-    ,*-concordance.tex
-    ,*.tikz
-    ,*-tikzDictionary
+    "*-concordance.tex"
+    "*.tikz"
+    "*-tikzDictionary"
 
     # listings
-    ,*.lol
+    "*.lol"
 
     # luatexja-ruby
-    ,*.ltjruby
+    "*.ltjruby"
 
     # makeidx
-    ,*.idx
-    ,*.ilg
-    ,*.ind
+    "*.idx"
+    "*.ilg"
+    "*.ind"
 
     # minitoc
-    ,*.maf
-    ,*.mlf
-    ,*.mlt
-    ,*.mtc[0-9]*
-    ,*.slf[0-9]*
-    ,*.slt[0-9]*
-    ,*.stc[0-9]*
+    "*.maf"
+    "*.mlf"
+    "*.mlt"
+    "*.mtc[0-9]*"
+    "*.slf[0-9]*"
+    "*.slt[0-9]*"
+    "*.stc[0-9]*"
 
     # minted
-    _minted*
-    ,*.pyg
+    "_minted*"
+    "*.pyg"
 
     # morewrites
-    ,*.mw
+    "*.mw"
 
     # nomencl
-    ,*.nlg
-    ,*.nlo
-    ,*.nls
+    "*.nlg"
+    "*.nlo"
+    "*.nls"
 
     # pax
-    ,*.pax
+    "*.pax"
 
     # pdfpcnotes
-    ,*.pdfpc
+    "*.pdfpc"
 
     # sagetex
-    ,*.sagetex.sage
-    ,*.sagetex.py
-    ,*.sagetex.scmd
+    "*.sagetex.sage"
+    "*.sagetex.py"
+    "*.sagetex.scmd"
 
     # scrwfile
-    ,*.wrt
+    "*.wrt"
 
     # sympy
-    ,*.sout
-    ,*.sympy
-    sympy-plots-for-*.tex/
+    "*.sout"
+    "*.sympy"
+    "sympy-plots-for-*.tex/"
 
     # pdfcomment
-    ,*.upa
-    ,*.upb
+    "*.upa"
+    "*.upb"
 
     # pythontex
-    ,*.pytxcode
-    pythontex-files-*/
+    "*.pytxcode"
+    "pythontex-files-*/"
 
     # tcolorbox
-    ,*.listing
+    "*.listing"
 
     # thmtools
-    ,*.loe
+    "*.loe"
 
     # TikZ & PGF
-    ,*.dpth
-    ,*.md5
-    ,*.auxlock
+    "*.dpth"
+    "*.md5"
+    "*.auxlock"
 
     # todonotes
-    ,*.tdo
+    "*.tdo"
 
     # vhistory
-    ,*.hst
-    ,*.ver
+    "*.hst"
+    "*.ver"
 
     # easy-todo
-    ,*.lod
+    "*.lod"
 
     # xcolor
-    ,*.xcp
+    "*.xcp"
 
     # xmpincl
-    ,*.xmpi
+    "*.xmpi"
 
     # xindy
-    ,*.xdy
+    "*.xdy"
 
     # xypic precompiled matrices and outlines
-    ,*.xyc
-    ,*.xyd
+    "*.xyc"
+    "*.xyd"
 
     # endfloat
-    ,*.ttt
-    ,*.fff
+    "*.ttt"
+    "*.fff"
 
     # Latexian
-    TSWLatexianTemp*
+    "TSWLatexianTemp*"
 
     ## Editors:
-    # WinEdt
-    ,*.bak
-    ,*.sav
-
-    # Texpad
-    .texpadtmp
-
-    # LyX
-    ,*.lyx~
-
-    # Kile
-    ,*.backup
-
-    # gummi
-    .*.swp
-
-    # KBibTeX
-    ,*~[0-9]*
-
-    # TeXnicCenter
-    ,*.tps
-
     # auto folder when using emacs and auctex
-    ./auto/*
-    ,*.el
+    "**/auto/*"
 
     # expex forward references with \gathertags
-    ,*-tags.tex
+    "*-tags.tex"
 
     # standalone packages
-    ,*.sta
+    "*.sta"
 
     # Makeindex log files
-    ,*.lpz
+    "*.lpz"
 
     # xwatermark package
-    ,*.xwm
+    "*.xwm"
   #+end_src
 
 + ~stata-kernel~ config files
@@ -4270,7 +4270,7 @@ Finally, I set up the general keybindings to call up ~magit~.
 
 First enable ~delta~ with ~home-manager~.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref git-module-extra
   {
     programs.git.delta.enable = true;
   }
@@ -4488,7 +4488,7 @@ A project is defined by a directory tree whose root is identified using special 
 
 I use ~deadgrep~ to search for text in projects. ~deadgrep~ use ~ripgrep~ as the backend to search text in project based on regexp.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref cli-module-extra
   {
     home.packages = [ pkgs.ripgrep ];
   }
@@ -4545,12 +4545,12 @@ Finally, define the entry points for ~deadgrep~.
 
 ** Local Environment
 
-An big advantage of ~nix~ is that it can create reproducible isolate production environments. At the system level, this is achieved by ~direnv~ and ~nix-direnv~, which will automatically build and run ~shell.nix~ (or ~default.nix/~flakes.nix~) once enter a project via shell. However, ~emacs~ inherits system information (~PATH~ and other environment variables) from the shell in which it starts. Therefore, it won't be able to pick up the local environment defined in ~shell.nix~ and friends. This posts considerable challenge for working in ~emacs~ with local environments.
+An big advantage of ~nix~ is that it can create reproducible isolate production environments. At the system level, this is achieved by ~direnv~ and ~nix-direnv~, which will automatically build and run ~shell.nix~ (or ~default.nix/~flake.nix~) once enter a project via shell. However, ~emacs~ inherits system information (~PATH~ and other environment variables) from the shell in which it starts. Therefore, it won't be able to pick up the local environment defined in ~shell.nix~ and friends. This posts considerable challenge for working in ~emacs~ with local environments.
 
 To address this problem, I use ~envrc~, which makes ~process-environment~ a buffer-local variable. I first need to enable ~direnv~ and ~nix-direnv~ support in ~home-manager~.
 
-#+begin_src nix :noweb-ref home-manager :noweb yes
-  {
+#+begin_src nix :noweb yes :tangle ./modules/direnv.nix :mkdirp yes
+  direnv = {
     <<nix-direnv-overlays>>
 
     programs.direnv = {
@@ -4570,13 +4570,13 @@ There is a [[https://github.com/nix-community/nix-direnv/issues/70][bug]] in the
 
 #+begin_src nix :noweb-ref nix-direnv-overlays
   nixpkgs.overlays = [
-    (self: super: {
-      nix-direnv = super.nix-direnv.overrideAttrs (oldAttrs: rec {
+    (final: prev: {
+      nix-direnv = prev.nix-direnv.overrideAttrs (oldAttrs: rec {
         # Substitute instead of wrapping because the resulting file is getting sourced, not executed:
         postPatch = ''
             substituteInPlace direnvrc \
-              --replace "\''${NIX_BIN_PREFIX}" "\''${NIX_BIN_PREFIX:-${super.nix}/bin/}" \
-              --replace "grep" "${super.gnugrep}/bin/grep"
+              --replace "\''${NIX_BIN_PREFIX}" "\''${NIX_BIN_PREFIX:-${prev.nix}/bin/}" \
+              --replace "grep" "${prev.gnugrep}/bin/grep"
           '';
       });
     })
@@ -4598,8 +4598,9 @@ For the first issue, ~envrc~ can update the current environment by running ~envr
 
 #+begin_src emacs-lisp
   (defun gatsby:envrc--maybe-reload ()
-    "run `envrc-reload' if the current buffer name is one of \"shell.nix\", \"default.nix\", or \"flakes.nix\"."
-    (when (member (f-filename (buffer-file-name)) '("shell.nix" "default.nix" "flakes.nix"))
+    "run `envrc-reload' if the current buffer name is one of \"shell.nix\", \"default.nix\", or \"flake.nix\"."
+    (when (and (member (f-filename (buffer-file-name)) '("shell.nix" "default.nix" "flake.nix"))
+               (member ".envrc" (--map (f-base it) (f-files default-directory))))
       (envrc-reload)))
 
   (defun gatsby:envrc--setup-update-hook ()
@@ -4844,104 +4845,100 @@ To receive and send emails from the comfort in ~emacs~, I use
 
   To deal with the security requirement of GMail, I use a ~xoauth2~ plugins for ~cryus~ library. [[http://blog.onodera.asia/2020/06/how-to-use-google-g-suite-oauth2-with.html][This blog]] provides a good summary on how to enable ~xoauth2~ for ~mbsync~, which involves installing a ~cryus~ plugin. ~cryus~ requires all plugins to live in the same directory, which is difficult for a ~nix~-based system, as ~cryus~ plugins lives in different ~nix~ storage. I use a hack which consists of three steps:
 
-  1. build a copy of ~cyrus_sasl~ since it is a dependency of xoauth2 plugin
-
+  1. import the original ~cyrus_sasl~ from ~nixpkgs~, since it is a dependency of all xoauth2 plugins
   2. build ~xoauth2~ plugin (I use [[https://github.com/robn/sasl2-oauth][robn's sasl2-oauth plugin]])
-
   3. add an overlay of ~cyrus_sasl~ with ~xoauth2~ libraries symlinking to ~${cyruss_sasl}/lib/sasl2~
 
-    Until [[https://github.com/NixOS/nixpkgs/issues/108480][the upstream]] figured out some ways to deal with this, I will use my hack to allow ~mbsync~ retrieve emails from google.
+     Until [[https://github.com/NixOS/nixpkgs/issues/108480][the upstream]] figured out some ways to deal with this, I will use my hack to allow ~mbsync~ retrieve emails from google. To do so, register the relevant packages. Note that in order to use this, make sure that ~google-api/id~ and ~google-api/secret~ are present in the storage path of [[https://www.passwordstore.org/][GNU Pass]].
 
-    #+begin_src nix :noweb-ref home-manager :noweb yes
-      (
-        let
-          gmail-oauth2-tools = with pkgs; stdenv.mkDerivation {
-            name = "gmail-oauth2-tools";
-            src = fetchFromGitHub {
-              owner = "google";
-              repo = "gmail-oauth2-tools";
-              rev = "e3229155a4037267ce40f1a3a681f53221aa4d8d";
-              sha256 = "1cxpkiaajhq1gjsg47r2b5xgck0r63pvkyrkm7af8c8dw7fyn64f";
-            };
-            buildInputs = [ python2 pass oauth2Lib ];
-            installPhase = ''
-              mkdir -p $out/bin
-              cp python/oauth2.py $out/bin/gmail-oauth2-tools
-              chmod +x $out/bin/gmail-oauth2-tools
+     #+begin_src nix :noweb-ref flake-input
+       gmail-oauth2-tools = {
+         url = "github:google/gmail-oauth2-tools";
+         flake = false;
+       };
 
-              # authorization script
-              cat > $out/bin/gmail-get-token <<EOF
-              #! /usr/bin/env bash
-              ID=\$(${pass}/bin/pass google-api/id)
-              SECRET=\$(${pass}/bin/pass google-api/secret)
-              TOKEN=\$(${pass}/bin/pass google-api/\$1)
-              ACCOUNT=\$1
+       oauth2-lib = {
+         url = "github:robn/sasl2-oauth";
+         flake = false;
+       };
+     #+end_src
 
-              $out/bin/gmail-oauth2-tools --user=\$ACCOUNT --client_id=\$ID --client_secret=\$SECRET --refresh_token=\$TOKEN --generate_oauth2_token | awk -F" " '{if(NR==1)print \$3}'
-              EOF
+     Then include them in the ~home-manager~ configuration.
 
-              chmod +x $out/bin/gmail-get-token
-            '';
-          };
+     #+begin_src nix :noweb yes :tangle ./modules/mail.nix :mkdirp yes
+       homeDirectory: { pkgs, lib, config, ... }:
+         let
+           gmailOauth2Tools = with pkgs; stdenv.mkDerivation {
+             name = "gmail-oauth2-tools";
+             src = gmail-oauth2-tools;
+             buildInputs = [ python2 pass oauth2Lib ];
+             installPhase = ''
+             mkdir -p $out/bin
+             cp python/oauth2.py $out/bin/gmail-oauth2-tools
+             chmod +x $out/bin/gmail-oauth2-tools
 
-          cyrus = import <nixpkgs/pkgs/development/libraries/cyrus-sasl/default.nix> {
-            inherit (pkgs) lib stdenv fetchurl openssl openldap kerberos db gettext
-              pam fixDarwinDylibNames autoreconfHook buildPackages pruneLibtoolFiles fetchpatch;
-          };
+             # authorization script
+             cat > $out/bin/gmail-get-token <<EOF
+             #! /usr/bin/env bash
+             ID=\$(${pass}/bin/pass google-api/id)
+             SECRET=\$(${pass}/bin/pass google-api/secret)
+             TOKEN=\$(${pass}/bin/pass google-api/\$1)
+             ACCOUNT=\$1
 
-          oauth2Lib = with pkgs; stdenv.mkDerivation {
-            name = "sasl2-oauth";
-            src = fetchFromGitHub {
-              owner = "robn";
-              repo = "sasl2-oauth";
-              rev = "4236b6fb904d836b85b55ba32128b843fd8c2362";
-              sha256 = "17c1131yy41smz86fkb6rywfqv3hpn0inqk179a4jcr1snsgr891";
-            };
-            nativeBuildInputs = [ autoreconfHook cyrus ];
-          };
+             $out/bin/gmail-oauth2-tools --user=\$ACCOUNT --client_id=\$ID --client_secret=\$SECRET --refresh_token=\$TOKEN --generate_oauth2_token | awk -F" " '{if(NR==1)print \$3}'
+             EOF
 
-        in
+             chmod +x $out/bin/gmail-get-token
+           '';
+           };
+           oauth2Lib = with pkgs; stdenv.mkDerivation {
+             name = "sasl2-oauth";
+             src = oauth2-lib;
+             nativeBuildInputs = [
+               autoreconfHook
+               nixpkgs.legacyPackages."${system}".cyrus_sasl
+             ];
+           };
+         in {
+           imports = [
+             <<mail-module-extra>>
+           ];
 
-          {
+           nixpkgs.overlays = [
+             (
+               final: prev:
+               {
+                 cyrus_sasl = prev.cyrus_sasl.overrideAttrs (div: rec {
+                   postInstall = ''
+                     for lib in ${oauth2Lib}/lib/sasl2/*; do
+                       ln -sf $lib $out/lib/sasl2/
+                     done
+                   '';
+                 });
+               }
+             )
+           ];
 
-            imports = [
-              <<account-setting>>
-            ];
+           programs.mbsync.enable = true;
 
-            nixpkgs.overlays = [
-              (
-                self: super:
-                {
-                  cyrus_sasl = super.cyrus_sasl.overrideAttrs (div: rec {
-                    postInstall = ''
-                for lib in ${oauth2Lib}/lib/sasl2/*; do
-                  ln -sf $lib $out/lib/sasl2/
-                done
-              '';
-                  });
-                }
-              )
-            ];
+           home.packages = [ gmailOauth2Tools ];
 
-            programs.mbsync.enable = true;
+           services = {
+             mbsync = {
+               enable = true;
+               # sync every 5 minutes, but alerts can be less frequent
+               frequency = "*:0/5";
+               postExec = ''${pkgs.notmuch}/bin/notmuch new'';
+             };
+           };
 
-            home.packages = [ gmail-oauth2-tools ];
-
-            services = {
-              mbsync = {
-                enable = true;
-                # sync every 5 minutes, but alerts can be less frequent
-                frequency = "*:0/5";
-                postExec = ''${pkgs.notmuch}/bin/notmuch new'';
-              };
-            };
-          }
-      )
-  #+end_src
+           <<account-setting>>
+         }
+   #+end_src
 
 + ~notmuch~ to index and search emails based on tag and other maildir attributes. It also provides a great ~emacs~ package to interact and manipulate its database.
 
-  #+begin_src nix :noweb-ref account-setting
+  #+begin_src nix :noweb-ref mail-module-extra
     {
       programs.notmuch = {
         enable = true;
@@ -4971,7 +4968,7 @@ To receive and send emails from the comfort in ~emacs~, I use
   - mails with "spam" tag to spam, without "spam" tag to archive or inbox, depending on whether they have "inbox" tags;
   - mails with "trash" tag to trash, without "trash" tag to archive or inbox, depending on whether they have "inbox" tags;
 
-    #+begin_src nix :noweb-ref account-setting
+    #+begin_src nix :noweb-ref mail-module-extra
       {
         programs.afew.enable = true;
 
@@ -5059,7 +5056,7 @@ To receive and send emails from the comfort in ~emacs~, I use
 
     Putting them together:
 
-    #+begin_src nix :noweb-ref account-setting :noweb yes
+    #+begin_src nix :noweb-ref mail-module-extra :noweb yes
       {
         programs.afew.extraConfig = ''
           [SpamFilter]
@@ -5078,12 +5075,12 @@ To receive and send emails from the comfort in ~emacs~, I use
         home.file = {
           ".config/afew/OnlyAllowListFilter.py" = {
             text = ''
-        <<OnlyAllowListFilter>>
+              <<OnlyAllowListFilter>>
             '';
           };
           ".config/afew/allow_list" = {
             text = ''
-        <<AllowList>>
+              <<AllowList>>
             '';
           };
         };
@@ -5100,7 +5097,7 @@ To receive and send emails from the comfort in ~emacs~, I use
 
 + finally, I use ~msmtp~ to send emails. ~msmtp~ has nice multi account supports so I won't send the email from the wrong address.
 
-  #+begin_src nix :noweb-ref account-setting
+  #+begin_src nix :noweb-ref mail-module-extra
     {
       programs.msmtp.enable = true;
     }
@@ -5111,87 +5108,76 @@ To receive and send emails from the comfort in ~emacs~, I use
 I include my email accounts here. I have two accounts. A personal one ([[junyi.yi.hou@gmail.com]]), and one that I got from my school ([[junyi.hou@berkeley.edu]]). I set my personal account as my default email account.
 
 #+begin_src nix :noweb yes :noweb-ref account-setting
-  (
+  accounts.email = let
+    mailDir = "${homeDirectory}/.mail";
+    mbsyncExtraConf = {
+      Create = "Slave";
+      Expunge = "Both";
+      SyncState = "*";
+      Sync = "all";
+    };
+  in {
+    maildirBasePath = mailDir;
+    accounts = {
+      <<personal-account>>
+      <<uc-berkeley-account>>
+    };
+  };
+
+  home.activation.initMailDir =
     let
-      mbsyncExtraConf = {
-        Create = "Slave";
-        Expunge = "Both";
-        SyncState = "*";
-        Sync = "all";
-      };
-
+      mailDir = "${homeDirectory}/.mail";
+      mkAccountDir = with builtins; concatStringsSep "\n"
+        (map (account: ''$DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${mailDir}/${account.name}'')
+          (attrValues config.accounts.email.accounts));
     in
-
-      {
-        accounts.email = {
-          maildirBasePath = mailDir;
-          accounts = {
-            <<personal-account>>
-            <<uc-berkeley-account>>
-          };
-        };
-
-        home.activation = {
-          initMailDir =
-            let
-              mkAccountDir = with builtins; concatStringsSep "\n"
-                (map (account: ''$DRY_RUN_CMD mkdir -p $VERBOSE_ARG ${mailDir}/${account.name}'')
-                  (attrValues config.accounts.email.accounts));
-            in
-              lib.hm.dag.entryAfter [ "writeBoundary" ] mkAccountDir;
-        };
-      }
-  )
+      lib.hm.dag.entryAfter [ "writeBoundary" ] mkAccountDir;
 #+end_src
 
 I then export my account information to ~emacs~.
 
 #+begin_src nix :noweb-ref account-setting
-  {
-    home.file = {
-      "${lispDir}/gatsby:accounts.el" =
-        let
-          defaultAcc = with builtins; head (
-            filter (a: a.primary) (attrValues config.accounts.email.accounts));
-          allAccounts = with builtins;
-            concatStringsSep " "
-              (map (a: ''"'' + a + ''"'')
-                (catAttrs "address"
-                  (filter (a: a.flavor == "gmail.com")
-                    (sort (a1: a2: if a1.primary then true else false)
-                      (attrValues config.accounts.email.accounts)))));
-        in
-          {
-            text = ''
-              ;;; gatsby:accounts.el -*- lexical-binding: t; -*-
+  home.file."${homeDirectory}/.emacs.d/site-lisp/gatsby:accounts.el" =
+    let
+      defaultAcc = with builtins; head (
+        filter (a: a.primary) (attrValues config.accounts.email.accounts));
+      allAccounts = with builtins;
+        concatStringsSep " "
+          (map (a: ''"'' + a + ''"'')
+            (catAttrs "address"
+              (filter (a: a.flavor == "gmail.com")
+                (sort (a1: a2: if a1.primary then true else false)
+                  (attrValues config.accounts.email.accounts)))));
+      mailDir = "${homeDirectory}/.mail";
+    in {
+      text = ''
+        ;;; gatsby:accounts.el -*- lexical-binding: t; -*-
 
-              ;; the default account
-              (setq user-full-name "${defaultAcc.realName}"
-                    user-mail-address "${defaultAcc.address}")
+        ;; the default account
+        (setq user-full-name "${defaultAcc.realName}"
+              user-mail-address "${defaultAcc.address}")
 
-              ;; record all accounts
-              (defconst user-all-mail-addresses '(${allAccounts}) "All registered email addresses")
+        ;; record all accounts
+        (defconst user-all-mail-addresses '(${allAccounts}) "All registered email addresses")
 
-              ;; smtpmail settings
-              (setq smtpmail-queue-mail nil
-                    smtpmail-queue-dir (let* ((dir "${mailDir}/queue"))
-                                         (unless (file-exists-p dir)
-                                           (make-directory dir))
-                                         (format "%s/cur" dir)))
+        ;; smtpmail settings
+        (setq smtpmail-queue-mail nil
+              smtpmail-queue-dir (let* ((dir "${mailDir}/queue"))
+                                   (unless (file-exists-p dir)
+                                     (make-directory dir))
+                                   (format "%s/cur" dir)))
 
-              (provide 'gatsby:accounts)
-              ;;; gatsby:accounts.el ends here
-            '';
-          };
+        (provide 'gatsby:accounts)
+        ;;; gatsby:accounts.el ends here
+      '';
     };
-  }
 #+end_src
 
 **** personal account
 
 #+begin_src nix :noweb-ref personal-account
   personal = {
-    realName = realUser;
+    realName = self.realUser;
     userName = "junyi.yi.hou@gmail.com";
     address = "junyi.yi.hou@gmail.com";
     flavor = "gmail.com";
@@ -5259,7 +5245,7 @@ I then export my account information to ~emacs~.
 
 #+begin_src nix :noweb-ref uc-berkeley-account
   berkeley = {
-    realName = realUser;
+    realName = self.realUser;
     userName = "junyi.hou@berkeley.edu";
     address = "junyi.hou@berkeley.edu";
     flavor = "gmail.com";
@@ -5613,7 +5599,7 @@ Now apply evil style key binding to ~notmuch-tree~ mode.
 
 The builtin ~shr~ html renderer is bare-bones. To improve the html rendering quality, I use the external ~w3m~ program to render html emails.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref mail-module-extra
   {
     home.packages = [ pkgs.w3m ];
   }
@@ -5782,8 +5768,8 @@ When starting up ~emacs~ for the first time, the ~password-store~ will ask me fo
 
 Makes sure that the calendar directory (~$HOME/.cal~) exists.
 
-#+begin_src nix :noweb-ref home-manager
-  {
+#+begin_src nix :tangle ./modules/calendar.nix :mkdirp yes
+  { lib, ... }: {
     home.activation = {
       initCalDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD mkdir -p $VERBOSE_ARG $HOME/.cal
@@ -6528,55 +6514,50 @@ Finally, add key bindings for reactions.
 * Production Environment
 ** Emacs-Lisp
 
-Register ~emacs~ with ~home-manager~
+*** Emacs:flake
 
-#+begin_src nix :noweb yes :noweb-ref home-manager
-  (
-    { pkgs, ... }:
-    let
-      <<emacsOverlayVersion>>
-    in
-      {
-        nixpkgs.overlays = [
-          (import (builtins.fetchTarball {
-            url = "https://github.com/nix-community/emacs-overlay/archive/" + emacsOverlayHash + ".tar.gz";
-          }))
-        ];
+Use ~emacs-overlay~ from ~nix-community~ to obtain the latest git version of ~emacs~.
 
-        programs.emacs = {
-          enable = true;
-          package =
-            <<emacs-package>>;
-        };
-
-        home = {
-          file.".emacs.d" = {
-            source = ./emacs.d;
-            recursive = true;
-          };
-          sessionVariables = {
-            EDITOR = "emacsclient -c";
-            VISUAL = "emacsclient -c";
-          };
-        };
-
-        services.emacs = {
-          enable = true;
-          client.enable = true;
-        };
-      }
-  )
+#+begin_src nix :noweb-ref flake-input
+  emacs-overlay.url = "github:nix-community/emacs-overlay";
 #+end_src
 
-I pin the commit of ~nix-community/emacs-overlay~ below in order to not randomly updating and rebuilding ~emacs~ when I run ~home-manager switch~.
+#+begin_src nix :tangle ./modules/emacs.nix :mkdirp yes
+  {
+    nixpkgs.overlays = [ emacs-overlay.overlay ];
 
-#+begin_src nix :noweb-ref emacsOverlayVersion
-  emacsOverlayHash = "4d5abf7952918493d448f7dabd24156624c821e3";
+    home = {
+      file.".emacs.d" = {
+        source = ./emacs.d;
+        recursive = true;
+      };
+      sessionVariables = {
+        EDITOR = "emacsclient -c";
+        VISUAL = "emacsclient -c";
+      };
+    };
+
+    services.emacs = {
+      enable = true;
+      client.enable = true;
+    };
+  }
 #+end_src
 
-The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to include a ~emacs~ package that are compatible with macOS.
+For ~linux~ system, ~emacs-overlay~ provides derivation for ~native-comp~ version, so I can just use it.
 
-#+begin_src nix :noweb-ref emacs-package
+#+begin_src nix :noweb-ref flake-linux-config
+  {
+    programs.emacs = {
+      enable = true;
+      package = pkgs.emacsPgtkGcc;
+    };
+  }
+#+end_src
+
+For ~macOS~, I follow the method used [[https://github.com/twlz0ne/nix-gccemacs-darwin][here]] to enable ~cocona~ and wrap ~emacsGit~ with ~macOS~ specific library path.
+
+#+begin_src nix :noweb-ref flake-darwin-config
   (
     let
       libPath = with pkgs; lib.concatStringsSep ":" [
@@ -6585,28 +6566,45 @@ The official ~emacs-overlay~ has only Linux based ~emacs~. I modify it to includ
         "${lib.getLib stdenv.glibc}/lib"
       ];
 
-      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
+      emacsNsGcc = pkgs.emacsGit.overrideAttr (
         old: {
           configureFlags = (lib.remove "--with-xft" old.configureFlags)
-                           ++ lib.singleton "--with-ns";
+            ++ [ "--with-ns" "--with-native-compilation" ];
+          postInstall = old.postInstall or "" + ''
+            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
+            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
+            cat <<EOF> $out/bin/run-emacs.sh
+            #!/usr/bin/env bash
+            set -e
+            exec $out/bin/emacs-28.0.50 "\$@"
+            EOF
+            chmod a+x $out/bin/run-emacs.sh
+            ln -snf ./run-emacs.sh $out/bin/emacs
+          '';
         }
       );
 
-      emacsGccDarwin = pkgs.symlinkJoin {
-        name = "emacsGccDarwin";
-        paths = [ emacsNsGcc ];
-        buildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/emacs \
-          --set LIBRARY_PATH ${libPath}
-        '';
-        meta.platforms = pkgs.stdenv.lib.platforms.linux;
-        passthru.nativeComp = true;
-        src = emacsNsGcc.src;
-      };
-
     in
-      (if pkgs.stdenv.isLinux then pkgs.emacsPgtkGcc else emacsGccDarwin)
+
+    {
+      programs.emacs = {
+        enable = true;
+        package = (
+          pkgs.symlinkJoin {
+            name = "emacsGccDarwin";
+            paths = [ emacsNsGcc ];
+            buildInputs = [ pkgs.makeWrapper ];
+            postBuild = ''
+              wrapProgram $out/bin/emacs \
+              --set LIBRARY_PATH ${libPath}
+            '';
+            meta.platforms = pkgs.lib.platforms.darwin;
+            passthru.nativeComp = true;
+            src = emacsNsGcc.src;
+          }
+        );
+      };
+    }
   )
 #+end_src
 
@@ -6616,7 +6614,7 @@ The builtin ~elisp-mode~ is, of course, good enough for editing ~elisp~ file.
   (use-package elisp-mode :straight (:type built-in))
 #+end_src
 
-Set the ~tab-width~ to 2  in ~elisp-mode~, as lisp do not look good with too many spaces.
+Set the ~tab-width~ to 2 in ~elisp-mode~, as lisp do not look good with too many spaces.
 
 #+begin_src emacs-lisp
   (defun gatsby:lisp--set-tab-width ()
@@ -6754,6 +6752,8 @@ It is difficult to read regexp in ~elisp~, since I need to escape the escape cha
 
 Python is a general purpose language with many libraries that enable people to jump on a task without worrying too much about inventing the wheel.
 
+*** Python:major-mode
+
 I use the builtin ~python-mode~, together with ~emacs-jupyter~ and ~eglot~ for REPL/LSP support.
 
 #+begin_src emacs-lisp :noweb yes
@@ -6864,49 +6864,62 @@ Now define keybindings.
 
 STATA is a package that can conduct statistical analysis using its own script-like language. It has two main advantages for me: it is widely used in economics community, and therefore has a large array of packages to perform different statistical analyses. I am also more familiar with it than the R package.
 
-Install STATA with ~home-manager~.
+*** STATA:flake
 
-#+begin_src nix :noweb-ref home-manager
-  {
-    home.packages = [
-      (
-        let
-          stata = pkgs.stdenv.mkDerivation {
-            name = "stata-14";
-            src = /home/lactaid/Downloads/stata;
-            # FIXME: still complaining not finding the following libraries
-            # installing from arch for now
-            # (libpng12; ncurses5-compat-libs)
-            propagatedBuildInputs = with pkgs; [ ncurses5 libpng12 ];
-            installPhase = ''
-              export plat=linux.64
+Register STATA with ~flake~ and install it using ~home-manager~.
 
-              buildDir=$(pwd)
-              mkdir -p $out
-              cp unix/linux.64/ado.taz $out/ado.tar.Z
-              cp unix/linux.64/base.taz $out/base.tar.Z
-              cp unix/linux.64/bins.taz $out/bins.tar.Z
-              cp unix/linux.64/docs.taz $out/docs.tar.Z
-              cp unix/linux.64/setrwxp $out/setrwxp
-              cp unix/linux.64/inst2 $out/inst2
-
-              cd $out
-              ./inst2 now
-
-              # install license file
-              cp $buildDir/stata.lic ./
-            '';
-          };
-        in
-          (
-            pkgs.writeShellScriptBin "stata-bin" ''
-              ${stata}/stata-mp
-            ''
-          )
-      )
-    ];
-  }
+#+begin_src nix :noweb-ref flake-input
+  # stata = {
+  #   url = "file:///home/lactaid/Downloads/stata";
+  #   flake = false;
+  # };
 #+end_src
+
+Note that I only include STATA package for ~linux~. There is a separate version of STATA for ~macOS~.
+
+#+begin_src nix :noweb-ref flake-linux-config
+  # {
+  #   home.packages = [
+  #     (
+  #       let
+  #         STATA = pkgs.stdenv.mkDerivation {
+  #           name = "stata-14";
+  #           src = stata;
+  #           # FIXME: still complaining not finding the following libraries
+  #           # installing from arch for now
+  #           # (libpng12; ncurses5-compat-libs)
+  #           propagatedBuildInputs = with pkgs; [ ncurses5 libpng12 ];
+  #           installPhase = ''
+  #             export plat=linux.64
+
+  #             buildDir=$(pwd)
+  #             mkdir -p $out
+  #             cp unix/linux.64/ado.taz $out/ado.tar.Z
+  #             cp unix/linux.64/base.taz $out/base.tar.Z
+  #             cp unix/linux.64/bins.taz $out/bins.tar.Z
+  #             cp unix/linux.64/docs.taz $out/docs.tar.Z
+  #             cp unix/linux.64/setrwxp $out/setrwxp
+  #             cp unix/linux.64/inst2 $out/inst2
+
+  #             cd $out
+  #             ./inst2 now
+
+  #             # install license file
+  #             cp $buildDir/stata.lic ./
+  #           '';
+  #         };
+  #       in
+  #         (
+  #           pkgs.writeShellScriptBin "stata-bin" ''
+  #             ${STATA}/stata-mp
+  #           ''
+  #         )
+  #     )
+  #   ];
+  # }
+#+end_src
+
+*** STATA:major-mode
 
 I'd like to use ~emacs~ to replace STATA's builtin IDE. To do so, I need to be able to send codes from my ~emacs~ to an underlying STATA process. ~stata_kernel~ implements a STATA kernel for jupyter REPL, for which I can interacting from within ~emasc~ using the [[emacs-jupyter]] package.
 
@@ -6946,6 +6959,8 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
 
 ~R~ is an open source statistical package, which makes it attractive to people outside of economists. ~emacs~ can edit ~R~ files.
 
+*** R:major-mode
+
 #+begin_src emacs-lisp :noweb yes
   (use-package ess
     :hook
@@ -6954,71 +6969,6 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
     <<r-config>>
     :general
     <<r-binding>>)
-#+end_src
-
-Make sure to run ~eglot~ along with R to enable the language server when editing R files.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref r-hook
-  (ess-r-mode . eglot-ensure)
-#+end_src
-
-~emacs-tree-sitter~ does not include ~R~ grammar. To build it from source, I will need install ~tree-sitter-cli~.
-
-#+begin_src nix :noweb-ref home-manager
-  (
-    let
-      tree-sitter = pkgs.stdenv.mkDerivation {
-        pname = "tree-sitter";
-        version = "0.19.4";
-        src = builtins.fetchurl {
-          url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.19.4/tree-sitter-linux-x64.gz";
-          sha256 = "0z4l8sl89z1n4p0xjd89sd7lvs957hfzhsyirrkidx5ycr7dfj30";
-        };
-        unpackPhase = ''
-          cp $src tree-sitter.gz
-          gzip -df tree-sitter.gz
-        '';
-        installPhase = ''
-          mkdir -p $out/bin
-          install -t $out/bin *
-        '';
-      };
-    in
-      {
-        home.packages = [ tree-sitter pkgs.nodejs ];
-      }
-  )
-#+end_src
-
-Check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ from github and compile it.
-
-#+begin_src emacs-lisp
-  (defun gatsby:tree-sitter--install-and-load-r ()
-    ;; pull tree-sitter R source code
-    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/r"))
-      (let ((default-directory tree-sitter-langs-git-dir))
-        (tree-sitter-langs--call
-         "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r")))
-
-    ;; compile using tree-sitter-cli tool
-    (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
-      ;; do not open a new buffer to display compile information
-      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
-        (tree-sitter-langs-compile 'r)))
-
-    ;; register ess-r-mode with r grammar
-    (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
-      (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
-
-    ;; register tree-sitter
-    (tree-sitter-require 'r))
-#+end_src
-
-Enable ~tree-sitter-mode~ when loading ~R~ files.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref r-hook
-  (ess-r-mode . tree-sitter-mode)
-  (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
 #+end_src
 
 Instead of using the ~ess-r-mode~ to run ~R~ REPL, I use ~emacs-jupyter~ for REPL. To do so, I first register ~irkernel~ with ~gatsby:jupyter-repl-function-alist~.
@@ -7065,11 +7015,52 @@ I bind ~ess-insert-assign~ and ~gatsby:r-pipe~ both to ~M-RET~, with a helper fu
     "M-RET" #'gatsby:r-assign-or-pipe)
 #+end_src
 
+*** R:LSP
+
+Make sure to run ~eglot~ along with R to enable the language server when editing R files.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-hook
+  (ess-r-mode . eglot-ensure)
+#+end_src
+
+*** R:tree-sitter
+
+~emacs-tree-sitter~ does not include ~R~ grammar. I need to compile ~R~ grammar from source. First check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ from github and compile it.
+
+#+begin_src emacs-lisp
+  (defun gatsby:tree-sitter--install-and-load-r ()
+    ;; pull tree-sitter R source code
+    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/r"))
+      (let ((default-directory tree-sitter-langs-git-dir))
+        (tree-sitter-langs--call
+         "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r")))
+
+    ;; compile using tree-sitter-cli tool
+    (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
+      ;; do not open a new buffer to display compile information
+      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
+        (tree-sitter-langs-compile 'r)))
+
+    ;; register ess-r-mode with r grammar
+    (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
+      (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
+
+    ;; register tree-sitter
+    (tree-sitter-require 'r))
+#+end_src
+
+Enable ~tree-sitter-mode~ when loading ~R~ files.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref r-hook
+  (ess-r-mode . tree-sitter-mode)
+  (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
+#+end_src
+
 ** Nix
 
 I use nix to manage my dotfiles and development environments. nix uses its own language to manage setups. Therefore, it would be ideal if I can read and write nix files in ~emacs~ to modify my nix settings.
 
-There are several useful packages for day-to-day and development with ~nix~:
+*** Nix:major-mode
 
 #+begin_src emacs-lisp :noweb yes
   (use-package nix-mode
@@ -7084,17 +7075,28 @@ There are several useful packages for day-to-day and development with ~nix~:
     <<nix-config>>)
 #+end_src
 
-Nix community offers a basic LSP server for linting ~.nix~ file. I register it with ~home-manager~ first and then hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
+*** Nix:LSP
 
-#+begin_src nix :noweb-ref home-manager
-  {
+Nix community offers a basic LSP server for linting ~.nix~ file. I first register it with ~flake~.
+
+#+begin_src nix :noweb-ref flake-input
+  rnix-lsp = {
+    url = "github:nix-community/rnix-lsp";
+  };
+#+end_src
+
+... and install using ~home-manager~,
+
+#+begin_src nix :noweb yes :tangle ./modules/nix-development.nix :mkdirp yes
+  system: { pkgs, ... }: {
     home.packages = [
-      (import (builtins.fetchTarball {
-        url = https://github.com/nix-community/rnix-lsp/archive/master.tar.gz;
-      }))
+      rnix-lsp.defaultPackage."${system}"
+      <<nix-development-extra-package>>
     ];
   }
 #+end_src
+
+... finally hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref nix-init
   (add-to-list 'eglot-server-programs '(nix-mode . ("rnix-lsp")))
@@ -7104,7 +7106,35 @@ Nix community offers a basic LSP server for linting ~.nix~ file. I register it w
 (nix-mode . eglot-ensure)
 #+end_src
 
-Download and install ~tree-sitter~ Nix grammar
+In addition, I use
+#+begin_src nix :noweb-ref nix-development-extra-package
+  pkgs.nixpkgs-fmt
+#+end_src
+to format my nix code before save.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
+  (setq nix-nixfmt-bin "nixpkgs-fmt")
+
+  (defun gatsby:nix--fmt-before-save ()
+    (add-hook 'before-save-hook #'nix-format-buffer nil t))
+
+  (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
+#+end_src
+
+~nix-format-buffer~ moves point to ~point-min~. This behavior is annoying since I hook ~nix-format-buffer~ to the ~before-save-hool~, which means I have to move back to the last-modified position after each save. The following advice fix this issue.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
+  (defun gatsby:nix--save-excrusion (fn &rest args)
+    (let ((ori-point (point)))
+      (apply fn args)
+      (goto-char ori-point)))
+
+  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
+#+end_src
+
+*** Nix:tree-sitter
+
+Nix is not included in the grammar bundle provided by ~emacs-tree-sitter~. I need to download and compile it from source.
 
 #+begin_src emacs-lisp
   (defun gatsby:tree-sitter-install-and-load-nix ()
@@ -7173,46 +7203,9 @@ Sometimes I would like to check out package files located at ~nix-store~. To ens
     "ns" #'gatsby:nix-shell-in-storage)
 #+end_src
 
-I use ~nixpkgs-fmt~ to format my nix code before save.
-
-#+begin_src nix :noweb-ref home-manager
-  {
-    home.packages = [ pkgs.nixpkgs-fmt ];
-  }
-#+end_src
-
-#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
-  (setq nix-nixfmt-bin "nixpkgs-fmt")
-
-  (defun gatsby:nix--fmt-before-save ()
-    (add-hook 'before-save-hook #'nix-format-buffer nil t))
-
-  (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
-#+end_src
-
-~nix-format-buffer~ moves point to ~point-min~. This behavior is annoying since I hook ~nix-format-buffer~ to the ~before-save-hool~, which means I have to move back to the last-modified position after each save. The following advice fix this issue.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
-  (defun gatsby:nix--save-excrusion (fn &rest args)
-    (let ((ori-point (point)))
-      (apply fn args)
-      (goto-char ori-point)))
-
-  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
-#+end_src
-
-Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get the hash value of source codes that I can feed to the ~fetcher~ function later.
-
-#+begin_src nix :noweb-ref home-manager
-  {
-    home.packages = with pkgs; [
-      nix-prefetch-scripts
-      nix-prefetch-github
-    ];
-  }
-#+end_src
-
 ** Markdown
+
+*** Markdown:major-mode
 
 ~emacs~ is also useful to edit and read non-code text as well. The first of which is ~markdown~ files.
 
@@ -7221,6 +7214,7 @@ Finally, the ~nix-prefetch-X~ scripts are convenient since it allows me to get t
 #+end_src
 
 ** Man-Page Integration
+*** Man-page:major-mode
 
 I can also read man page from within ~emacs~ and even in ~eshell~. The builtin ~man~ mode offers good integration of reading man page.
 
@@ -7257,25 +7251,9 @@ My only issue of ~man~ mode is that it always opens a new window to display man 
 This concludes the configuration for ~man~.
 
 ** LaTeX
+*** LaTeX:major-mode
 
-First install ~textlive~ and the LSP ~digestif~ via ~home-manager~.
-
-#+begin_src nix :noweb-ref home-manager
-  (
-    let
-
-      digestif = pkgs.writeScriptBin "digestif" (builtins.readFile
-        (builtins.fetchurl https://raw.githubusercontent.com/astoff/digestif/master/scripts/digestif));
-
-    in
-
-      {
-        home.packages =  [ pkgs.texlive.combined.scheme-full digestif ];
-      }
-  )
-#+end_src
-
-AUCTeX is a gigantic package that aims at providing a tex IDE for ~emacs~. Although I already use a tex LSP ([[https://github.com/astoff/digestif][digestif]]) to handles label, autocomplete, etc. I still need AUCTeX to conveniently interact with tex command line utilities (mainly via ~TeX-command-sequence~ function)
+I use AUCTeX to edit tex source file in ~emacs~. AUCTeX is a gigantic package that aims at providing a tex IDE for ~emacs~. Although I already use [[LaTeX:LSP][a LSP]] to handles label, autocomplete, etc. I still need AUCTeX to conveniently interact with tex command line utilities (mainly via ~TeX-command-sequence~ function)
 
 #+begin_src emacs-lisp :noweb yes
   (use-package tex
@@ -7308,13 +7286,6 @@ AUCTeX tries to be smart and increase the font size of (sub)section titles, move
   (font-latex-fontify-sectioning 1.0)
 #+end_src
 
-Make sure that I load LSP and folding mode when I open an ~.tex~ file.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
-  (LaTeX-mode . eglot-ensure)
-  (LaTeX-mode . company-mode)
-#+end_src
-
 Load ~TeX-PDF-mode~, which allows me to use ~PDFTeX~ as the main tex engine.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
@@ -7341,25 +7312,6 @@ Load ~outline-minor-mode~ to enable code folding.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref tex-config
   (setq TeX-outline-extra '(("^\\(% \\)?\\\\begin{frame}" 3)))
-#+end_src
-
-Properly format tex file can be done as simple as running ~(indent-region (point-min) (point-max))~. But I need to turn off ~LaTeX-syntactic-comments~ and ~LaTeX-item-indent~, because they mess up the indent level for commented blocks and lists, respectively.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref tex-init
-  (defun gatsby:latex--setup ()
-    "Setup tab width and indentation rule for `LaTeX-mode'."
-    (setq-local tab-width 2)
-    (add-hook 'before-save-hook
-              (lambda () (indent-region (point-min) (point-max))) nil t))
-#+end_src
-
-#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
-  (LaTeX-mode . gatsby:latex--setup)
-#+end_src
-
-#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
-  (setq LaTeX-syntactic-comments nil
-        LaTeX-item-indent 0)
 #+end_src
 
 Furthermore, tex has many wired pairs (like $). It does not play well with ~electric-pair-mode~. AUCTeX has a builtin replacement of ~electric-pair-mode~ which, although usable, not "electric" enough for me. In particular, it misses a function that allows me to delete the closing pair after point with ~delete~ if there is nothing between the matching pairs. I add this function to it.
@@ -7412,9 +7364,55 @@ Furthermore, tex has many wired pairs (like $). It does not play well with ~elec
     "DEL" #'gatsby:latex-delete)
 #+end_src
 
-Finally, I use ~Zathura~ as my pdf viewer.
+*** LaTeX:LSP
 
-#+begin_src nix :noweb-ref home-manager :noweb yes
+First install ~textlive~ and the LSP via ~flake~. I use ~texlab~ instead of more light-weighted ~digestif~ since the latter works only in ~linux~ but not ~macOS~.
+
+#+begin_src nix :noweb yes :tangle ./modules/latex.nix :mkdirp yes
+  { pkgs, ... }: {
+
+    imports = [
+      <<latex-module-extra>>
+    ];
+
+    home.packages =  [
+      pkgs.texlive.combined.scheme-full
+      pkgs.texlab
+    ];
+  }
+#+end_src
+
+Make sure that I load LSP and folding mode when I open an ~.tex~ file.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . eglot-ensure)
+  (LaTeX-mode . company-mode)
+#+end_src
+
+Properly format tex file can be done as simple as running ~(indent-region (point-min) (point-max))~. But I need to turn off ~LaTeX-syntactic-comments~ and ~LaTeX-item-indent~, because they mess up the indent level for commented blocks and lists, respectively.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-init
+  (defun gatsby:latex--setup ()
+    "Setup tab width and indentation rule for `LaTeX-mode'."
+    (setq-local tab-width 2)
+    (add-hook 'before-save-hook
+              (lambda () (indent-region (point-min) (point-max))) nil t))
+#+end_src
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
+  (LaTeX-mode . gatsby:latex--setup)
+#+end_src
+
+#+begin_src emacs-lisp :tangle no :noweb-ref tex-config
+  (setq LaTeX-syntactic-comments nil
+        LaTeX-item-indent 0)
+#+end_src
+
+*** LaTeX:pdf-viewer
+
+I use ~Zathura~ as my pdf viewer.
+
+#+begin_src nix :noweb-ref latex-module-extra :noweb yes
   {
     programs.zathura = {
       enable = true;
@@ -7444,7 +7442,7 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
 #+begin_src nix :noweb-ref zathura-options
   options = {
     synctex = true;
-    synctex-editor-command = "emacsclient +%{line} +{input}";
+    synctex-editor-command = "emacsclient +%{line} %{input}";
   };
   extraConfig = ''
     map <C-r> exec zathuraInverseSearch
@@ -7452,6 +7450,8 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
 #+end_src
 
 Unfortunately, ~zathuraInverseSearch~ is system-specific. In Linux, I use ~ydotool~ to mimic mouse movement and ~swaymsg~ to detect current window setup. In MacOS, I use the builtin ~AppleScript~ for it.
+
+# TODO: implement ~zathuraInverseSearch~
 
 Apart from the ability of folding sections, enabling ~outline-minor-mode~ also allows me to navigate quickly between different sections.
 
@@ -7462,10 +7462,106 @@ Apart from the ability of folding sections, enabling ~outline-minor-mode~ also a
 #+end_src
 
 * Miscellaneous Tools
+** Update Utilities
+
+First the updating script
+
+#+begin_src shell :shebang "#!/usr/bin/env nix-shell" :tangle update-user-config :noweb yes
+  #! nix-shell -i bash -p bash emacs
+  echo "start tangling modules..."
+  emacs -Q --batch main.org -f org-babel-tangle
+  echo "done"
+
+  <<update-user-config-hook>>
+
+  x86_64_linux=`uname -a | grep -P "x86_64(.)+Linux"`
+
+  if [ -n "$x86_64_linux" ]; then
+      nix build .#homeConfigurations.x86_64-linux.activationPackage
+  fi
+
+  x86_64_darwin=`uname -a | grep -P "x86_64(.)+Darwin"`
+
+  if [ -n "$x86_64_darwin" ]; then
+      nix build .#homeConfigurations.x86_64-darwin.activationPackage
+  fi
+
+  ./result/activate
+#+end_src
+
+Then the within-emacs updating function.
+
+#+begin_src emacs-lisp
+  (defun gatsby:switch-home ()
+    "Make an asynchronous process tangling, building and switch to `home-manager' configuration defined in `flake.nix'. Print stdout to `*flake-process*' buffer.
+
+  The exact configuration to be built is determined by the output of \"uname -a\". This flake currently support x86_64-linux and x86_64-darwin platforms.
+  "
+    (interactive)
+    (when (process-live-p "flake-process")
+      (user-error "Another flake process is currently running, exiting"))
+
+    (if (buffer-live-p (get-buffer "*flake-process*"))
+        (with-current-buffer "*flake-process*"
+          (let ((inhibit-read-only t))
+            (delete-region (point-min) (point-max))))
+      (with-current-buffer (get-buffer-create "*flake-process*")
+        (special-mode)))
+
+    (let ((exec-path `(,default-directory ,@exec-path)))
+      (make-process
+       :name "flake-process"
+       :buffer "*flake-process*"
+       :command '("update-user-config")
+       :filter
+       (lambda (proc msg)
+         (when (buffer-live-p (process-buffer proc))
+           (with-current-buffer (process-buffer proc)
+             (let ((moving (= (point) (process-mark proc)))
+                   (inhibit-read-only t))
+               (save-excursion
+                 (goto-char (process-mark proc))
+                 (insert (xterm-color-filter msg))
+                 (set-marker (process-mark proc) (point)))
+               (if moving (goto-char (process-mark proc)))))))))
+
+    (pop-to-buffer "*flake-process*"))
+#+end_src
+
+Finally the ~./update-readme~ script.
+
+#+begin_src shell :tangle update-readme :tangle-mode (identity #o755)  :shebang "#!/usr/bin/env sh"
+  ":"; exec emacs --quick --script "$0" "$@" # -*- mode: emacs-lisp; lexical-binding: t; -*-
+
+  (message "updating README.org...")
+  (let* ((source-file (car argv))
+         (readme-file (cadr argv))
+         (org-mode-hook nil))
+    (save-excursion
+      (find-file source-file)
+      (goto-char (org-find-exact-headline-in-buffer "Overview"))
+      (let* ((elem (org-element-at-point))
+             (beg (org-element-property :begin elem))
+             (end (org-element-property :contents-end elem)))
+        (write-region beg end readme-file))))
+  (message "done")
+#+end_src
+
+Automatically update ~README.org~ when updating the whole configuration.
+
+#+begin_src shell :noweb-ref update-user-config-hook
+  ./update-readme main.org README.org
+#+end_src
+
 ** Command Line Utilities
 
-#+begin_src nix :noweb-ref home-manager
-  {
+#+begin_src nix :noweb yes :tangle ./modules/cli.nix :mkdirp yes
+  { pkgs, ... }: {
+
+    imports = [
+      <<cli-module-extra>>
+    ];
+
     home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
   }
 #+end_src
@@ -7474,7 +7570,7 @@ Apart from the ability of folding sections, enabling ~outline-minor-mode~ also a
 
 I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-webkit]] as a modern JS compatible browser inside ~emacs~, but until then, I will use ~firefox~ instead.
 
-#+begin_src nix :noweb-ref home-manager
+#+begin_src nix :noweb-ref flake-linux-config
   {
     home.packages = [ pkgs.firefox ];
 
@@ -7484,24 +7580,14 @@ I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-w
   }
 #+end_src
 
-* System-specific Settings
 ** Keyboard Firmware Loader
 
-Initializing system-specific configuration using the ~lib.mkIf~ function:
 I use [[https://drop.com/buy/drop-alt-mechanical-keyboard][drop-alt keyboard]], which supports custom layout via QMK firmware. To enable the custom layout, I first configure and download the layout file [[https://drop.com/mechanical-keyboards/configurator][here]]. The official firmware loader ~mdloader~ can be used to refresh the firmware. [[https://drop.com/talk/10343/how-to-configure-your-alt-keyboard][Here]] is a step-by-step tutorial.
 
-#+begin_src nix :noweb-ref home-manager :noweb yes
-  (
-    { pkgs, lib, config, ...}:
 The firmware loader supports both linux and macOS platform. However, the pre-built binary does not confirm with ~flake~ input format. Therefore I need to build it from source. To do so, first register ~mdloader~ with ~flake~.
 
-    lib.mkMerge [
-      <<linux-config>>
-      <<macos-config>>
-    ]
-  )
 #+begin_src nix :noweb-ref flake-input
-  drop-keyboard-loader = {
+  qmk-firmwork-loader = {
     url = "github:Massdrop/mdloader";
     flake = false;
   };
@@ -7509,13 +7595,13 @@ The firmware loader supports both linux and macOS platform. However, the pre-bui
 
 Then make sure it is installed by the ~home-manager~.
 
-#+begin_src nix :noweb-ref flake-module
-  drop-keyboard-loader-module = {
+#+begin_src nix :tangle ./modules/drop-keyboard-loader.nix :mkdirp yes
+  { pkgs, ... }: {
     home.packages = [
       (
         pkgs.stdenv.mkDerivation {
           name = "mdloader";
-          src = drop-keyboard-loader;
+          src = qmk-firmwork-loader;
           installPhase = ''
             install -Dt $out/bin/ ./build/mdloader
             cp applet-mdflash.bin $out/bin/
@@ -7523,7 +7609,7 @@ Then make sure it is installed by the ~home-manager~.
         }
       )
     ];
-  };
+  }
 #+end_src
 
 To refresh the keyboard firmware, connect it to the computer in DFU mode and run
@@ -7532,72 +7618,6 @@ To refresh the keyboard firmware, connect it to the computer in DFU mode and run
   mdloader --first --download /path/to/firmware/bin/file --restart
 #+end_src
 
-#+end_src
-
-** Linux (Wayland)
-
-~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
-
-+ display services (~wayland~, ~sway~)
-+ notification services (~libnotify~, ~mako~)
-+ network services (~networkmanager~, ~bluez~)
-+ system fonts
-
-Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
-
-#+begin_src nix :noweb-ref linux-config :noweb yes
-  (
-    lib.mkIf (pkgs.stdenv.isLinux) {
-      home = {
-        file = {
-          ".config/sway/config".source = ./linux/sway;
-          ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
-          ".config/waybar/config".source = ./linux/waybar;
-          ".config/waybar/style.css".source = ./linux/waybar-style;
-          ".config/fontconfig" = {
-            source = ./linux/fontconfig;
-            recursive = true;
-          };
-        };
-      };
-
-      <<extra-linux-packages>>
-      <<extra-linux-setup>>
-    }
-  )
-#+end_src
-
-I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system packages (e.g., ~sway~).
-
-#+begin_src nix :noweb-ref extra-linux-setup
-  home.sessionPath = [ "/usr/bin" ];
-#+end_src
-
-In addition, I include some Linux-wayland specific packages.
-
-#+begin_src nix :noweb-ref extra-linux-packages
-  home.packages = with pkgs; [
-    bemenu
-    havoc # terminal
-  ];
-
-  home.file.".config/havoc.cfg" = {
-    text = ''
-      [child]
-      program=bash
-      [font]
-      size=25
-      [bind]
-      C-S-c=copy
-      C-S-v=paste
-    '';
-  };
-#+end_src
-
-** MacOS
-
-On MacOS system, those components are builtin, and I don't need to worry about it.
-
 * TODO
 ** vterm: iron out quirks in integrating with ~evil~
 ** org-gcal: support invite people
@@ -7605,3 +7625,5 @@ On MacOS system, those components are builtin, and I don't need to worry about i
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
+** replace straight.el with nix-flake
+** implement ~zathuraInverseSearch~

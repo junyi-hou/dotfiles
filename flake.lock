@@ -1,0 +1,210 @@
+{
+  "nodes": {
+    "emacs-overlay": {
+      "locked": {
+        "lastModified": 1619836013,
+        "narHash": "sha256-puhJJQayOyGWLqRPPragmGC/PTTg8Hs1/HRCusGfo4k=",
+        "owner": "nix-community",
+        "repo": "emacs-overlay",
+        "rev": "365ad520a5d3ca88d48d0494fa8ba6a7f74c10bf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "emacs-overlay",
+        "type": "github"
+      }
+    },
+    "gmail-oauth2-tools": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1559164127,
+        "narHash": "sha256-jhjr3eENMeTUqTP7ue8wGUz2elkiH/K0fAFDqVSct7M=",
+        "owner": "google",
+        "repo": "gmail-oauth2-tools",
+        "rev": "e3229155a4037267ce40f1a3a681f53221aa4d8d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "google",
+        "repo": "gmail-oauth2-tools",
+        "type": "github"
+      }
+    },
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1619820677,
+        "narHash": "sha256-mNz58JzgB7mWSujih0PC0FJ/XUFtysHVGi2JPvG/okg=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "2eed1380266cf6d0f48a90ba24131fc8f65a4f61",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "naersk": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1605267184,
+        "narHash": "sha256-0FSNlq6nN0/W88fg5kTkgRhAOQ8pI+uSZqBG9w49pMM=",
+        "owner": "nmattia",
+        "repo": "naersk",
+        "rev": "ce273fa593dcc94a629d0d869f07d96d2b337e37",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nmattia",
+        "repo": "naersk",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1619464443,
+        "narHash": "sha256-R7WAb8EnkIJxxaF6GTHUPytjonhB4Zm0iatyWoW169A=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "8e4fe32876ca15e3d5eb3ecd3ca0b224417f5f17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1605988311,
+        "narHash": "sha256-PA+kgq46NApOAJlmBNJHs5DwsIrY+jodM0e4g7VtXyY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2247d824fe07f16325596acc7faa286502faffd1",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1605988311,
+        "narHash": "sha256-PA+kgq46NApOAJlmBNJHs5DwsIrY+jodM0e4g7VtXyY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2247d824fe07f16325596acc7faa286502faffd1",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "oauth2-lib": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1611713742,
+        "narHash": "sha256-IaH8tNUhM0lUOmFiG4G9cGzsuM9mTWfQrzoQ78MIgZ0=",
+        "owner": "robn",
+        "repo": "sasl2-oauth",
+        "rev": "4236b6fb904d836b85b55ba32128b843fd8c2362",
+        "type": "github"
+      },
+      "original": {
+        "owner": "robn",
+        "repo": "sasl2-oauth",
+        "type": "github"
+      }
+    },
+    "pragmata-pro": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-5qpkwQOEM73hWsvnPxzvGVXneE80hMb2NlfS8gCIZSw=",
+        "type": "tarball",
+        "url": "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip"
+      }
+    },
+    "qmk-firmwork-loader": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1602023898,
+        "narHash": "sha256-vuoYxeNisU5bQbsNg3yUdGn2LmkxoNY15WH9cBFNt98=",
+        "owner": "Massdrop",
+        "repo": "mdloader",
+        "rev": "9df711a7c2df36ad9efae34fb7302ecbfa49c0a6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Massdrop",
+        "repo": "mdloader",
+        "type": "github"
+      }
+    },
+    "rnix-lsp": {
+      "inputs": {
+        "naersk": "naersk",
+        "nixpkgs": "nixpkgs_3",
+        "utils": "utils"
+      },
+      "locked": {
+        "lastModified": 1617631723,
+        "narHash": "sha256-Qo09WUFFsqoj07ZNXxF3SL3eMaCg9UovNNJb1wa/O8s=",
+        "owner": "nix-community",
+        "repo": "rnix-lsp",
+        "rev": "23df7ab20b71896ac47da8dab6d4bcc6e8f994d5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "rnix-lsp",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "emacs-overlay": "emacs-overlay",
+        "gmail-oauth2-tools": "gmail-oauth2-tools",
+        "home-manager": "home-manager",
+        "nixpkgs": "nixpkgs",
+        "oauth2-lib": "oauth2-lib",
+        "pragmata-pro": "pragmata-pro",
+        "qmk-firmwork-loader": "qmk-firmwork-loader",
+        "rnix-lsp": "rnix-lsp"
+      }
+    },
+    "utils": {
+      "locked": {
+        "lastModified": 1605370193,
+        "narHash": "sha256-YyMTf3URDL/otKdKgtoMChu4vfVL3vCMkRqpGifhUn0=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "5021eac20303a61fafe17224c087f5519baed54d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
