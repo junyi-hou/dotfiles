@@ -46,49 +46,61 @@ GPL
 I use ~flake~ to manage my configuration files.
 
 #+begin_src nix :tangle flake.nix :noweb yes
-    {
-      description = "Junyi's configuration file";
+  {
+    description = "Junyi's configuration file";
 
-      inputs = {
-        nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    inputs = {
+      nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-        home-manager = {
-          url = "github:nix-community/home-manager";
-          inputs.nixpkgs.follows = "nixpkgs";
-        };
-
-        <<flake-input>>
+      home-manager = {
+        url = "github:nix-community/home-manager";
+        inputs.nixpkgs.follows = "nixpkgs";
       };
 
-      outputs = { self, ... }@inputs: with inputs; {
-        realUser = "Junyi Hou";
+      <<flake-input>>
+    };
 
-        homeModules = with builtins;
-          let
-            moduleDir = ./modules;
-            importFn = name: _: import (moduleDir + "/${name}");
-            filterAttrs = nixpkgs.lib.filterAttrs;
-            filterFn = name: _: nixpkgs.lib.hasSuffix ".nix" name;
-          in
-            mapAttrs importFn (filterAttrs filterFn (readDir moduleDir));
+    outputs = { self, ... }@inputs: with inputs; {
+      realUser = "Junyi Hou";
 
-        homeConfigurations = {
-          "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
-            system = "x86_64-linux";
-            homeDirectory = "/home/lactaid";
-            username = "lactaid";
-            configuration = ./linux/homeConfig.nix;
+      homeModules = with builtins;
+        let
+          moduleDir = ./modules;
+          importFn = name: _: import (moduleDir + "/${name}");
+          filterAttrs = nixpkgs.lib.filterAttrs;
+          filterFn = name: _: nixpkgs.lib.hasSuffix ".nix" name;
+        in
+          mapAttrs importFn (filterAttrs filterFn (readDir moduleDir));
+
+      homeConfigurations = {
+        "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
+          system = "x86_64-linux";
+          homeDirectory = "/home/lactaid";
+          username = "lactaid";
+          configuration = { pkgs, lib, config, ... }: {
+            programs.home-manager.enable = true;
+            imports = [
+              <<linux-modules>>
+              <<common-modules>>
+            ];
           };
+        };
 
-          "x86_64-darwin" = home-manager.lib.homeManagerConfiguration rec {
-            system = "x86_64-darwin";
-            homeDirectory = "/Users/lactaid";
-            username = "lactaid";
-            configuration = ./darwin/homeConfig.nix;
+        "x86_64-darwin" = home-manager.lib.homeManagerConfiguration rec {
+          system = "x86_64-darwin";
+          homeDirectory = "/Users/lactaid";
+          username = "lactaid";
+          configuration = { pkgs, lib, config, ... }: {
+            programs.home-manager.enable = true;
+            imports = [
+              <<darwin-modules>>
+              <<common-modules>>
+            ];
           };
         };
       };
-    }
+    };
+  }
 #+end_src
 
 ** System-specific Settings
@@ -117,16 +129,6 @@ I first include a set of common modules that should be enable for all platforms.
 #+end_src
 
 *** Linux (Wayland)
-
-#+begin_src nix :tangle ./linux/homeConfig.nix :mkdirp yes :noweb yes
-  { pkgs, lib, config, ... }: {
-    programs.home-manager.enable = true;
-    imports = [
-      <<linux-modules>>
-      <<common-modules>>
-    ];
-  }
-#+end_src
 
 ~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
@@ -189,15 +191,6 @@ In addition, I include some Linux-wayland specific packages.
 
 On MacOS system, those components are builtin, and I don't need to worry about it.
 
-#+begin_src nix :tangle ./darwin/homeConfig.nix :mkdirp yes :noweb yes
-  { pkgs, lib, config, ... }: {
-    programs.home-manager.enable = true;
-    imports = [
-      <<darwin-modules>>
-      <<common-modules>>
-    ];
-  }
-#+end_src
 
 * ~emacs~ Configuration
 

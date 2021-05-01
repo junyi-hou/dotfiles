@@ -1,0 +1,12 @@
+{ pkgs, ... }: {
+  imports = [
+    {
+      home.packages = with pkgs; [
+        aspell aspellDicts.en aspellDicts.en-computers aspellDicts.en-science
+      ];
+    }
+    {
+      home.packages = [ pkgs.languagetool ];
+    }
+  ];
+}

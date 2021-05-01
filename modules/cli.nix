@@ -1,0 +1,13 @@
+{ pkgs, ... }: {
+
+  imports = [
+    {
+      home.packages = [ pkgs.bat ];
+    }
+    {
+      home.packages = [ pkgs.ripgrep ];
+    }
+  ];
+
+  home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
+}

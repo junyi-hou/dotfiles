@@ -6,42 +6,30 @@
 
 *** Initialization
 
-  Make sure the ~nix~ package manager and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
+  Make sure the ~nix~ package manager, ~flake~, and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
   #+begin_src shell
-    update-user-config
+    ./update-user-config --init
   #+end_src
 
-*** Update
+*** Update Configuration
 
-All updates should be made in ~main.org~. After such changes are made, run the following command in terminal:
+The script ~update-user-config~ is used to initialize or update configuration. This script does two things. First, it start an new ~emacs~ process in batch mode and tangle ~main.org~, which updates all relevant NixOS modules and user configurations. Second, it runs ~nix build~ to implement those updates. Therefore, the preferred way of updating is to edit ~main.org~ and make changes as see fit, then call ~gatsby:switch-home~ in ~emacs~ or run ~./update-user-config~ in shell to automatically update (tangle) the new setting.
 
+Alternatively, one can manually edit ~*.nix~ and run
 #+begin_src shell
-emacs -Q --batch main.org -f org-babel-tangle
+  ./update-user-config --no-tangle
 #+end_src
-
-Alternatively, if inside ~emacs~, run
-
-#+begin_src shell
-  M-x find-file ./main.org
-  M-x org-babel-tangle
-#+end_src
+to commit updates. The ~--no-tangle~ flag is important: without this flag, ~update-user-config~ will restore the ~*.nix~ files and there will be no update made.
 
 ** Repository Structure
 
 + project-root
   - main.org        -- the org file that generates all configuration
-  - emacs.d
-    - debug-init.el -- the minimal init file for debug purpose
-    - etc
-      - eshell      -- eshell alias
-      - yasnippet   -- snippet files
-  - linux
-    - fontconfig    -- ~fontconfig~ files
-    - sway          -- ~sway~ configuration file
-    - waybar        -- ~waybar~ configuration file
-    - waybar-style  -- ~waybar~ CSS style file
-    - wallpaper.jpg -- wallpaper
+  - emacs.d         -- ~emacs~ configuration file
+  - modules         -- nixOS modules generated from ~main.org~
+  - linux           -- linux-specific configuration files
+  - darwin          -- macOS-specific configuration files
 
 ** License
 

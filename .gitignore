@@ -1,5 +1,3 @@
 result
 emacs.d/init.el
 **/eshell/**
-**/*.nix
-!flake.nix
