@@ -15,7 +15,7 @@
   Make sure the ~nix~ package manager, ~flake~, and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
   #+begin_src shell
-    ./update-user-config --init
+    ./update-user-config
   #+end_src
 
 *** Update Configuration
@@ -190,7 +190,6 @@ In addition, I include some Linux-wayland specific packages.
 *** MacOS
 
 On MacOS system, those components are builtin, and I don't need to worry about it.
-
 
 * ~emacs~ Configuration
 
@@ -7488,13 +7487,12 @@ Apart from the ability of folding sections, enabling ~outline-minor-mode~ also a
 * Miscellaneous Tools
 ** Update Utilities
 
-First the updating script
+First the updating script.
 
 #+begin_src shell :shebang "#!/usr/bin/env nix-shell" :tangle update-user-config :noweb yes
   #! nix-shell -i bash -p bash emacs
-  echo "start tangling modules..."
-  emacs -Q --batch main.org -f org-babel-tangle
-  echo "done"
+
+  <<update-user-config-tangle-p>>
 
   <<update-user-config-hook>>
 
@@ -7503,6 +7501,20 @@ First the updating script
 
   nix build .#homeConfigurations.$ARCH-$SYSTEM_TYPE.activationPackage
   ./result/activate
+#+end_src
+
+Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.
+
+#+begin_src shell :noweb-ref update-user-config-tangle-p
+  if [ "$1" == "--no-tangle" ]; then
+      echo "--no-tangle flag is on, skip tangling..."
+  elif [ "$1" != "" ]; then
+      echo "unsupported flag $1"
+  else
+      echo "start tangling modules..."
+      emacs -Q --batch main.org -f org-babel-tangle
+      echo "done"
+  fi
 #+end_src
 
 Then the within-emacs updating function.
