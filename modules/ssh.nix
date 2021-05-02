@@ -1,4 +1,4 @@
-{
+inputs: with inputs; {
   programs.ssh = {
     enable = true;
     matchBlocks = {

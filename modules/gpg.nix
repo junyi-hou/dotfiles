@@ -1,4 +1,4 @@
-{ lib, ... }: {
+inputs: with inputs; { lib, ... }: {
   programs = {
     gpg = {
       enable = true;

@@ -1,4 +1,4 @@
-homeDirectory: { pkgs, lib, config, ... }:
+inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
   let
     gmailOauth2Tools = with pkgs; stdenv.mkDerivation {
       name = "gmail-oauth2-tools";
@@ -258,7 +258,7 @@ homeDirectory: { pkgs, lib, config, ... }:
             };
           };
           notmuch.enable = true;
-          passwordCommand = "${gmail-oauth2-tools}/bin/gmail-get-token junyi.yi.hou@gmail.com";
+          passwordCommand = "${gmailOauth2Tools}/bin/gmail-get-token junyi.yi.hou@gmail.com";
         
           primary = true;
         };
@@ -326,7 +326,7 @@ homeDirectory: { pkgs, lib, config, ... }:
             };
           };
           notmuch.enable = true;
-          passwordCommand = "${gmail-oauth2-tools}/bin/gmail-get-token junyi.hou@berkeley.edu";
+          passwordCommand = "${gmailOauth2Tools}/bin/gmail-get-token junyi.hou@berkeley.edu";
         };
       };
     };

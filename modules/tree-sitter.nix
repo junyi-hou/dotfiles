@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+inputs: with inputs; { pkgs, ... }:
 let
   tree-sitter = pkgs.stdenv.mkDerivation {
     pname = "tree-sitter";

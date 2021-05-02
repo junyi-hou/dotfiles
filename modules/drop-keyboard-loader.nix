@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+inputs: with inputs; { pkgs, ... }: {
   home.packages = [
     (
       pkgs.stdenv.mkDerivation {

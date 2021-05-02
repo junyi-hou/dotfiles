@@ -1,4 +1,4 @@
-direnv = {
+inputs: with inputs; {
   nixpkgs.overlays = [
     (final: prev: {
       nix-direnv = prev.nix-direnv.overrideAttrs (oldAttrs: rec {

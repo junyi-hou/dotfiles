@@ -9,7 +9,7 @@
   Make sure the ~nix~ package manager, ~flake~, and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
   #+begin_src shell
-    ./update-user-config --init
+    ./update-user-config
   #+end_src
 
 *** Update Configuration

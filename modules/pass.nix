@@ -1,4 +1,4 @@
-homeDirectory: {
+inputs: with inputs; homeDirectory: {
   programs.password-store = {
     enable = true;
     settings = {

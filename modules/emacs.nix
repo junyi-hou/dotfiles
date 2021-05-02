@@ -1,9 +1,9 @@
-{
+inputs: with inputs; {
   nixpkgs.overlays = [ emacs-overlay.overlay ];
 
   home = {
     file.".emacs.d" = {
-      source = ./emacs.d;
+      source = ../emacs.d;
       recursive = true;
     };
     sessionVariables = {

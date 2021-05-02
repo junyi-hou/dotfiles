@@ -1,21 +1,20 @@
 #!/usr/bin/env nix-shell
 #! nix-shell -i bash -p bash emacs
-echo "start tangling modules..."
-emacs -Q --batch main.org -f org-babel-tangle
-echo "done"
+
+if [ "$1" == "--no-tangle" ]; then
+    echo "--no-tangle flag is on, skip tangling..."
+elif [ "$1" != "" ]; then
+    echo "unsupported flag $1"
+else
+    echo "start tangling modules..."
+    emacs -Q --batch main.org -f org-babel-tangle
+    echo "done"
+fi
 
 ./update-readme main.org README.org
 
-x86_64_linux=`uname -a | grep -P "x86_64(.)+Linux"`
+SYSTEM_TYPE=`uname | tr '[:upper:]' '[:lower:]'`
+ARCH=`uname -m`
 
-if [ -n "$x86_64_linux" ]; then
-    nix build .#homeConfigurations.x86_64-linux.activationPackage
-fi
-
-x86_64_darwin=`uname -a | grep -P "x86_64(.)+Darwin"`
-
-if [ -n "$x86_64_darwin" ]; then
-    nix build .#homeConfigurations.x86_64-darwin.activationPackage
-fi
-
+nix build .#homeConfigurations.$ARCH-$SYSTEM_TYPE.activationPackage
 ./result/activate

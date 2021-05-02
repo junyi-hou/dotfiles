@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+inputs: with inputs; { pkgs, ... }:
 let
   pragmataPro = pkgs.stdenv.mkDerivation {
     pname = "PragmataPro";

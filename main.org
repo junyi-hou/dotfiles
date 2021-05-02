@@ -60,19 +60,19 @@ I use ~flake~ to manage my configuration files.
       <<flake-input>>
     };
 
-    outputs = { self, ... }@inputs: with inputs; {
+    outputs = { self, ... }@inputs: {
       realUser = "Junyi Hou";
 
       homeModules = with builtins;
         let
           moduleDir = ./modules;
-          importFn = name: _: import (moduleDir + "/${name}");
-          filterAttrs = nixpkgs.lib.filterAttrs;
-          filterFn = name: _: nixpkgs.lib.hasSuffix ".nix" name;
+          importFn = name: _: import (moduleDir + "/${name}") inputs;
+          filterAttrs = inputs.nixpkgs.lib.filterAttrs;
+          filterFn = name: _: inputs.nixpkgs.lib.hasSuffix ".nix" name;
         in
           mapAttrs importFn (filterAttrs filterFn (readDir moduleDir));
 
-      homeConfigurations = {
+      homeConfigurations = with inputs; {
         "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
           system = "x86_64-linux";
           homeDirectory = "/home/lactaid";
@@ -770,7 +770,7 @@ To install fonts, first register the source file in ~flake~.
 Then install it using the custom module.
 
 #+begin_src nix :noweb yes :tangle ./modules/font.nix :mkdirp yes
-  { pkgs, ... }:
+  inputs: with inputs; { pkgs, ... }:
   let
     pragmataPro = pkgs.stdenv.mkDerivation {
       pname = "PragmataPro";
@@ -2053,7 +2053,7 @@ I do not need to register ~libvterm~ with ~home-manager~. Rather, the recommende
 According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~ requires some shell-side configuration. Since I use ~bash~ by default, I need to add those shell-side configuration to my ~.bashrc~.
 
 #+begin_src nix :noweb yes :tangle ./modules/vterm.nix :mkdirp yes
-  { pkgs, ... }: {
+  inputs: with inputs; { pkgs, ... }: {
 
     imports = [
       <<vterm-module-extra>>
@@ -2912,22 +2912,24 @@ This concludes the settings for ~company~.
 
 ~yasnippet~ is the goto snippet engine for ~emacs~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package yasnippet
     :hook
     (company-mode . yas-reload-all)
-    (company-mode . yas-minor-mode))
+    (company-mode . yas-minor-mode)
+    :config
+    <<yas-config>>)
 #+end_src
 
 There are several changes I want to make on the behaviors of ~yasnippet~ when inside snippets. First, I want to be able to expand snippets within snippet
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref yas-config
   (setq yas-triggers-in-field t)
 #+end_src
 
 Second, sometimes I need to go back to a (modified) snippet field and change its content. However, ~yasnippet~ makes this difficult: it goes back to the beginning of the field, and hitting ~delete~ will go out of a snippet field (therefore forcefully exit the snippet). To make changes, I need to move my cursor to the appropriate position of the field first. This is annoying. Therefore I improve the ~delete~ in ~yasnippet~ to allow me to delete the whole field if I am at the beginning of the a field, regardless of whether the field has modified or not.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref yas-config
   (defun gatsby:yas--clear-field-filter (cmd)
     "Clear field regardless of whether it has been modified or not.
   This make sure that if I backtab into a modified field I can still hit <Del> and delete the whole field."
@@ -2950,7 +2952,7 @@ Second, sometimes I need to go back to a (modified) snippet field and change its
 
 I put ~completing-read~ on top to ~yas-prompt-functions~ so I can use [[selectrum]] in ~yas-choose-value~, which does not require match by default.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref yas-config
   (add-to-list 'yas-prompt-functions #'completing-read)
 #+end_src
 
@@ -3035,7 +3037,7 @@ I enable ~tree-sitter-fold-mode~ whenever ~tree-sitter-mode~ is enabled.
 To compile tree-sitter grammars for different languages, I need to install the tree-sitter command-line utility. The tree-sitter repository provides pre-built binary of the command-line utility. However, before [[https://github.com/NixOS/nix/pull/4153][this pull request]] gets merged, ~flake~ do not support using plain binary files as inputs. As a workaround, I have to manually specific their checksums when building them:
 
 #+begin_src nix :tangle ./modules/tree-sitter.nix :mkdirp yes
-  { pkgs, ... }:
+  inputs: with inputs; { pkgs, ... }:
   let
     tree-sitter = pkgs.stdenv.mkDerivation {
       pname = "tree-sitter";
@@ -3528,7 +3530,7 @@ Set ~ein:output-area-inlined-images~ to ~t~ so ~ein~ can display inline images.
 I am not a native speaker. This makes spelling and grammar checkers very helpful for my writing.
 
 #+begin_src nix :noweb yes :tangle ./modules/grammar.nix :mkdirp yes
-  { pkgs, ... }: {
+  inputs: with inputs; { pkgs, ... }: {
     imports = [
       <<grammar-module>>
     ];
@@ -3641,7 +3643,6 @@ Finally, add key bindings for quick typo correction and grammar checking
     "cg" 'gatsby:langtool-toggle)
 #+end_src
 
-
 * Secret Management
 
 ~emacs~ is not only a text editor, it can also serve as the integrated interface between the user (me) and the computer, via its ability to spawn subprocesses and present them in text form. In particular, ~emacs~ can be used to manage secrets like passwords and tokens.
@@ -3662,7 +3663,7 @@ I use ~home-manager~ to configure my [[accounts][account information]] (email ad
 First, I include ~GPG~ in my ~home-manager~ system.
 
 #+begin_src nix :tangle ./modules/gpg.nix :mkdirp yes
-  { lib, ... }: {
+  inputs: with inputs; { lib, ... }: {
     programs = {
       gpg = {
         enable = true;
@@ -3716,7 +3717,7 @@ Second, I enable ~epa~ package in ~emacs~.
 First, install the ~pass~ package using ~home-manager~.
 
 #+begin_src nix :tangle ./modules/pass.nix :mkdirp yes
-  homeDirectory: {
+  inputs: with inputs; homeDirectory: {
     programs.password-store = {
       enable = true;
       settings = {
@@ -3786,7 +3787,7 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 First enable ssh.
 
 #+begin_src nix :noweb yes :tangle ./modules/ssh.nix :mkdirp yes
-  {
+  inputs: with inputs; {
     programs.ssh = {
       enable = true;
       matchBlocks = {
@@ -3812,7 +3813,7 @@ Include server location shortcuts.
 Register ~git~ with ~home-manager~ first.
 
 #+begin_src nix :noweb yes :tangle ./modules/git.nix :mkdirp yes
-  { pkgs, config, ... }: {
+  inputs: with inputs; { pkgs, config, ... }: {
 
     imports = [
       <<git-module-extra>>
@@ -4472,14 +4473,44 @@ A project is defined by a directory tree whose root is identified using special 
 + find file in a project
 + search text in projects
 
-#+begin_src emacs-lisp
-  (use-package project
+For the first two features, I use ~projectile~.
+
+#+begin_src emacs-lisp :noweb yes
+  (use-package projectile
+    :hook
+    (after-init . projectile-mode)
     :config
-    (with-eval-after-load 'vc-hooks
-      (setq vc-follow-symlinks t)))
+    <<projectile-config>>
+    :general
+    (:keymaps 'normal
+     :prefix "SPC"
+     "op" #'projectile-switch-project
+     "of" #'projectile-find-file))
 #+end_src
 
-I use ~deadgrep~ to search for text in projects. ~deadgrep~ use ~ripgrep~ as the backend to search text in project based on regexp.
+By default, ~projectile-find-file~ will ask me to switch to an known project if there is none. Instead of this behavior, I want it to call ~find-file~ instead.
+
+#+begin_src emacs-lisp :noweb-ref projectile-config
+  (defun gatsby:projectile-find-file (args)
+    "Call `projectile-find-file', and pass prefix ARGS to it.
+  If no project is found at `default-directory', call `find-file' instead."
+    (interactive "P")
+    (if (projectile-project-root)
+        (projectile--find-file args)
+      (call-interactively #'find-file)))
+
+  (advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
+#+end_src
+
+~projectile~ can utilize ~fd~ for faster file search. Enable it requires installing the ~fd~ utility.
+
+#+begin_src nix :noweb-ref cli-module-extra
+  {
+    home.packages = [ pkgs.fd ];
+  }
+#+end_src
+
+For the last feature, I use ~deadgrep~ to search for text in projects. ~deadgrep~ use ~ripgrep~ as the backend to search text in project based on regexp.
 
 #+begin_src nix :noweb-ref cli-module-extra
   {
@@ -4543,7 +4574,7 @@ An big advantage of ~nix~ is that it can create reproducible isolate production 
 To address this problem, I use ~envrc~, which makes ~process-environment~ a buffer-local variable. I first need to enable ~direnv~ and ~nix-direnv~ support in ~home-manager~.
 
 #+begin_src nix :noweb yes :tangle ./modules/direnv.nix :mkdirp yes
-  direnv = {
+  inputs: with inputs; {
     <<nix-direnv-overlays>>
 
     programs.direnv = {
@@ -4859,7 +4890,7 @@ To receive and send emails from the comfort in ~emacs~, I use
      Then include them in the ~home-manager~ configuration.
 
      #+begin_src nix :noweb yes :tangle ./modules/mail.nix :mkdirp yes
-       homeDirectory: { pkgs, lib, config, ... }:
+       inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
          let
            gmailOauth2Tools = with pkgs; stdenv.mkDerivation {
              name = "gmail-oauth2-tools";
@@ -5762,7 +5793,7 @@ When starting up ~emacs~ for the first time, the ~password-store~ will ask me fo
 Makes sure that the calendar directory (~$HOME/.cal~) exists.
 
 #+begin_src nix :tangle ./modules/calendar.nix :mkdirp yes
-  { lib, ... }: {
+  inputs: with inputs; { lib, ... }: {
     home.activation = {
       initCalDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           $DRY_RUN_CMD mkdir -p $VERBOSE_ARG $HOME/.cal
@@ -6516,12 +6547,12 @@ Use ~emacs-overlay~ from ~nix-community~ to obtain the latest git version of ~em
 #+end_src
 
 #+begin_src nix :tangle ./modules/emacs.nix :mkdirp yes
-  {
+  inputs: with inputs; {
     nixpkgs.overlays = [ emacs-overlay.overlay ];
 
     home = {
       file.".emacs.d" = {
-        source = ./emacs.d;
+        source = ../emacs.d;
         recursive = true;
       };
       sessionVariables = {
@@ -6539,7 +6570,7 @@ Use ~emacs-overlay~ from ~nix-community~ to obtain the latest git version of ~em
 
 For ~linux~ system, ~emacs-overlay~ provides derivation for ~native-comp~ version, so I can just use it.
 
-#+begin_src nix :noweb-ref flake-linux-config
+#+begin_src nix :noweb-ref linux-modules
   {
     programs.emacs = {
       enable = true;
@@ -6550,7 +6581,7 @@ For ~linux~ system, ~emacs-overlay~ provides derivation for ~native-comp~ versio
 
 For ~macOS~, I follow the method used [[https://github.com/twlz0ne/nix-gccemacs-darwin][here]] to enable ~cocona~ and wrap ~emacsGit~ with ~macOS~ specific library path.
 
-#+begin_src nix :noweb-ref flake-darwin-config
+#+begin_src nix :noweb-ref darwin-modules
   (
     let
       libPath = with pkgs; lib.concatStringsSep ":" [
@@ -6870,7 +6901,7 @@ Register STATA with ~flake~ and install it using ~home-manager~.
 
 Note that I only include STATA package for ~linux~. There is a separate version of STATA for ~macOS~.
 
-#+begin_src nix :noweb-ref flake-linux-config
+#+begin_src nix :noweb-ref linux-modules
   # {
   #   home.packages = [
   #     (
@@ -7081,7 +7112,7 @@ Nix community offers a basic LSP server for linting ~.nix~ file. I first registe
 ... and install using ~home-manager~,
 
 #+begin_src nix :noweb yes :tangle ./modules/nix-development.nix :mkdirp yes
-  system: { pkgs, ... }: {
+  inputs: with inputs; system: { pkgs, ... }: {
     home.packages = [
       rnix-lsp.defaultPackage."${system}"
       <<nix-development-extra-package>>
@@ -7362,7 +7393,7 @@ Furthermore, tex has many wired pairs (like $). It does not play well with ~elec
 First install ~textlive~ and the LSP via ~flake~. I use ~texlab~ instead of more light-weighted ~digestif~ since the latter works only in ~linux~ but not ~macOS~.
 
 #+begin_src nix :noweb yes :tangle ./modules/latex.nix :mkdirp yes
-  { pkgs, ... }: {
+  inputs: with inputs; { pkgs, ... }: {
 
     imports = [
       <<latex-module-extra>>
@@ -7467,18 +7498,10 @@ First the updating script
 
   <<update-user-config-hook>>
 
-  x86_64_linux=`uname -a | grep -P "x86_64(.)+Linux"`
+  SYSTEM_TYPE=`uname | tr '[:upper:]' '[:lower:]'`
+  ARCH=`uname -m`
 
-  if [ -n "$x86_64_linux" ]; then
-      nix build .#homeConfigurations.x86_64-linux.activationPackage
-  fi
-
-  x86_64_darwin=`uname -a | grep -P "x86_64(.)+Darwin"`
-
-  if [ -n "$x86_64_darwin" ]; then
-      nix build .#homeConfigurations.x86_64-darwin.activationPackage
-  fi
-
+  nix build .#homeConfigurations.$ARCH-$SYSTEM_TYPE.activationPackage
   ./result/activate
 #+end_src
 
@@ -7488,7 +7511,7 @@ Then the within-emacs updating function.
   (defun gatsby:switch-home ()
     "Make an asynchronous process tangling, building and switch to `home-manager' configuration defined in `flake.nix'. Print stdout to `*flake-process*' buffer.
 
-  The exact configuration to be built is determined by the output of \"uname -a\". This flake currently support x86_64-linux and x86_64-darwin platforms.
+  The exact configuration to be built is determined by the output of \"uname\". This flake currently support x86_64-linux and x86_64-darwin platforms.
   "
     (interactive)
     (when (process-live-p "flake-process")
@@ -7549,7 +7572,7 @@ Automatically update ~README.org~ when updating the whole configuration.
 ** Command Line Utilities
 
 #+begin_src nix :noweb yes :tangle ./modules/cli.nix :mkdirp yes
-  { pkgs, ... }: {
+  inputs: with inputs; { pkgs, ... }: {
 
     imports = [
       <<cli-module-extra>>
@@ -7563,7 +7586,7 @@ Automatically update ~README.org~ when updating the whole configuration.
 
 I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-webkit]] as a modern JS compatible browser inside ~emacs~, but until then, I will use ~firefox~ instead.
 
-#+begin_src nix :noweb-ref flake-linux-config
+#+begin_src nix :noweb-ref linux-modules
   {
     home.packages = [ pkgs.firefox ];
 
@@ -7589,7 +7612,7 @@ The firmware loader supports both linux and macOS platform. However, the pre-bui
 Then make sure it is installed by the ~home-manager~.
 
 #+begin_src nix :tangle ./modules/drop-keyboard-loader.nix :mkdirp yes
-  { pkgs, ... }: {
+  inputs: with inputs; { pkgs, ... }: {
     home.packages = [
       (
         pkgs.stdenv.mkDerivation {
