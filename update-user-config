@@ -1,6 +1,20 @@
 #!/usr/bin/env nix-shell
-#! nix-shell -i bash -p bash
+#! nix-shell -i bash -p bash emacs
+
+if [ "$1" == "--no-tangle" ]; then
+    echo "--no-tangle flag is on, skip tangling..."
+elif [ "$1" != "" ]; then
+    echo "unsupported flag $1"
+else
+    echo "start tangling modules..."
+    emacs -Q --batch main.org -f org-babel-tangle
+    echo "done"
+fi
 
 ./update-readme main.org README.org
 
-home-manager switch
+SYSTEM_TYPE=`uname | tr '[:upper:]' '[:lower:]'`
+ARCH=`uname -m`
+
+nix build .#homeConfigurations.$ARCH-$SYSTEM_TYPE.activationPackage
+./result/activate
