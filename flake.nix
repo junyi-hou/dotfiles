@@ -37,16 +37,23 @@
   };
 
   outputs = { self, ... }@inputs: {
+
+    supportedPlatforms = {
+      "x86_64-linux" = true;
+      "x86_64-darwin" = true;
+    };
+
+    defaultPackage = builtins.mapAttrs (system: _: self.homeConfigurations."${system}".activationPackage) self.supportedPlatforms;
+
     realUser = "Junyi Hou";
 
-    homeModules = with builtins;
-      let
-        moduleDir = ./modules;
-        importFn = name: _: import (moduleDir + "/${name}") inputs;
-        filterAttrs = inputs.nixpkgs.lib.filterAttrs;
-        filterFn = name: _: inputs.nixpkgs.lib.hasSuffix ".nix" name;
-      in
-        mapAttrs importFn (filterAttrs filterFn (readDir moduleDir));
+    homeModules = let
+      moduleDir = ./modules;
+      importFn = name: _: import (moduleDir + "/${name}") inputs;
+      filterAttrs = inputs.nixpkgs.lib.filterAttrs;
+      filterFn = name: _: inputs.nixpkgs.lib.hasSuffix ".nix" name;
+    in
+      builtins.mapAttrs importFn (filterAttrs filterFn (builtins.readDir moduleDir));
 
     homeConfigurations = with inputs; {
       "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
