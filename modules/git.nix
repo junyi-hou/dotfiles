@@ -45,7 +45,7 @@ inputs: with inputs; { pkgs, config, ... }: {
         "*.fot"
         "*.cb"
         "*.cb2"
-        ".*.lb"
+        "*.lb"
         
         ## Intermediate documents:
         "*.dvi"
