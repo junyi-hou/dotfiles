@@ -2146,6 +2146,16 @@ List of CANDIDATES is given by flyspell for the WORD."
 (advice-add 'magit-push-current-to-pushremote :around #'magit-push--protected-branch)
 (advice-add 'magit-push-current-to-upstream :around #'magit-push--protected-branch)
 
+(magit-add-section-hook 'magit-status-sections-hook
+                        'magit-insert-recent-commits
+                        'magit-insert-unpushed-to-upstream-or-recent
+                        'replace)
+
+(magit-add-section-hook 'magit-status-sections-hook
+                        'magit-insert-unpushed-to-upstream
+                        'magit-insert-unpushed-to-pushremote
+                        'append)
+
 (defun gatsby:vcs-visit-thing-at-point ()
   "Get file at point in magit buffers."
   (interactive)

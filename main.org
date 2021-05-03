@@ -4191,6 +4191,21 @@ I don't want to accidentally push half baked commits to the remote branch. To av
   (advice-add 'magit-push-current-to-upstream :around #'magit-push--protected-branch)
 #+end_src
 
+~magit~ will hide ~recent commit~ section if there are commits not pushed onto the remote branch. I want ~recent commit~ section to be visible at all time.
+
+#+begin_src emacs-lisp
+  (magit-add-section-hook 'magit-status-sections-hook
+                          'magit-insert-recent-commits
+                          'magit-insert-unpushed-to-upstream-or-recent
+                          'replace)
+
+  (magit-add-section-hook 'magit-status-sections-hook
+                          'magit-insert-unpushed-to-upstream
+                          'magit-insert-unpushed-to-pushremote
+                          'append)
+#+end_src
+
+
 The following function allows me to quickly visit things at point in the magic buffer: be it a file, a commit, or a status.
 
 #+begin_src emacs-lisp
