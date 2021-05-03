@@ -2344,8 +2344,8 @@ List of CANDIDATES is given by flyspell for the WORD."
 (use-package projectile
   :hook
   (after-init . projectile-mode)
-  :config
-  (defun gatsby:projectile-find-file (args)
+  :init
+  (defun gatsby:projectile-find-file (&optional args)
     "Call `projectile-find-file', and pass prefix ARGS to it.
   If no project is found at `default-directory', call `find-file' instead."
     (interactive "P")
@@ -2359,16 +2359,6 @@ List of CANDIDATES is given by flyspell for the WORD."
    :prefix "SPC"
    "op" #'projectile-switch-project
    "of" #'projectile-find-file))
-
-(defun gatsby:projectile-find-file (args)
-  "Call `projectile-find-file', and pass prefix ARGS to it.
-If no project is found at `default-directory', call `find-file' instead."
-  (interactive "P")
-  (if (projectile-project-root)
-      (projectile--find-file args)
-    (call-interactively #'find-file)))
-
-(advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
 
 (use-package deadgrep)
 

@@ -4478,8 +4478,8 @@ For the first two features, I use ~projectile~.
   (use-package projectile
     :hook
     (after-init . projectile-mode)
-    :config
-    <<projectile-config>>
+    :init
+    <<projectile-init>>
     :general
     (:keymaps 'normal
      :prefix "SPC"
@@ -4489,8 +4489,8 @@ For the first two features, I use ~projectile~.
 
 By default, ~projectile-find-file~ will ask me to switch to an known project if there is none. Instead of this behavior, I want it to call ~find-file~ instead.
 
-#+begin_src emacs-lisp :noweb-ref projectile-config
-  (defun gatsby:projectile-find-file (args)
+#+begin_src emacs-lisp :tangle no :noweb-ref projectile-init
+  (defun gatsby:projectile-find-file (&optional args)
     "Call `projectile-find-file', and pass prefix ARGS to it.
   If no project is found at `default-directory', call `find-file' instead."
     (interactive "P")
