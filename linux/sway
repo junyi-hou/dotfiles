@@ -16,7 +16,7 @@ bindsym $mod+q kill
 # program launcher
 bindsym $mod+d exec bemenu-run
 bindsym $mod+Shift+Return exec havoc
-bindsym $mod+Return exec "emacsclient -c"
+bindsym $mod+Return exec "emacsclient -c -e '(eshell)'"
 bindsym $mod+f exec "firefox"
 
 # change focus
