@@ -1,12 +1,12 @@
 * Overview
 
-  This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flakes~ to make my development environment reproducible across different platforms.
+  This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flake~ to manage dependencies.
 
 ** Usage
 
 *** Initialization
 
-  Make sure the ~nix~ package manager, ~flake~, and ~home-manager~ are available. The current ~$USER~ will also need to be a trusted user of ~nix~. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
+  Make sure the ~nix~ package manager is available in the current system. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
 
   #+begin_src shell
     ./update-user-config
