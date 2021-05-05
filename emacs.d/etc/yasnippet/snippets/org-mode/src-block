@@ -1,6 +1,7 @@
 # -*- mode: snippet -*-
 # name: src-block
 # key: src
+# expand-env: ((yas-indent-line 'fixed))
 # --
 ${1:#+name: $2
 }#+begin_src ${3:$$(let ((val (yas-choose-value (-filter 'identity gatsby:org-babel-available-interpreters))))

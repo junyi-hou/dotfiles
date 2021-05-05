@@ -1,0 +1,31 @@
+# key: new
+# name: new-shell
+# expand-env: ((yas-indent-line 'fixed))
+# --
+{
+  description = "$1";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-utils.url = "numtide/flake-utils";
+    $2
+  };
+
+  outputs = { self, ... }@inputs:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        $3
+      in
+      rec {
+        devShell = pkgs.mkShell {
+          buildInputs = [
+            $4
+          ];
+          ${5:shellHook = ''
+            $6
+          '';}
+        };
+      }
+    );
+}

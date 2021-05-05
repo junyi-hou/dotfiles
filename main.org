@@ -4709,15 +4709,15 @@ I include the following functions to quickly modify or initialize a ~.envrc~ and
                                        'directory-name-p)))
     ;; 1. put use_nix in .envrc file
     (with-temp-buffer
-      (insert "use_nix\n")
+      (insert "use flake\n")
       (write-file (format "%s.envrc" root) nil))
     ;; 2. init (and open) a shell.nix file with basic structure
-    (f-touch (format "%sshell.nix" root))
+    (f-touch (format "%sflake.nix" root))
     ;; ask if want to allow
     (when (and (eq envrc--status 'error)
                (y-or-n-p (format "%s is not allowed by direnv, allowing it?")))
       (envrc-allow))
-    (find-file-other-window (format "%sshell.nix" root))
+    (find-file-other-window (format "%sflake.nix" root))
     (yas-expand-snippet (yas-lookup-snippet "new-shell"))
     (evil-insert-state))
 #+end_src

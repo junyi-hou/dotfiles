@@ -46,7 +46,7 @@ pkgs.mkShell {
     ${3:pkgs.nodePackages.pyright}
   ];
   shellHook = ''
-    export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}
+    export JUPYTER_PATH=\$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}
     $0
   '';
 }
