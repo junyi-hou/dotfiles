@@ -1,0 +1,5 @@
+alias cat bat $*
+alias ll ls -alh
+alias cls gatsby:eshell-clear-buffer
+alias sudo eshell/sudo $*
+alias su eshell/su $*
