@@ -578,28 +578,18 @@
    "C-e" #'selectrum-next-page
    "C-y" #'selectrum-previous-page))
 
-(defun gatsby:selectrum--remove-until-slash (bound n)
-  "Return the position of the backwards Nth slash until BOUND.
-  If no slash was found, return BOUND."
-  (save-excursion
-    (if-let* ((found (search-backward "/" bound 'noerror n)))
-        (1+ found)
-      bound)))
+(defun gatsby:selectrum--remove-base (dir)
+  "Insert the string of trimming the base of DIR into the minibuffer."
+  (delete-minibuffer-contents)
+  (insert (string-trim-right (if (string= dir "~/") (expand-file-name "~/") dir) "[^/]+/?")))
 
 (defun gatsby:selectrum-better-backspace ()
   "If `point' is at \"/\", delete till the last \"/\"."
   (interactive)
-  (cond ((thing-at-point-looking-at "~/")
-         (progn
-           (delete-region (minibuffer-prompt-end) (point))
-           (insert (file-name-directory (expand-file-name "~")))))
-        ((string= (buffer-substring (minibuffer-prompt-end) (point)) "/")
-         (call-interactively #'backward-delete-char))
-        ((thing-at-point-looking-at "/")
-         (delete-region (gatsby:selectrum--remove-until-slash
-                         (minibuffer-prompt-end) 2)
-                        (point)))
-        (t (call-interactively #'backward-delete-char))))
+  (if (thing-at-point-looking-at "/")
+      (let ((dir (minibuffer-contents-no-properties)))
+        (gatsby:selectrum--remove-base dir))
+    (call-interactively #'backward-delete-char)))
 
 (general-define-key :keymaps #'selectrum-minibuffer-map
   "<backspace>" #'gatsby:selectrum-better-backspace)
@@ -629,14 +619,15 @@
 (defun gatsby:selectrum-select-current-candidate-if-not-dir ()
   "Select the current candidate. If, however, the current selection is a directory, enter the directory instead of opening it using `dired'."
   (interactive)
-  (let*  ((index selectrum--current-candidate-index)
-          (candidate (selectrum--get-candidate index)))
-    (if (not (directory-name-p candidate))
-        (selectrum-select-current-candidate)
-      (delete-region (gatsby:selectrum--remove-until-slash
-                      (minibuffer-prompt-end) 1)
-                     (point-max))
-      (insert candidate))))
+  (let*  ((input (minibuffer-contents-no-properties))
+          (index selectrum--current-candidate-index)
+          (candidate (selectrum--get-candidate index))
+          (dir (if (directory-name-p input) input (file-name-directory input))))
+    (if (and dir (directory-name-p candidate))
+        (progn
+          (delete-minibuffer-contents)
+          (insert (format "%s%s" dir candidate)))
+      (selectrum-select-current-candidate))))
 
 (defun gatsby:selectrum-unified-tab ()
   "<tab> does the following things
@@ -656,11 +647,13 @@
         (gatsby:selectrum-select-current-candidate-if-not-dir))
        ;; case 1
        ((not (string= common ""))
-        (progn
-          (delete-region (gatsby:selectrum--remove-until-slash
-                          (minibuffer-prompt-end) 1)
-                         (point-max))
-          (insert common)))))))
+        (let*  ((input (minibuffer-contents-no-properties))
+                (dir (if (directory-name-p input) input (file-name-directory input))))
+          (if dir
+              (progn
+                (delete-minibuffer-contents)
+                (insert (format "%s%s" dir common)))
+            (insert common))))))))
 
 (general-define-key :keymaps 'selectrum-minibuffer-map
   "<tab>" #'gatsby:selectrum-unified-tab)
@@ -2455,15 +2448,15 @@ List of CANDIDATES is given by flyspell for the WORD."
                                      'directory-name-p)))
   ;; 1. put use_nix in .envrc file
   (with-temp-buffer
-    (insert "use_nix\n")
+    (insert "use flake\n")
     (write-file (format "%s.envrc" root) nil))
   ;; 2. init (and open) a shell.nix file with basic structure
-  (f-touch (format "%sshell.nix" root))
+  (f-touch (format "%sflake.nix" root))
   ;; ask if want to allow
   (when (and (eq envrc--status 'error)
              (y-or-n-p (format "%s is not allowed by direnv, allowing it?")))
     (envrc-allow))
-  (find-file-other-window (format "%sshell.nix" root))
+  (find-file-other-window (format "%sflake.nix" root))
   (yas-expand-snippet (yas-lookup-snippet "new-shell"))
   (evil-insert-state))
 
