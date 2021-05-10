@@ -10,6 +10,7 @@ let
       cp *.ttf $out/share/fonts/PragmataPro
     '';
   };
+
 in
 {
   imports = [
@@ -55,7 +56,16 @@ in
   ];
 
   fonts = {
-    fonts = [ pragmataPro ];
+    fonts = [
+      pragmataPro
+      pkgs.source-han-sans
+      pkgs.dejavu_fonts
+    ];
     fontconfig.enable = true;
+  };
+
+  home.file.".config/fontconfig" = {
+    source = ../fontconfig;
+    recursive = true;
   };
 }

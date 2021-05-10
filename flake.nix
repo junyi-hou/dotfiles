@@ -10,7 +10,7 @@
     };
 
     pragmata-pro = {
-      url = "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip";
+      url = "file:///home/junyi/Downloads/PragmataPro0.828-2.zip";
       flake = false;
     };
     gmail-oauth2-tools = {
@@ -58,8 +58,8 @@
     homeConfigurations = with inputs; {
       "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
         system = "x86_64-linux";
-        homeDirectory = "/home/lactaid";
-        username = "lactaid";
+        homeDirectory = "/home/junyi";
+        username = "junyi";
         configuration = { pkgs, lib, config, ... }: {
           programs.home-manager.enable = true;
           imports = [
@@ -70,10 +70,6 @@
                   ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
                   ".config/waybar/config".source = ./linux/waybar;
                   ".config/waybar/style.css".source = ./linux/waybar-style;
-                  ".config/fontconfig" = {
-                    source = ./linux/fontconfig;
-                    recursive = true;
-                  };
                 };
               };
             }

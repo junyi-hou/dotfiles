@@ -4,6 +4,8 @@
 #+startup: show3levels
 #+options: toc:3
 
+# Gatsby1122334
+
 * Overview
 
   This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flake~ to manage dependencies.
@@ -82,8 +84,8 @@ I use ~flake~ to manage my configuration files.
       homeConfigurations = with inputs; {
         "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
           system = "x86_64-linux";
-          homeDirectory = "/home/lactaid";
-          username = "lactaid";
+          homeDirectory = "/home/junyi";
+          username = "junyi";
           configuration = { pkgs, lib, config, ... }: {
             programs.home-manager.enable = true;
             imports = [
@@ -154,10 +156,6 @@ Notwithstanding this shortcoming, ~home-manager~ can still be used to manage the
         ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
         ".config/waybar/config".source = ./linux/waybar;
         ".config/waybar/style.css".source = ./linux/waybar-style;
-        ".config/fontconfig" = {
-          source = ./linux/fontconfig;
-          recursive = true;
-        };
       };
     };
   }
@@ -720,7 +718,20 @@ I defer configuring evil state, slack, mail and envrc segments when I load those
 
 *** font
 
-To make this configuration portable, I define a font specifically for ~emacs~ using ~home-manager~. The vanilla ~home-manager~ do not have a module to install fonts. There is a [[https://github.com/nix-community/home-manager/issues/520#issuecomment-451759097][comment]] that adds a custom font module to ~home-manager~, which I include below.
+To make this configuration portable, I define a font specifically for ~emacs~. In particular, the font consists of
++ ~PragmataPro~ for monospace ASCII/ligature;
++ ~SourceHanSans~ for CJK supports;
+
+To install fonts, first register source files in ~flake~.
+
+#+begin_src nix :noweb-ref flake-input
+  pragmata-pro = {
+    url = "file:///home/junyi/Downloads/PragmataPro0.828-2.zip";
+    flake = false;
+  };
+#+end_src
+
+Then install it using ~home-manager~. Note that the vanilla ~home-manager~ do not have a module to install fonts. There is a [[https://github.com/nix-community/home-manager/issues/520#issuecomment-451759097][comment]] that adds a custom font module to ~home-manager~, which I include below.
 
 #+begin_src nix :noweb-ref font-config
   (
@@ -764,16 +775,7 @@ To make this configuration portable, I define a font specifically for ~emacs~ us
   )
 #+end_src
 
-To install fonts, first register the source file in ~flake~.
-
-#+begin_src nix :noweb-ref flake-input
-  pragmata-pro = {
-    url = "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip";
-    flake = false;
-  };
-#+end_src
-
-Then install it using the custom module.
+With the help of this custom module, I can include fonts (and their configurations) in ~home-manager~ configuration.
 
 #+begin_src nix :noweb yes :tangle ./modules/font.nix :mkdirp yes
   inputs: with inputs; { pkgs, ... }:
@@ -788,6 +790,7 @@ Then install it using the custom module.
         cp *.ttf $out/share/fonts/PragmataPro
       '';
     };
+
   in
   {
     imports = [
@@ -795,8 +798,17 @@ Then install it using the custom module.
     ];
 
     fonts = {
-      fonts = [ pragmataPro ];
+      fonts = [
+        pragmataPro
+        pkgs.source-han-sans
+        pkgs.dejavu_fonts
+      ];
       fontconfig.enable = true;
+    };
+
+    home.file.".config/fontconfig" = {
+      source = ../fontconfig;
+      recursive = true;
     };
   }
 #+end_src
@@ -848,7 +860,7 @@ I use a resolution-based scale method to determine font size. Specifically, I fi
 
   (set-face-attribute
    'default nil
-   :family "PragmataPro Mono Liga"
+   :family "Monospace"
    :width 'normal
    :weight 'Regular)
 
@@ -7511,8 +7523,7 @@ First the updating script.
 
   <<update-user-config-hook>>
 
-  nix build . --experimental-features "nix-command flakes"
-  ./result/activate
+  nix build . --experimental-features "nix-command flakes" && ./result/activate
 #+end_src
 
 Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.

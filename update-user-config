@@ -13,5 +13,4 @@ fi
 
 ./update-readme main.org README.org
 
-nix build . --experimental-features "nix-command flakes"
-./result/activate
+nix build . --experimental-features "nix-command flakes" && ./result/activate

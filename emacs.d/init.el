@@ -301,7 +301,7 @@
 
 (set-face-attribute
  'default nil
- :family "PragmataPro Mono Liga"
+ :family "Monospace"
  :width 'normal
  :weight 'Regular)
 

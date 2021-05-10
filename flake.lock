@@ -134,11 +134,11 @@
       "locked": {
         "narHash": "sha256-5qpkwQOEM73hWsvnPxzvGVXneE80hMb2NlfS8gCIZSw=",
         "type": "tarball",
-        "url": "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip"
+        "url": "file:///home/junyi/Downloads/PragmataPro0.828-2.zip"
       },
       "original": {
         "type": "tarball",
-        "url": "file:///home/lactaid/Downloads/PragmataPro0.828-2.zip"
+        "url": "file:///home/junyi/Downloads/PragmataPro0.828-2.zip"
       }
     },
     "qmk-firmwork-loader": {
