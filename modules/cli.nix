@@ -12,5 +12,5 @@ inputs: with inputs; { pkgs, ... }: {
     }
   ];
 
-  home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
+  home.packages = [ pkgs.tree pkgs.curl pkgs.htop pkgs.inetutils ];
 }

@@ -2,7 +2,9 @@ inputs: with inputs; { pkgs, ... }: {
 
   imports = [
     {
-      home.packages = [ pkgs.inetutils ];
+      home.packages = with pkgs; [
+        cmake
+      ];
     }
   ];
 

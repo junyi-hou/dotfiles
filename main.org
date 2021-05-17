@@ -2061,9 +2061,12 @@ This concludes configuration for ~eshell~.
 
 I do not need to register ~libvterm~ with ~home-manager~. Rather, the recommended way of having ~libvterm~ is through the ~vterm~ package.
 
-#+begin_src emacs-lisp
-  (use-package vterm)
-  (add-to-list 'evil-insert-state-modes 'vterm-mode)
+#+begin_src emacs-lisp :noweb yes
+  ;; (use-package vterm
+  ;;   :init
+  ;;   (add-to-list 'evil-insert-state-modes 'vterm-mode)
+  ;;   :config
+  ;;   <<vterm-config>>)
 #+end_src
 
 According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~ requires some shell-side configuration. Since I use ~bash~ by default, I need to add those shell-side configuration to my ~.bashrc~.
@@ -2128,23 +2131,26 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
   }
 #+end_src
 
-~vterm_prompt_end~ function also depends on the ~hostname~ command line utility, which is provided by ~inetutils~ package.
+Building ~vterm~ also requires some build essentials. I rely on the system version of ~libtool~, ~gnu make~ etc. for now due to [[https://github.com/akermu/emacs-libvterm/issues/333][this bug]]. Hopefully it will get resolved from the upstream.
 
 #+begin_src nix :noweb-ref vterm-module-extra
   {
-    home.packages = [ pkgs.inetutils ];
+    home.packages = with pkgs; [
+      cmake
+    ];
   }
 #+end_src
 
+
 To configure ~vterm~, I first allow ~vterm~ to change the buffer name according to ~$PWD~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (setq vterm-buffer-name-string "*vterm*: %s")
 #+end_src
 
 I then extend the scrollback limit of ~vterm~ to retain more information.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref vterm-config
   (setq vterm-max-scrollback 10000)
 #+end_src
 
@@ -2152,7 +2158,7 @@ Third, ~vterm~ is a terminal emulator and not an internal ~emacs~ buffer, keystr
 
 First, ~evil~ moves the cursor backwards when entering the normal state. This behavior can cause confusion in terminals. I turn it off by setting ~evil-move-cursor-back~ to ~nil~ in ~vterm~ mode.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (defun gatsby:vterm---escape-stay ()
     "Go back to normal state but don't move cursor backwards.
   Moving cursor backwards is the default vim behavior but
@@ -2164,7 +2170,7 @@ First, ~evil~ moves the cursor backwards when entering the normal state. This be
 
 Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get send to ~vterm~. Therefore the cursor will not move accordingly to what it seems to be. To correct this, ~vterm~ provides a function ~vterm-goto-char~ that moves cursor to ~point~. I use this function to amend ~evil-insert~ and ~evil-append~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (defun gatsby:vterm--point-follow-cursor (pos)
     "When calling `vterm-goto-char' to a POS, also move the `point' to that position."
     (goto-char pos))
@@ -2239,7 +2245,7 @@ Second, the basic movement commands (e.g., "h", "l", "e", "b", "w") will not get
 
 The other two major evil operations are change and delete. ~evil-collection~ also has appropriate codes that allow me to mimic their behavior.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (evil-define-operator gatsby:vterm-delete (beg end type register yank-handler)
     "Modification of evil-delete to work in vterm buffer.
   Delete text from BEG to END with TYPE.
@@ -2340,7 +2346,7 @@ The other two major evil operations are change and delete. ~evil-collection~ als
 
 I also need to translate evil-paste, as it also modifies the cursor position and insert text.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (defun gatsby:vterm--yank-region (fn &rest args)
     (when (evil-visual-state-p)
       (vterm-delete-region (region-beginning) (region-end)))
@@ -2355,7 +2361,7 @@ I also need to translate evil-paste, as it also modifies the cursor position and
 
 Finally, I include bindings that are consistent with other REPL modes: going back and forth in prompts and clear buffer.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual)
     "u" #'vterm-undo
     "<" #'vterm-previous-prompt
@@ -2368,14 +2374,14 @@ Finally, I include bindings that are consistent with other REPL modes: going bac
 I haven't had the luck to make ~vterm~ working with ~company~. Therefore I
 fall back to the autocompletion provided by the underlying shell in the ~vterm~ mode.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (general-define-key :keymaps 'vterm-mode-map :states 'insert
     "<tab>" #'vterm-send-tab)
 #+end_src
 
 ~electric-pair~ is not enabled in ~vterm~ mode for the same reason that it modifies the buffer but not the underlying shell process. The following function restores ~electric-pair~ functionality in ~vterm~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (defvar gatsby:vterm-pairs
     '(("\"" . "\"")
       ("'" . "'")
@@ -2398,7 +2404,7 @@ fall back to the autocompletion provided by the underlying shell in the ~vterm~ 
 
 Now I integrate ~vterm~ with ~eshell~ by overriding ~eshell-exec-visual~ and allow it to use ~vterm~ to execute those visual commands.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config :tangle no
   (defun gatsby:eshell-exec-visual (&rest args)
     "Use `vterm' to execute `eshell-visual-commands'."
     (let* (eshell-interpreter-alist
@@ -2422,7 +2428,7 @@ Now I integrate ~vterm~ with ~eshell~ by overriding ~eshell-exec-visual~ and all
 
 Finally, define the entry point for ~vterm~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb-ref vterm-config
   (defun gatsby:vterm-open-here (&optional arg)
     "Open a new vterm in the current directory.
   If the prefix argument (ARG) is not null, go to the home directory
@@ -6605,7 +6611,7 @@ For ~linux~ system, ~emacs-overlay~ provides derivation for ~native-comp~ versio
   {
     programs.emacs = {
       enable = true;
-      package = pkgs.emacsPgtkGcc;
+      package = pkgs.emacsGit;
     };
   }
 #+end_src
@@ -7618,7 +7624,7 @@ Automatically update ~README.org~ when updating the whole configuration.
       <<cli-module-extra>>
     ];
 
-    home.packages = [ pkgs.tree pkgs.curl pkgs.htop ];
+    home.packages = [ pkgs.tree pkgs.curl pkgs.htop pkgs.inetutils ];
   }
 #+end_src
 
@@ -7629,10 +7635,6 @@ I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-w
 #+begin_src nix :noweb-ref linux-modules
   {
     home.packages = [ pkgs.firefox ];
-
-    home.sessionVariables = {
-      MOZ_ENABLE_WAYLAND = 1;
-    };
   }
 #+end_src
 
