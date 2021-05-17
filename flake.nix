@@ -30,6 +30,10 @@
     rnix-lsp = {
       url = "github:nix-community/rnix-lsp";
     };
+    nix-gl = {
+      url = "github:guibou/nixGL";
+      flake = false;
+    };
     qmk-firmwork-loader = {
       url = "github:Massdrop/mdloader";
       flake = false;
@@ -141,11 +145,19 @@
             # }
             {
               home.packages = [ pkgs.firefox ];
-            
-              home.sessionVariables = {
-                MOZ_ENABLE_WAYLAND = 1;
-              };
             }
+            (
+              let
+                nixGL = (import "${nix-gl}" { pkgs = pkgs; }).nixGLIntel;
+                wrapped = pkgs.writeScriptBin "alacritty" ''
+                  #!${pkgs.stdenv.shell}
+                  exec ${nixGL}/bin/nixGLIntel ${nixpkgs.legacyPackages."${system}".alacritty}/bin/alacritty
+                '';
+              in
+              {
+                nixpkgs.overlays = [ (final: prev: { alacritty = wrapped; }) ];
+              }
+            )
             self.homeModules."font.nix"
             self.homeModules."vterm.nix"
             self.homeModules."grammar.nix"
@@ -162,6 +174,7 @@
             self.homeModules."git.nix"
             self.homeModules."tree-sitter.nix"
             self.homeModules."drop-keyboard-loader.nix"
+            self.homeModules."terminal-emulator.nix"
           ];
         };
       };
@@ -237,6 +250,7 @@
             self.homeModules."git.nix"
             self.homeModules."tree-sitter.nix"
             self.homeModules."drop-keyboard-loader.nix"
+            self.homeModules."terminal-emulator.nix"
           ];
         };
       };

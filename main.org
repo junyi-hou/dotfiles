@@ -140,6 +140,7 @@ I first include a set of common modules that should be enable for all platforms.
   self.homeModules."git.nix"
   self.homeModules."tree-sitter.nix"
   self.homeModules."drop-keyboard-loader.nix"
+  self.homeModules."terminal-emulator.nix"
 #+end_src
 
 *** Linux (Wayland)
@@ -7637,6 +7638,46 @@ I am keeping a close eye on [[https://github.com/akirakyle/emacs-webkit][emacs-w
     home.packages = [ pkgs.firefox ];
   }
 #+end_src
+
+** Terminal Emulator
+
+I include ~alacritty~ in case ~emacs~ fails.
+
+#+begin_src nix :tangle ./modules/terminal-emulator.nix :mkdirp yes :noweb yes
+  inputs: with inputs; { pkgs, ... }: {
+    programs.alacritty = {
+      enable = true;
+    };
+  }
+#+end_src
+
+~alacritty~ uses ~OpenGL~ to improve performance. However, ~OpenGL~ applications installed by nix in non-nixOS Linux systems have a [[https://pmiddend.github.io/posts/nixgl-on-ubuntu/][bug]]. [[https://github.com/guibou/nixGL][nixGL]] wraps ~OpenGL~ libraries and provides a solution.
+
+#+begin_src nix :noweb-ref flake-input
+  nix-gl = {
+    url = "github:guibou/nixGL";
+    flake = false;
+  };
+#+end_src
+
+Override ~alacritty~ package in Linux with ~nixGL~.
+
+#+begin_src nix :noweb-ref linux-modules
+  (
+    let
+      nixGL = (import "${nix-gl}" { pkgs = pkgs; }).nixGLIntel;
+      wrapped = pkgs.writeScriptBin "alacritty" ''
+        #!${pkgs.stdenv.shell}
+        exec ${nixGL}/bin/nixGLIntel ${nixpkgs.legacyPackages."${system}".alacritty}/bin/alacritty
+      '';
+    in
+    {
+      nixpkgs.overlays = [ (final: prev: { alacritty = wrapped; }) ];
+    }
+  )
+#+end_src
+
+
 
 ** Keyboard Firmware Loader
 
