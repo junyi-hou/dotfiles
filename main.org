@@ -14,7 +14,12 @@
 
 *** Initialization
 
-  Make sure the ~nix~ package manager is available in the current system. To install this configuration, clone this repository to ~~/.config/nixpkgs~ and run
+Make sure the ~nix~ package manager is available in the current system, and the current user is a trusted user. To make current user trusted, edit ~/etc/nix/nix.conf~ and add
+#+begin_src shell
+  trusted-users = USER-NAME
+#+end_src
+
+To install this configuration, clone this repository and run
 
   #+begin_src shell
     ./update-user-config
