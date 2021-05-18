@@ -36,6 +36,13 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
   - linux           -- linux-specific configuration files
   - darwin          -- macOS-specific configuration files
 
+** News
+
+*** 2021-05-18 Tue
+
+- disable [[vterm]] module due to a nix-specific [[https://github.com/akermu/emacs-libvterm/issues/333#issuecomment-824172389][bug]] reported here.
+- use a different branch for [[org-appear]] which supports ~feature/org-fold~
+
 ** License
 
 GPL

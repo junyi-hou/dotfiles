@@ -1160,7 +1160,7 @@ If there is already a eshell buffer open for that directory, switch to that buff
   "RET" #'org-open-at-point)
 
 (use-package org-appear
-  :straight (org-appear :type git :host github :repo "awth13/org-appear")
+  :straight (org-appear :type git :host github :repo "awth13/org-appear" :branch "feature/org-fold-support")
   :hook (org-mode . org-appear-mode))
 
 (setq org-appear-autolinks t)

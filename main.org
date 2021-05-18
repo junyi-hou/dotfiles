@@ -42,6 +42,13 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
   - linux           -- linux-specific configuration files
   - darwin          -- macOS-specific configuration files
 
+** News
+
+*** 2021-05-18 Tue
+
+- disable vterm module due to a nix-specific [[https://github.com/akermu/emacs-libvterm/issues/333#issuecomment-824172389][bug]] reported here.
+- use a different branch for org-appear which supports ~feature/org-fold~
+
 ** License
 
 GPL
@@ -2554,11 +2561,11 @@ I rarely use ~<RET>~ to change line in the normal state, so I bind it to open li
 
 *** org-appear
 
-Org-mode automatically renders links like [[org-appear][this]]. ~org-appear~ expands those links when the cursor is on them to make editing them easier.
+Org-mode automatically renders links like [[org-appear][this]]. ~org-appear~ expands those links when the cursor is on them to make editing them easier. The master branch of ~org-appear~ does not support the ~fold~ feature branch I currently use as discussed [[https://github.com/awth13/org-appear/issues/5][here]]. Instead, ~feature/org-fold-support~ adds such support and thus I will use this branch for now.
 
 #+begin_src emacs-lisp
   (use-package org-appear
-    :straight (org-appear :type git :host github :repo "awth13/org-appear")
+    :straight (org-appear :type git :host github :repo "awth13/org-appear" :branch "feature/org-fold-support")
     :hook (org-mode . org-appear-mode))
 
   (setq org-appear-autolinks t)
