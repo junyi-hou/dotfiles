@@ -119,29 +119,9 @@ I use ~flake~ to manage my configuration files.
 
 ** System-specific Settings
 
-*** common modules
+*** Linux (X)
 
-I first include a set of common modules that should be enable for all platforms.
-
-#+begin_src conf :noweb-ref common-modules
-  self.homeModules."font.nix"
-  self.homeModules."vterm.nix"
-  self.homeModules."grammar.nix"
-  self.homeModules."gpg.nix"
-  (self.homeModules."pass.nix" homeDirectory)
-  self.homeModules."direnv.nix"
-  (self.homeModules."mail.nix" homeDirectory)
-  self.homeModules."calendar.nix"
-  (self.homeModules."nix-development.nix" system)
-  self.homeModules."latex.nix"
-  self.homeModules."cli.nix"
-  self.homeModules."emacs.nix"
-  self.homeModules."ssh.nix"
-  self.homeModules."git.nix"
-  self.homeModules."tree-sitter.nix"
-  self.homeModules."drop-keyboard-loader.nix"
-  self.homeModules."terminal-emulator.nix"
-#+end_src
+~home-manager~ cannot manage display sessions. This is fair as ~home-manager~ should not be used to install system-wide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
 *** Linux (Wayland)
 
@@ -817,6 +797,12 @@ With the help of this custom module, I can include fonts (and their configuratio
       recursive = true;
     };
   }
+#+end_src
+
+Since ~fontconfig~ is available in both Linux and MacOS, make font configuration universally available.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."font.nix"
 #+end_src
 
 *** ligature
@@ -2056,18 +2042,18 @@ The following advice enable ~eshell~ to follow the correct local environment.
 
 This concludes configuration for ~eshell~.
 
-*** vterm
+*** COMMENT vterm
 
 ~eshell~ is not perfect, as it may not be consistent with the real shell in some cases (e.g., when running TUI programs like ~htop~ and ~nmtui~, or when ~ssh~-ing to remote). When this happens, I use ~vterm~ to launch a real shell to deal with it.
 
 I do not need to register ~libvterm~ with ~home-manager~. Rather, the recommended way of having ~libvterm~ is through the ~vterm~ package.
 
 #+begin_src emacs-lisp :noweb yes
-  ;; (use-package vterm
-  ;;   :init
-  ;;   (add-to-list 'evil-insert-state-modes 'vterm-mode)
-  ;;   :config
-  ;;   <<vterm-config>>)
+  (use-package vterm
+    :init
+    (add-to-list 'evil-insert-state-modes 'vterm-mode)
+    :config
+    <<vterm-config>>)
 #+end_src
 
 According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~ requires some shell-side configuration. Since I use ~bash~ by default, I need to add those shell-side configuration to my ~.bashrc~.
@@ -2458,6 +2444,12 @@ Finally, define the entry point for ~vterm~.
 
   (general-define-key :keymaps '(motion normal visual) :prefix "SPC"
     "oS" 'gatsby:vterm-open-here)
+#+end_src
+
+Enable ~vterm~ in MacOS and Linux.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."vterm.nix"
 #+end_src
 
 ** Org Mode
@@ -3084,6 +3076,12 @@ To compile tree-sitter grammars for different languages, I need to install the t
   }
 #+end_src
 
+Make ~tree-sitter CLI~ available in both Linux and MacOS.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."tree-sitter.nix"
+#+end_src
+
 *** REPL
 
 Read-Evaluate-Print-Loop (REPL) is a convenient way to do try-and-error programming. It allows me to
@@ -3666,6 +3664,12 @@ Finally, add key bindings for quick typo correction and grammar checking
     "cg" 'gatsby:langtool-toggle)
 #+end_src
 
+Make grammar modules available everywhere.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."grammar.nix"
+#+end_src
+
 * Secret Management
 
 ~emacs~ is not only a text editor, it can also serve as the integrated interface between the user (me) and the computer, via its ability to spawn subprocesses and present them in text form. In particular, ~emacs~ can be used to manage secrets like passwords and tokens.
@@ -3733,6 +3737,12 @@ Second, I enable ~epa~ package in ~emacs~.
     (password-cache-expiry 720000))
 #+end_src
 
+Finally, enable ~gpg~ modules in both Linux and MacOS.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."gpg.nix"
+#+end_src
+
 ** password-store
 
 ~pass~ is an open source software that manages passwords secret management tool that builds on ~GPG~. ~password-store~ provides an ~emacs~ interface with ~pass~
@@ -3791,6 +3801,12 @@ Define the entry points for ~password-store~
     "pg" 'gatsby:password-store-generate)
 #+end_src
 
+Finally, enable ~pass~ modules in both Linux and MacOS.
+
+#+begin_src nix :noweb-ref common-modules
+  (self.homeModules."pass.nix" homeDirectory)
+#+end_src
+
 ** sudo-edit
 
 Sometimes I need to edit some file as ~root~. One way to do it is to close the file and re-open it with ~sudo~ in ~eshell~. I find this process suboptimal. So I use ~sudo-edit~, which allows me to become the ~root~ user and edit the current buffer.
@@ -3820,6 +3836,10 @@ First enable ssh.
   }
 #+end_src
 
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."ssh.nix"
+#+end_src
+
 Include server location shortcuts.
 
 #+begin_src nix :noweb-ref ssh-servers
@@ -3832,6 +3852,8 @@ Include server location shortcuts.
 
 * Project Management
 ** Git
+
+*** git:CLI
 
 Register ~git~ with ~home-manager~ first.
 
@@ -3871,6 +3893,12 @@ Register ~git~ with ~home-manager~ first.
 
     home.packages = [ pkgs.gitAndTools.delta ];
   }
+#+end_src
+
+Enable it in Linux and MacOS
+
+#+begin_src conf :noweb-ref common-modules
+  self.homeModules."git.nix"
 #+end_src
 
 *** global gitignore
@@ -4645,6 +4673,12 @@ There is a [[https://github.com/nix-community/nix-direnv/issues/70][bug]] in the
   ];
 #+end_src
 
+Make sure ~direnv~ is enabled in both Linux and MacOS.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."direnv.nix"
+#+end_src
+
 Then register ~envrc~ within ~emacs~.
 
 #+begin_src emacs-lisp
@@ -5164,6 +5198,12 @@ To receive and send emails from the comfort in ~emacs~, I use
       programs.msmtp.enable = true;
     }
   #+end_src
+
+Make sure this setting is picked up in both Linux and MacOS systems.
+
+#+begin_src nix :noweb-ref common-modules
+  (self.homeModules."mail.nix" homeDirectory)
+#+end_src
 
 *** accounts
 
@@ -5838,6 +5878,10 @@ Makes sure that the calendar directory (~$HOME/.cal~) exists.
         '';
     };
   }
+#+end_src
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."calendar.nix"
 #+end_src
 
 By default, ~org-gcal~ will place each occurrence of recurring events as a top level entry. This can be improved by setting ~org-gcal-recurring-events-mode~ to ~nested~, which will collect recurring events into one entry.
@@ -6670,6 +6714,12 @@ For ~macOS~, I follow the method used [[https://github.com/twlz0ne/nix-gccemacs-
   )
 #+end_src
 
+Enable ~emacs~ in both supported platforms.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."emacs.nix"
+#+end_src
+
 The builtin ~elisp-mode~ is, of course, good enough for editing ~elisp~ file.
 
 #+begin_src emacs-lisp
@@ -7158,6 +7208,12 @@ Nix community offers a basic LSP server for linting ~.nix~ file. I first registe
   }
 #+end_src
 
+... include it in both Linux and MacOS:
+
+#+begin_src nix :noweb-ref common-modules
+  (self.homeModules."nix-development.nix" system)
+#+end_src
+
 ... finally hook it onto the ~eglot~ server program so it can recognize and run LSP server automatically when I open a .nix file.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref nix-init
@@ -7444,6 +7500,10 @@ First install ~textlive~ and the LSP via ~flake~. I use ~texlab~ instead of more
   }
 #+end_src
 
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."latex.nix"
+#+end_src
+
 Make sure that I load LSP and folding mode when I open an ~.tex~ file.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref tex-hook
@@ -7618,6 +7678,8 @@ Automatically update ~README.org~ when updating the whole configuration.
 
 ** Command Line Utilities
 
+Here includes a series of small command line utilities.
+
 #+begin_src nix :noweb yes :tangle ./modules/cli.nix :mkdirp yes
   inputs: with inputs; { pkgs, ... }: {
 
@@ -7627,6 +7689,10 @@ Automatically update ~README.org~ when updating the whole configuration.
 
     home.packages = [ pkgs.tree pkgs.curl pkgs.htop pkgs.inetutils ];
   }
+#+end_src
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."cli.nix"
 #+end_src
 
 ** Browser
@@ -7649,6 +7715,10 @@ I include ~alacritty~ in case ~emacs~ fails.
       enable = true;
     };
   }
+#+end_src
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."terminal-emulator.nix"
 #+end_src
 
 ~alacritty~ uses ~OpenGL~ to improve performance. However, ~OpenGL~ applications installed by nix in non-nixOS Linux systems have a [[https://pmiddend.github.io/posts/nixgl-on-ubuntu/][bug]]. [[https://github.com/guibou/nixGL][nixGL]] wraps ~OpenGL~ libraries and provides a solution.
@@ -7676,8 +7746,6 @@ Override ~alacritty~ package in Linux with ~nixGL~.
     }
   )
 #+end_src
-
-
 
 ** Keyboard Firmware Loader
 
@@ -7709,6 +7777,12 @@ Then make sure it is installed by the ~home-manager~.
       )
     ];
   }
+#+end_src
+
+Make the loader available in Linux and MacOS.
+
+#+begin_src nix :noweb-ref common-modules
+  self.homeModules."drop-keyboard-loader.nix"
 #+end_src
 
 To refresh the keyboard firmware, connect it to the computer in DFU mode and run
