@@ -1091,299 +1091,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
   (advice-add #'eshell/cd :after #'gatsby:envrc--update-after-cd))
 
-;; (use-package vterm
-;;   :init
-;;   (add-to-list 'evil-insert-state-modes 'vterm-mode)
-;;   :config
-;;   (setq vterm-buffer-name-string "*vterm*: %s")
-;;   (setq vterm-max-scrollback 10000)
-;;   (defun gatsby:vterm---escape-stay ()
-;;     "Go back to normal state but don't move cursor backwards.
-;;   Moving cursor backwards is the default vim behavior but
-;;   it is not appropriate in some cases like terminals."
-;;     (setq-local evil-move-cursor-back nil))
-;;   
-;;   (add-hook 'vterm-mode-hook #'gatsby:vterm---escape-stay)
-;;   (defun gatsby:vterm--point-follow-cursor (pos)
-;;     "When calling `vterm-goto-char' to a POS, also move the `point' to that position."
-;;     (goto-char pos))
-;;   
-;;   (advice-add #'vterm-goto-char :after #'gatsby:vterm--point-follow-cursor)
-;;   
-;;   (defun gatsby:vterm-insert ()
-;;     "Insert character before cursor."
-;;     (interactive)
-;;     (vterm-goto-char (point))
-;;     (call-interactively #'evil-insert))
-;;   
-;;   (defun gatsby:vterm-insert-line ()
-;;     "Insert character at beginning of prompt."
-;;     (interactive)
-;;     (vterm-goto-char (vterm--get-prompt-point))
-;;     (call-interactively #'evil-insert))
-;;   
-;;   (defun gatsby:vterm-append ()
-;;     "Append character after cursor."
-;;     (interactive)
-;;     (vterm-goto-char (1+ (point)))
-;;     (call-interactively #'evil-append))
-;;   
-;;   (defun gatsby:vterm-append-line ()
-;;     "Append character at end-of-line."
-;;     (interactive)
-;;     (vterm-goto-char (point-max))
-;;     (call-interactively #'vterm-previous-prompt)
-;;     (vterm-goto-char (vterm-end-of-line))
-;;     (call-interactively #'evil-append))
-;;   
-;;   (defun gatsby:vterm-bol ()
-;;     "Move to the beginning of line."
-;;     (interactive)
-;;     (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
-;;       (if (> (point) true-prompt)
-;;           (vterm-goto-char true-prompt)
-;;         (evil-first-non-blank-of-visual-line))))
-;;   
-;;   (defun gatsby:vterm-eol ()
-;;     "Move to the end of line."
-;;     (interactive)
-;;     (vterm-goto-char (vterm-end-of-line)))
-;;   
-;;   (defun gatsby:vterm-left ()
-;;     "Move one character left."
-;;     (interactive)
-;;     (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
-;;       (if (> (point) true-prompt)
-;;           (call-interactively #'vterm-send-left)
-;;         (evil-backward-char))))
-;;   
-;;   (defun gatsby:vterm-right ()
-;;     "Move one character right"
-;;     (interactive)
-;;     (let ((true-prompt (save-excursion (goto-char (point-max)) (vterm--get-prompt-point))))
-;;       (if (> (point) true-prompt)
-;;           (call-interactively #'vterm-send-right)
-;;         (evil-forward-char))))
-;;   
-;;   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual motion)
-;;     "i" #'gatsby:vterm-insert
-;;     "I" #'gatsby:vterm-insert-line
-;;     "a" #'gatsby:vterm-append
-;;     "A" #'gatsby:vterm-append-line
-;;     [remap evil-first-non-blank-of-visual-line] #'gatsby:vterm-bol
-;;     [remap evil-end-of-visual-line] #'gatsby:vterm-eol
-;;     [remap evil-backward-char] #'gatsby:vterm-left
-;;     [remap evil-forward-char] #'gatsby:vterm-right)
-;;   (evil-define-operator gatsby:vterm-delete (beg end type register yank-handler)
-;;     "Modification of evil-delete to work in vterm buffer.
-;;   Delete text from BEG to END with TYPE.
-;;   Save in REGISTER or in the kill-ring with YANK-HANDLER."
-;;     (interactive "<R><x><y>")
-;;     (let* ((beg (max (or beg (point)) (vterm--get-prompt-point)))
-;;            (end (min (or end beg) (vterm--get-end-of-line))))
-;;       (unless register
-;;         (let ((text (filter-buffer-substring beg end)))
-;;           (unless (string-match-p "\n" text)
-;;             ;; set the small delete register
-;;             (evil-set-register ?- text))))
-;;       (let ((evil-was-yanked-without-register nil))
-;;         (evil-yank beg end type register yank-handler))
-;;       (cond
-;;        ((eq type 'block)
-;;         (evil-apply-on-block #'vterm-delete-region beg end nil))
-;;        ((and (eq type 'line)
-;;              (= end (point-max))
-;;              (or (= beg end)
-;;                  (/= (char-before end) ?\n))
-;;              (/= beg (point-min))
-;;              (=  (char-before beg) ?\n))
-;;         (vterm-delete-region (1- beg) end))
-;;        (t
-;;         (vterm-delete-region beg end)))
-;;       ;; place cursor on beginning of line
-;;       (when (and (called-interactively-p 'any)
-;;                  (eq type 'line))
-;;         (evil-first-non-blank))))
-;;   
-;;   (evil-define-operator gatsby:vterm-delete-backward-char (beg end type register)
-;;     "Delete previous character."
-;;     :motion evil-backward-char
-;;     (interactive "<R><x>")
-;;     (gatsby:vterm-delete beg end type register))
-;;   
-;;   (evil-define-operator gatsby:vterm-delete-line (beg end type register yank-handler)
-;;     "Modification of evil-delete line to work in vterm bufer. Delete to end of line."
-;;     :motion nil
-;;     :keep-visual t
-;;     (interactive "<R><x>")
-;;     ;; act linewise in Visual state
-;;     (let* ((beg (or beg (point)))
-;;            (end (or end beg))
-;;            (visual-line-mode (and evil-respect-visual-line-mode
-;;                                   visual-line-mode))
-;;            (line-end (if visual-line-mode
-;;                          (save-excursion
-;;                            (end-of-visual-line)
-;;                            (point))
-;;                        (line-end-position))))
-;;       (when (evil-visual-state-p)
-;;         (unless (memq type '(line screen-line block))
-;;           (let ((range (evil-expand beg end
-;;                                     (if visual-line-mode
-;;                                         'screen-line
-;;                                       'line))))
-;;             (setq beg (evil-range-beginning range)
-;;                   end (evil-range-end range)
-;;                   type (evil-type range))))
-;;         (evil-exit-visual-state))
-;;       (cond
-;;        ((eq type 'block)
-;;         ;; equivalent to $d, i.e., we use the block-to-eol selection and
-;;         ;; call `gatsby:vterm-delete'. In this case we fake the call to
-;;         ;; `evil-end-of-line' by setting `temporary-goal-column' and
-;;         ;; `last-command' appropriately as `evil-end-of-line' would do.
-;;         (let ((temporary-goal-column most-positive-fixnum)
-;;               (last-command 'next-line))
-;;           (gatsby:vterm-delete beg end 'block register yank-handler)))
-;;        ((memq type '(line screen-line))
-;;         (gatsby:vterm-delete beg end type register yank-handler))
-;;        (t
-;;         (gatsby:vterm-delete beg line-end type register yank-handler)))))
-;;   
-;;   (evil-define-operator gatsby:vterm-change (beg end type register yank-handler)
-;;     (gatsby:vterm-delete beg end type register yank-handler)
-;;     (gatsby:vterm-insert))
-;;   
-;;   (evil-define-operator gatsby:vterm-change-line (beg end type register yank-handler)
-;;     :motion evil-end-of-line-or-visual-line
-;;     (gatsby:vterm-delete-line beg end type register yank-handler)
-;;     (gatsby:vterm-insert))
-;;   
-;;   (general-define-key :keymaps 'vterm-mode-map :states 'normal
-;;     "x" #'gatsby:vterm-delete-backward-char
-;;     "d" #'gatsby:vterm-delete
-;;     "D" #'gatsby:vterm-delete-line
-;;     "c" #'gatsby:vterm-change
-;;     "C" #'gatsby:vterm-change-line)
-;;   
-;;   (general-define-key :keymaps 'vterm-mode-map :states 'visual
-;;     "d" #'gatsby:vterm-delete
-;;     "c" #'gatsby:vterm-change
-;;     "x" #'gatsby:vterm-delete-backward-char)
-;;   (defun gatsby:vterm--yank-region (fn &rest args)
-;;     (when (evil-visual-state-p)
-;;       (vterm-delete-region (region-beginning) (region-end)))
-;;     (apply fn args))
-;;   
-;;   (advice-add #'vterm-yank :around #'gatsby:vterm--yank-region)
-;;   
-;;   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual)
-;;     "p" #'vterm-yank
-;;     "P" #'vterm-yank)
-;;   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual)
-;;     "u" #'vterm-undo
-;;     "<" #'vterm-previous-prompt
-;;     ">" #'vterm-next-prompt)
-;;   
-;;   (general-define-key :keymaps 'vterm-mode-map :states '(normal visual insert) :prefix "C-c"
-;;     "C-l" #'vterm-clear)
-;;   (general-define-key :keymaps 'vterm-mode-map :states 'insert
-;;     "<tab>" #'vterm-send-tab)
-;;   (defvar gatsby:vterm-pairs
-;;     '(("\"" . "\"")
-;;       ("'" . "'")
-;;       ("(" . ")")
-;;       ("[" . "]")
-;;       ("{" . "}")))
-;;   
-;;   (defun gatsby:vterm--insert-pairs (opening-char)
-;;     "Insert the pair defined by `opening-char' in `gatsby:vterm-pairs'."
-;;     (let ((pair (assoc-string opening-char gatsby:vterm-pairs)))
-;;       (when pair
-;;         (vterm-insert (format "%s%s" (car pair) (cdr pair)))
-;;         (vterm-send-left))))
-;;   
-;;   (--each gatsby:vterm-pairs
-;;     (let ((opening-char (car it)))
-;;       (general-define-key :keymaps 'vterm-mode-map :states 'insert
-;;         opening-char (lambda () (interactive) (gatsby:vterm--insert-pairs opening-char)))))
-;;   (defun gatsby:eshell-exec-visual (&rest args)
-;;     "Use `vterm' to execute `eshell-visual-commands'."
-;;     (let* (eshell-interpreter-alist
-;;              (interp (eshell-find-interpreter (car args) (cdr args)))
-;;            (eshell-buf (current-buffer))
-;;              (program (car interp))
-;;              (args (flatten-tree
-;;                       (eshell-stringify-list (append (cdr interp)
-;;                                                            (cdr args)))))
-;;              (term-buf (concat "*" (file-name-nondirectory program) "*")))
-;;       (vterm term-buf)
-;;       (vterm-send-string
-;;        (concat program " " (string-join args " ")))
-;;       (vterm-send-return)
-;;       (with-current-buffer eshell-buf
-;;         (kill-buffer)))
-;;     nil)
-;;   
-;;   (advice-add #'eshell-exec-visual :override #'gatsby:eshell-exec-visual)
-;;   (defun gatsby:vterm-open-here (&optional arg)
-;;     "Open a new vterm in the current directory.
-;;   If the prefix argument (ARG) is not null, go to the home directory
-;;   If there is already a vterm buffer open for that directory, switch to that buffer."
-;;     (interactive "P")
-;;     (let* ((dir (if arg (expand-file-name "~/") default-directory))
-;;            ;; check whether there exists a eshell buffer for DIR
-;;            (exists (--first (with-current-buffer it
-;;                               (and (string-equal major-mode "vterm-mode")
-;;                                    (f-equal-p dir default-directory)))
-;;                             (buffer-list)))
-;;            ;; check if the matched eshell buffer is visible
-;;            (visible (when exists (get-buffer-window exists 'all-frames))))
-;;       (if visible
-;;           (select-window visible)
-;;         (split-window-below (- (/ (window-total-height) 3)))
-;;         (other-window 1)
-;;         (if exists
-;;             (switch-to-buffer exists)
-;;           (let ((default-directory dir))
-;;             (vterm))))
-;;       (vterm-goto-char (point-max))
-;;       (call-interactively #'vterm-previous-prompt)
-;;       (vterm-goto-char (vterm-end-of-line))
-;;       (evil-insert-state)))
-;;   
-;;   (general-define-key :keymaps '(motion normal visual) :prefix "SPC"
-;;     "oS" 'gatsby:vterm-open-here))
-
-(defun gatsby:vterm-open-here (&optional arg)
-  "Open a new vterm in the current directory.
-If the prefix argument (ARG) is not null, go to the home directory
-If there is already a vterm buffer open for that directory, switch to that buffer."
-  (interactive "P")
-  (let* ((dir (if arg (expand-file-name "~/") default-directory))
-         ;; check whether there exists a eshell buffer for DIR
-         (exists (--first (with-current-buffer it
-                            (and (string-equal major-mode "vterm-mode")
-                                 (f-equal-p dir default-directory)))
-                          (buffer-list)))
-         ;; check if the matched eshell buffer is visible
-         (visible (when exists (get-buffer-window exists 'all-frames))))
-    (if visible
-        (select-window visible)
-      (split-window-below (- (/ (window-total-height) 3)))
-      (other-window 1)
-      (if exists
-          (switch-to-buffer exists)
-        (let ((default-directory dir))
-          (vterm))))
-    (vterm-goto-char (point-max))
-    (call-interactively #'vterm-previous-prompt)
-    (vterm-goto-char (vterm-end-of-line))
-    (evil-insert-state)))
-
-(general-define-key :keymaps '(motion normal visual) :prefix "SPC"
-  "oS" 'gatsby:vterm-open-here)
-
 (use-package org
   :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
                  :files ("*.el" "lisp/*.el" "contrib/lisp/*.el")))
@@ -2378,7 +2085,7 @@ List of CANDIDATES is given by flyspell for the WORD."
   
   (advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
   :general
-  (:keymaps 'normal
+  (:keymaps '(normal motion)
    :prefix "SPC"
    "op" #'projectile-switch-project
    "of" #'projectile-find-file))
@@ -3698,7 +3405,6 @@ Taken from `slack-room-display'."
   (nix-mode . tree-sitter-mode)
   (nix-mode . gatsby:tree-sitter-install-and-load-nix)
   :init
-  (add-to-list 'eglot-server-programs '(nix-mode . ("rnix-lsp")))
   (defun gatsby:nix-shell-in-storage (storage)
     "Open an eshell/vterm in the directory of STORAGE."
     (interactive (list (read-file-name "Select the package directory: "
@@ -3712,21 +3418,10 @@ Taken from `slack-room-display'."
           (gatsby:vterm-open-here)
         (gatsby:eshell-open-here))))
   
-  (general-define-key :keymaps 'normal :prefix "SPC"
+  (general-define-key :keymaps '(normal motion) :prefix "SPC"
     "ns" #'gatsby:nix-shell-in-storage)
+  (add-to-list 'eglot-server-programs '(nix-mode . ("rnix-lsp")))
   :config
-  (setq nix-nixfmt-bin "nixpkgs-fmt")
-  
-  (defun gatsby:nix--fmt-before-save ()
-    (add-hook 'before-save-hook #'nix-format-buffer nil t))
-  
-  (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
-  (defun gatsby:nix--save-excrusion (fn &rest args)
-    (let ((ori-point (point)))
-      (apply fn args)
-      (goto-char ori-point)))
-  
-  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
   (add-to-list 'gatsby:comint-repl-function-alist '(nix-mode gatsby:nix-repl))
   (add-to-list 'gatsby:comint-repl-mode-alist '(nix-mode . nix-repl-mode))
   
@@ -3741,7 +3436,19 @@ Taken from `slack-room-display'."
     "ro" #'gatsby:comint-start-or-pop-to-repl
     "rr" #'gatsby:comint-eval-region-or-line
     "rb" #'gatsby:comint-eval-buffer
-    "rz" #'gatsby:comint-associate-nix-repl))
+    "rz" #'gatsby:comint-associate-nix-repl)
+  (setq nix-nixfmt-bin "nixpkgs-fmt")
+  
+  (defun gatsby:nix--fmt-before-save ()
+    (add-hook 'before-save-hook #'nix-format-buffer nil t))
+  
+  (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
+  (defun gatsby:nix--save-excrusion (fn &rest args)
+    (let ((ori-point (point)))
+      (apply fn args)
+      (goto-char ori-point)))
+  
+  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion))
 
 (defun gatsby:tree-sitter-install-and-load-nix ()
   "Download, compile, and register nix grammar for tree-sitter if haven't done so."

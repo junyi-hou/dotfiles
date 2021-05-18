@@ -7160,6 +7160,46 @@ I use nix to manage my dotfiles and development environments. nix uses its own l
     <<nix-config>>)
 #+end_src
 
+nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Since ~nix-repl~ is a derived mode from ~comint-mode~, configuring ~nix-repl~ is relatively easy:
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
+  (add-to-list 'gatsby:comint-repl-function-alist '(nix-mode gatsby:nix-repl))
+  (add-to-list 'gatsby:comint-repl-mode-alist '(nix-mode . nix-repl-mode))
+
+  (defun gatsby:nix-repl ()
+    (let ((buf (get-buffer-create "*Nix-REPL*")))
+      (unless (comint-check-proc buf)
+        (nix--make-repl-in-buffer buf)
+        (with-current-buffer buf (nix-repl-mode)))
+      buf))
+
+  (general-define-key :keymaps 'nix-mode-map :states '(normal visual) :prefix "SPC"
+    "ro" #'gatsby:comint-start-or-pop-to-repl
+    "rr" #'gatsby:comint-eval-region-or-line
+    "rb" #'gatsby:comint-eval-buffer
+    "rz" #'gatsby:comint-associate-nix-repl)
+#+end_src
+
+Sometimes I would like to check out package files located at ~nix-store~. To ensure reproducible environment, nix installs packages to a unique path in ~nix-store~ by prefixing the package name with a hash. This makes it difficult to quickly navigate to the path where a particular package is installed. Luckily, I have ~selectrum~ and ~prescient~. And the following function will make it super easy in finding the path in ~nix-store~.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref nix-init
+  (defun gatsby:nix-shell-in-storage (storage)
+    "Open an eshell/vterm in the directory of STORAGE."
+    (interactive (list (read-file-name "Select the package directory: "
+                                       "/nix/store/"
+                                       nil
+                                       nil
+                                       nil
+                                       'directory-name-p)))
+    (let ((default-directory storage))
+      (if current-prefix-arg
+          (gatsby:vterm-open-here)
+        (gatsby:eshell-open-here))))
+
+  (general-define-key :keymaps '(normal motion) :prefix "SPC"
+    "ns" #'gatsby:nix-shell-in-storage)
+#+end_src
+
 *** Nix:LSP
 
 Nix community offers a basic LSP server for linting ~.nix~ file. I first register it with ~flake~.
@@ -7252,46 +7292,6 @@ Nix is not included in the grammar bundle provided by ~emacs-tree-sitter~. I nee
   ;; `install-and-load-nix'
   (nix-mode . tree-sitter-mode)
   (nix-mode . gatsby:tree-sitter-install-and-load-nix)
-#+end_src
-
-nix supports REPL. ~nix-mode~ has a builtin ~nix-repl~ command to run REPL. Since ~nix-repl~ is a derived mode from ~comint-mode~, configuring ~nix-repl~ is relatively easy:
-
-#+begin_src emacs-lisp :tangle no :noweb-ref nix-config
-  (add-to-list 'gatsby:comint-repl-function-alist '(nix-mode gatsby:nix-repl))
-  (add-to-list 'gatsby:comint-repl-mode-alist '(nix-mode . nix-repl-mode))
-
-  (defun gatsby:nix-repl ()
-    (let ((buf (get-buffer-create "*Nix-REPL*")))
-      (unless (comint-check-proc buf)
-        (nix--make-repl-in-buffer buf)
-        (with-current-buffer buf (nix-repl-mode)))
-      buf))
-
-  (general-define-key :keymaps 'nix-mode-map :states '(normal visual) :prefix "SPC"
-    "ro" #'gatsby:comint-start-or-pop-to-repl
-    "rr" #'gatsby:comint-eval-region-or-line
-    "rb" #'gatsby:comint-eval-buffer
-    "rz" #'gatsby:comint-associate-nix-repl)
-#+end_src
-
-Sometimes I would like to check out package files located at ~nix-store~. To ensure reproducible environment, nix installs packages to a unique path in ~nix-store~ by prefixing the package name with a hash. This makes it difficult to quickly navigate to the path where a particular package is installed. Luckily, I have ~selectrum~ and ~prescient~. And the following function will make it super easy in finding the path in ~nix-store~.
-
-#+begin_src emacs-lisp :tangle no :noweb-ref nix-init
-  (defun gatsby:nix-shell-in-storage (storage)
-    "Open an eshell/vterm in the directory of STORAGE."
-    (interactive (list (read-file-name "Select the package directory: "
-                                       "/nix/store/"
-                                       nil
-                                       nil
-                                       nil
-                                       'directory-name-p)))
-    (let ((default-directory storage))
-      (if current-prefix-arg
-          (gatsby:vterm-open-here)
-        (gatsby:eshell-open-here))))
-
-  (general-define-key :keymaps 'normal :prefix "SPC"
-    "ns" #'gatsby:nix-shell-in-storage)
 #+end_src
 
 ** Markdown
