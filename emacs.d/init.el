@@ -2198,8 +2198,8 @@ List of CANDIDATES is given by flyspell for the WORD."
 (general-define-key :keymaps '(magit-status-mode-map magit-diff-mode-map magit-log-mode-map)
                     :states '(motion normal visual)
                     "SPC" nil
-                    "<" 'magit-section-forward-sibling
-                    ">" 'magit-section-backward-sibling
+                    ">" 'magit-section-forward-sibling
+                    "<" 'magit-section-backward-sibling
                     "zo" 'magit-section-show
                     "zc" 'magit-section-hide
                     "`" 'magit-dispatch)
