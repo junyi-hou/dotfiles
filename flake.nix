@@ -75,6 +75,14 @@
                   ".config/waybar/config".source = ./linux/waybar;
                   ".config/waybar/style.css".source = ./linux/waybar-style;
                 };
+                packages = [
+                  pkgs.libnotify
+                  pkgs.dunst
+                ];
+              };
+            
+              services.dunst = {
+                enable = true;
               };
             }
             {

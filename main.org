@@ -125,7 +125,6 @@ I use ~flake~ to manage my configuration files.
 
 + display services (~xorg-server~, ~xorg-drivers~, ~xorg-xinit~, and ~i3gaps~)
 + sound service (~alsa-utils~)
-+ notification services (~libnotify~, ~mako~)
 + network services (~networkmanager~)
 
 Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
@@ -139,6 +138,14 @@ Notwithstanding this shortcoming, ~home-manager~ can still be used to manage the
         ".config/waybar/config".source = ./linux/waybar;
         ".config/waybar/style.css".source = ./linux/waybar-style;
       };
+      packages = [
+        pkgs.libnotify
+        pkgs.dunst
+      ];
+    };
+
+    services.dunst = {
+      enable = true;
     };
   }
 #+end_src
