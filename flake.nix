@@ -134,6 +134,26 @@
             #   ];
             # }
             {
+              home.packages = [
+                pkgs.xdotool
+                pkgs.jq
+                pkgs.writeScriptBin "zathuraInverseSearch" ''
+                  #!${pkgs.stdenv.shell}
+                  focused_window=$(i3-msg -t get_tree | jq -r 'recurse(.nodes[]) | select( .focused == true)')
+                  left=$(echo $focused_window | jq .window_rect.x)
+                  top=$(echo $focused_window | jq .window_rect.y)
+                  width=$(echo $focused_window | jq .window_rect.width)
+                  height=$(echo $focused_window | jq .window_rect.height)
+            
+                  # move cursor to (left+width/2, top+height/2)
+                  xdotool mousemove $(expr $left + $width / 2) $(expr $top + $height / 2)
+            
+                  # send ctrl+click
+                  xdotool keydown ctrl click 1 keyup ctrl
+                ''
+              ];
+            }
+            {
               home.packages = [ pkgs.firefox ];
             }
             (

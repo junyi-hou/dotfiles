@@ -7551,9 +7551,36 @@ I add quick key bindings to complie tex file and do forward search (for tex sorc
   '';
 #+end_src
 
-Unfortunately, ~zathuraInverseSearch~ is system-specific. In Linux, I use ~ydotool~ to mimic mouse movement and ~swaymsg~ to detect current window setup. In MacOS, I use the builtin ~AppleScript~ for it.
+Unfortunately, ~zathuraInverseSearch~ is system-specific. In Linux, I use ~xdotool~ to mimic mouse movement and ~i3-msg~ to detect the current window setup. In MacOS, I use the builtin ~AppleScript~ to accomplish the same goal.
 
-# TODO: implement ~zathuraInverseSearch~
+The Linux version goes:
+
+#+begin_src nix :noweb-ref linux-modules
+  {
+    home.packages = [
+      pkgs.xdotool
+      pkgs.jq
+      pkgs.writeScriptBin "zathuraInverseSearch" ''
+        #!${pkgs.stdenv.shell}
+        focused_window=$(i3-msg -t get_tree | jq -r 'recurse(.nodes[]) | select( .focused == true)')
+        left=$(echo $focused_window | jq .window_rect.x)
+        top=$(echo $focused_window | jq .window_rect.y)
+        width=$(echo $focused_window | jq .window_rect.width)
+        height=$(echo $focused_window | jq .window_rect.height)
+
+        # move cursor to (left+width/2, top+height/2)
+        xdotool mousemove $(expr $left + $width / 2) $(expr $top + $height / 2)
+
+        # send ctrl+click
+        xdotool keydown ctrl click 1 keyup ctrl
+      ''
+    ];
+  }
+#+end_src
+
+The MacOS version:
+
+# TODO: implement zathuraInverseSearch in macos
 
 Apart from the ability of folding sections, enabling ~outline-minor-mode~ also allows me to navigate quickly between different sections.
 
@@ -7780,4 +7807,3 @@ check out https://developers.google.com/calendar/v3/reference/events/insert
 ** ein: freezes ~emacs~
 ** replace straight.el with nix-flake
 check out https://github.com/vlaci/nix-straight.el
-** implement ~zathuraInverseSearch~
