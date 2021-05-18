@@ -1,4 +1,7 @@
-inputs: with inputs; {
+inputs: with inputs; { pkgs, ... }: {
+
+  home.packages = [ pkgs.openssh ];
+
   programs.ssh = {
     enable = true;
     matchBlocks = {

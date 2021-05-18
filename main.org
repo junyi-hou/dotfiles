@@ -48,6 +48,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 - disable vterm module due to a nix-specific [[https://github.com/akermu/emacs-libvterm/issues/333#issuecomment-824172389][bug]] reported here.
 - use a different branch for org-appear which supports ~feature/org-fold~
+- fix ssh bug: include the ~openssh~ package.
 
 ** License
 
@@ -55,7 +56,7 @@ GPL
 
 * ~flake~ Initialization
 
-I use ~flake~ to manage my configuration files.
+I use ~flake~ to manage my configuration files. In particular, I define a new output schema ~homeModules~ which automatically imports all ~.nix~ file in the ~./modules/~ folder (and in the current git tree). Those modules then can be imported by ~home-manager~.
 
 #+begin_src nix :tangle flake.nix :noweb yes
   {
@@ -3805,7 +3806,10 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
 First enable ssh.
 
 #+begin_src nix :noweb yes :tangle ./modules/ssh.nix :mkdirp yes
-  inputs: with inputs; {
+  inputs: with inputs; { pkgs, ... }: {
+
+    home.packages = [ pkgs.openssh ];
+
     programs.ssh = {
       enable = true;
       matchBlocks = {
@@ -3876,7 +3880,7 @@ Register ~git~ with ~home-manager~ first.
 
 Enable it in Linux and MacOS
 
-#+begin_src conf :noweb-ref common-modules
+#+begin_src nix :noweb-ref common-modules
   self.homeModules."git.nix"
 #+end_src
 
