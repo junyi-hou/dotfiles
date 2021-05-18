@@ -4,8 +4,6 @@
 #+startup: show3levels
 #+options: toc:3
 
-# Gatsby1122334
-
 * Overview
 
   This repository contains setup of development environment for doing economic research/data science. I use ~home-manager~ to manage home configuration ("dotfiles"), and ~flake~ to manage dependencies.
@@ -123,7 +121,7 @@ I use ~flake~ to manage my configuration files.
 
 ~home-manager~ cannot manage display sessions. This is fair as ~home-manager~ should not be used to install system-wide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
-+ display services (~xorg-server~, ~xorg-drivers~, ~xorg-xinit~, and ~i3gaps~)
++ display services (~xorg-server~, ~xorg-drivers~, ~xorg-xinit~, ~i3gaps~, and ~i3status~)
 + sound service (~alsa-utils~)
 + network services (~networkmanager~)
 
@@ -133,19 +131,12 @@ Notwithstanding this shortcoming, ~home-manager~ can still be used to manage the
   {
     home = {
       file = {
-        ".config/sway/config".source = ./linux/sway;
-        ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
-        ".config/waybar/config".source = ./linux/waybar;
-        ".config/waybar/style.css".source = ./linux/waybar-style;
+        ".config/i3/config".source = ./linux/i3;
       };
       packages = [
         pkgs.libnotify
         pkgs.dunst
       ];
-    };
-
-    services.dunst = {
-      enable = true;
     };
   }
 #+end_src
@@ -7560,7 +7551,7 @@ The Linux version goes:
     home.packages = [
       pkgs.xdotool
       pkgs.jq
-      pkgs.writeScriptBin "zathuraInverseSearch" ''
+      (pkgs.writeScriptBin "zathuraInverseSearch" ''
         #!${pkgs.stdenv.shell}
         focused_window=$(i3-msg -t get_tree | jq -r 'recurse(.nodes[]) | select( .focused == true)')
         left=$(echo $focused_window | jq .window_rect.x)
@@ -7573,7 +7564,7 @@ The Linux version goes:
 
         # send ctrl+click
         xdotool keydown ctrl click 1 keyup ctrl
-      ''
+      '')
     ];
   }
 #+end_src

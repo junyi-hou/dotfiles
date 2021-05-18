@@ -70,19 +70,12 @@
             {
               home = {
                 file = {
-                  ".config/sway/config".source = ./linux/sway;
-                  ".config/sway/wallpaper.jpg".source = ./linux/wallpaper.jpg;
-                  ".config/waybar/config".source = ./linux/waybar;
-                  ".config/waybar/style.css".source = ./linux/waybar-style;
+                  ".config/i3/config".source = ./linux/i3;
                 };
                 packages = [
                   pkgs.libnotify
                   pkgs.dunst
                 ];
-              };
-            
-              services.dunst = {
-                enable = true;
               };
             }
             {
@@ -137,7 +130,7 @@
               home.packages = [
                 pkgs.xdotool
                 pkgs.jq
-                pkgs.writeScriptBin "zathuraInverseSearch" ''
+                (pkgs.writeScriptBin "zathuraInverseSearch" ''
                   #!${pkgs.stdenv.shell}
                   focused_window=$(i3-msg -t get_tree | jq -r 'recurse(.nodes[]) | select( .focused == true)')
                   left=$(echo $focused_window | jq .window_rect.x)
@@ -150,7 +143,7 @@
             
                   # send ctrl+click
                   xdotool keydown ctrl click 1 keyup ctrl
-                ''
+                '')
               ];
             }
             {
