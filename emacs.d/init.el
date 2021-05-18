@@ -3599,7 +3599,7 @@ The exact configuration to be built is determined by the output of \"uname\". Th
     (with-current-buffer (get-buffer-create "*flake-process*")
       (special-mode)))
 
-  (let ((exec-path `(,default-directory ,@exec-path)))
+  (let ((exec-path `(,(projectile-root-bottom-up default-directory) ,@exec-path)))
     (make-process
      :name "flake-process"
      :buffer "*flake-process*"
@@ -3617,3 +3617,17 @@ The exact configuration to be built is determined by the output of \"uname\". Th
              (if moving (goto-char (process-mark proc)))))))))
 
   (pop-to-buffer "*flake-process*"))
+
+(defun gatsby:update-readme ()
+  "Update README.org."
+  (interactive)
+  (let* ((source-file (expand-file-name "main.org" (projectile-root-bottom-up default-directory)))
+         (readme-file (expand-file-name "README.org" (projectile-root-bottom-up default-directory)))
+         (org-mode-hook nil))
+    (save-excursion
+      (find-file source-file)
+      (goto-char (org-find-exact-headline-in-buffer "Overview"))
+      (let* ((elem (org-element-at-point))
+             (beg (org-element-property :begin elem))
+             (end (org-element-property :contents-end elem)))
+        (write-region beg end readme-file)))))

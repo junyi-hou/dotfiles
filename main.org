@@ -51,6 +51,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - fix ssh bug: include the ~openssh~ package.
 - fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
 - implement ~gatsby:update-readme~
+- improve various update utilities; allow updating from anywhere within the repository (not just the root)
 
 ** License
 
@@ -7603,6 +7604,8 @@ First the updating script.
 #+begin_src shell :shebang "#!/usr/bin/env nix-shell" :tangle update-user-config :noweb yes
   #! nix-shell -i bash -p bash emacs
 
+  set -e
+
   <<update-user-config-tangle-p>>
 
   <<update-user-config-hook>>
@@ -7619,7 +7622,8 @@ Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ fro
       echo "unsupported flag $1"
   else
       echo "start tangling modules..."
-      emacs -Q --batch main.org -f org-babel-tangle
+      project_root=$(git rev-parse --show-toplevel)
+      emacs -Q --batch $project_root/main.org -f org-babel-tangle
       echo "done"
   fi
 #+end_src
@@ -7643,7 +7647,7 @@ Then the within-emacs updating function.
       (with-current-buffer (get-buffer-create "*flake-process*")
         (special-mode)))
 
-    (let ((exec-path `(,default-directory ,@exec-path)))
+    (let ((exec-path `(,(projectile-root-bottom-up default-directory) ,@exec-path)))
       (make-process
        :name "flake-process"
        :buffer "*flake-process*"
@@ -7688,8 +7692,8 @@ And the within-emacs version.
   (defun gatsby:update-readme ()
     "Update README.org."
     (interactive)
-    (let* ((source-file (expand-file-name "main.org" default-directory))
-           (readme-file (expand-file-name "README.org" default-directory))
+    (let* ((source-file (expand-file-name "main.org" (projectile-root-bottom-up default-directory)))
+           (readme-file (expand-file-name "README.org" (projectile-root-bottom-up default-directory)))
            (org-mode-hook nil))
       (save-excursion
         (find-file source-file)
@@ -7703,7 +7707,8 @@ And the within-emacs version.
 Automatically update ~README.org~ when updating the whole configuration.
 
 #+begin_src shell :noweb-ref update-user-config-hook
-  ./update-readme main.org README.org
+  project_root=$(git rev-parse --show-toplevel)
+  $project_root/update-readme $project_root/main.org $project_root/README.org
 #+end_src
 
 ** Command Line Utilities

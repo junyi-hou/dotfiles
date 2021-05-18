@@ -45,6 +45,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - fix ssh bug: include the ~openssh~ package.
 - fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
 - implement ~gatsby:update-readme~
+- improve various update utilities; allow updating from anywhere within the repository (not just the root)
 
 ** License
 
