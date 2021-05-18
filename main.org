@@ -7772,4 +7772,5 @@ check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
 ** replace straight.el with nix-flake
+check out https://github.com/vlaci/nix-straight.el
 ** implement ~zathuraInverseSearch~
