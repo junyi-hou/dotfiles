@@ -44,6 +44,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - use a different branch for org-appear which supports ~feature/org-fold~
 - fix ssh bug: include the ~openssh~ package.
 - fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
+- implement ~gatsby:update-readme~
 
 ** License
 

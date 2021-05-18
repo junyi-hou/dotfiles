@@ -50,6 +50,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - use a different branch for org-appear which supports ~feature/org-fold~
 - fix ssh bug: include the ~openssh~ package.
 - fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
+- implement ~gatsby:update-readme~
 
 ** License
 
@@ -7662,7 +7663,7 @@ Then the within-emacs updating function.
     (pop-to-buffer "*flake-process*"))
 #+end_src
 
-Finally the ~./update-readme~ script.
+The script to update ~README.org~.
 
 #+begin_src shell :tangle update-readme :tangle-mode (identity #o755)  :shebang "#!/usr/bin/env sh"
   ":"; exec emacs --quick --script "$0" "$@" # -*- mode: emacs-lisp; lexical-binding: t; -*-
@@ -7679,6 +7680,24 @@ Finally the ~./update-readme~ script.
              (end (org-element-property :contents-end elem)))
         (write-region beg end readme-file))))
   (message "done")
+#+end_src
+
+And the within-emacs version.
+
+#+begin_src emacs-lisp
+  (defun gatsby:update-readme ()
+    "Update README.org."
+    (interactive)
+    (let* ((source-file (expand-file-name "main.org" default-directory))
+           (readme-file (expand-file-name "README.org" default-directory))
+           (org-mode-hook nil))
+      (save-excursion
+        (find-file source-file)
+        (goto-char (org-find-exact-headline-in-buffer "Overview"))
+        (let* ((elem (org-element-at-point))
+               (beg (org-element-property :begin elem))
+               (end (org-element-property :contents-end elem)))
+          (write-region beg end readme-file)))))
 #+end_src
 
 Automatically update ~README.org~ when updating the whole configuration.
