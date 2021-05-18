@@ -81,27 +81,9 @@
               home.sessionPath = [ "/usr/bin" ];
             }
             {
-              home.packages = with pkgs; [
-                bemenu
-                havoc # terminal
-              ];
-            
-              home.file.".config/havoc.cfg" = {
-                text = ''
-                  [child]
-                  program=bash
-                  [font]
-                  size=25
-                  [bind]
-                  C-S-c=copy
-                  C-S-v=paste
-                '';
-              };
-            }
-            {
               programs.emacs = {
                 enable = true;
-                package = pkgs.emacsPgtkGcc;
+                package = pkgs.emacsGit;
               };
             }
             # {
@@ -159,22 +141,21 @@
               }
             )
             self.homeModules."font.nix"
-            self.homeModules."vterm.nix"
+            self.homeModules."tree-sitter.nix"
             self.homeModules."grammar.nix"
             self.homeModules."gpg.nix"
             (self.homeModules."pass.nix" homeDirectory)
+            self.homeModules."ssh.nix"
+            self.homeModules."git.nix"
             self.homeModules."direnv.nix"
             (self.homeModules."mail.nix" homeDirectory)
             self.homeModules."calendar.nix"
+            self.homeModules."emacs.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"
-            self.homeModules."emacs.nix"
-            self.homeModules."ssh.nix"
-            self.homeModules."git.nix"
-            self.homeModules."tree-sitter.nix"
-            self.homeModules."drop-keyboard-loader.nix"
             self.homeModules."terminal-emulator.nix"
+            self.homeModules."drop-keyboard-loader.nix"
           ];
         };
       };
@@ -235,22 +216,21 @@
               }
             )
             self.homeModules."font.nix"
-            self.homeModules."vterm.nix"
+            self.homeModules."tree-sitter.nix"
             self.homeModules."grammar.nix"
             self.homeModules."gpg.nix"
             (self.homeModules."pass.nix" homeDirectory)
+            self.homeModules."ssh.nix"
+            self.homeModules."git.nix"
             self.homeModules."direnv.nix"
             (self.homeModules."mail.nix" homeDirectory)
             self.homeModules."calendar.nix"
+            self.homeModules."emacs.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"
-            self.homeModules."emacs.nix"
-            self.homeModules."ssh.nix"
-            self.homeModules."git.nix"
-            self.homeModules."tree-sitter.nix"
-            self.homeModules."drop-keyboard-loader.nix"
             self.homeModules."terminal-emulator.nix"
+            self.homeModules."drop-keyboard-loader.nix"
           ];
         };
       };

@@ -123,14 +123,10 @@ I use ~flake~ to manage my configuration files.
 
 ~home-manager~ cannot manage display sessions. This is fair as ~home-manager~ should not be used to install system-wide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
 
-*** Linux (Wayland)
-
-~home-manager~ cannot manage display sessions (or X-sessions). This is fair as ~home-manager~ should not be use to install systemwide package and start system services. Instead, I use system package manager (~pacman~ in my case) to install relevant packages and services. On Linux/GNU system, the list of packages I installed with ~pacman~ includes
-
-+ display services (~wayland~, ~sway~)
++ display services (~xorg-server~, ~xorg-drivers~, ~xorg-xinit~, and ~i3gaps~)
++ sound service (~alsa-utils~)
 + notification services (~libnotify~, ~mako~)
-+ network services (~networkmanager~, ~bluez~)
-+ system fonts
++ network services (~networkmanager~)
 
 Notwithstanding this shortcoming, ~home-manager~ can still be used to manage their configuration files, which I include below.
 
@@ -152,29 +148,6 @@ I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system pac
 #+begin_src nix :noweb-ref linux-modules
   {
     home.sessionPath = [ "/usr/bin" ];
-  }
-#+end_src
-
-In addition, I include some Linux-wayland specific packages.
-
-#+begin_src nix :noweb-ref linux-modules
-  {
-    home.packages = with pkgs; [
-      bemenu
-      havoc # terminal
-    ];
-
-    home.file.".config/havoc.cfg" = {
-      text = ''
-        [child]
-        program=bash
-        [font]
-        size=25
-        [bind]
-        C-S-c=copy
-        C-S-v=paste
-      '';
-    };
   }
 #+end_src
 
