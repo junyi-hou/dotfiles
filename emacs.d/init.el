@@ -1000,7 +1000,7 @@ If there is already a eshell buffer open for that directory, switch to that buff
                                  (f-equal-p dir default-directory)))
                           (buffer-list)))
          ;; check if the matched eshell buffer is visible
-         (visible (when exists (get-buffer-window exists 'all-frames))))
+         (visible (when exists (get-buffer-window exists))))
     (if visible
         (select-window visible)
       (split-window-below (- (/ (window-total-height) 3)))

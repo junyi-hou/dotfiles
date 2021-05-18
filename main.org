@@ -49,6 +49,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - disable vterm module due to a nix-specific [[https://github.com/akermu/emacs-libvterm/issues/333#issuecomment-824172389][bug]] reported here.
 - use a different branch for org-appear which supports ~feature/org-fold~
 - fix ssh bug: include the ~openssh~ package.
+- fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
 
 ** License
 
@@ -1908,7 +1909,7 @@ As a quick way to call ~eshell~, I define two functions. The first one opens an 
                                    (f-equal-p dir default-directory)))
                             (buffer-list)))
            ;; check if the matched eshell buffer is visible
-           (visible (when exists (get-buffer-window exists 'all-frames))))
+           (visible (when exists (get-buffer-window exists))))
       (if visible
           (select-window visible)
         (split-window-below (- (/ (window-total-height) 3)))
