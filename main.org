@@ -132,6 +132,7 @@ Notwithstanding this shortcoming, ~home-manager~ can still be used to manage the
     home = {
       file = {
         ".config/i3/config".source = ./linux/i3;
+        ".config/dunst/dunstrc".source = ./linux/dunst;
       };
       packages = [
         pkgs.libnotify

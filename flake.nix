@@ -71,6 +71,7 @@
               home = {
                 file = {
                   ".config/i3/config".source = ./linux/i3;
+                  ".config/dunst/dunstrc".source = ./linux/dunst;
                 };
                 packages = [
                   pkgs.libnotify
