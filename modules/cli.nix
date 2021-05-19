@@ -12,5 +12,27 @@ inputs: with inputs; { pkgs, ... }: {
     }
   ];
 
+  programs.bash = {
+    enable = true;
+
+    profileExtra = ''
+      [[ -f ~/.bashrc ]] && . ~/.bashrc
+    '';
+
+    initExtra = ''
+      alias ls="ls --color"
+      alias ll="ls -alh --color"
+      alias cat="bat"
+
+      mkcd(){
+          mkdir -p -- "$1" && cd -P -- "$1"
+      }
+
+      ff(){
+        emacsclient $@ &
+      }
+    '';
+  };
+
   home.packages = [ pkgs.tree pkgs.curl pkgs.htop pkgs.inetutils ];
 }

@@ -44,14 +44,18 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-19 Wed
+
+- move bash specific config out of vterm module.
+
 *** 2021-05-18 Tue
 
 - disable vterm module due to a nix-specific [[https://github.com/akermu/emacs-libvterm/issues/333#issuecomment-824172389][bug]] reported here.
 - use a different branch for org-appear which supports ~feature/org-fold~
 - fix ssh bug: include the ~openssh~ package.
-- fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame
-- implement ~gatsby:update-readme~
-- improve various update utilities; allow updating from anywhere within the repository (not just the root)
+- fix ~eshell-open-here~ bug: open a new shell even when an existing shell is visible in a different frame.
+- implement ~gatsby:update-readme~.
+- improve various update utilities; allow updating from anywhere within the repository (not just the root).
 
 ** License
 
@@ -2049,21 +2053,7 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
     ];
 
     programs.bash = {
-      enable = true;
-
-      profileExtra = ''
-        [[ -f ~/.bashrc ]] && . ~/.bashrc
-      '';
-
       initExtra = ''
-        alias ls="ls --color"
-        alias ll="ls -alh --color"
-        alias cat="bat"
-
-        mkcd(){
-            mkdir -p -- "$1" && cd -P -- "$1"
-        }
-
         vterm_printf(){
             if [ -n "$TMUX" ] && ([ "''${TERM%%-*}" = "tmux" ] || [ "''${TERM%%-*}" = "screen" ] ); then
                 # Tell tmux to pass the escape sequences through
@@ -2092,10 +2082,6 @@ According to the [[https://github.com/akermu/emacs-libvterm][document]], ~vterm~
                   }
 
         PROMPT_COMMAND='echo -ne "\033]0;''${HOSTNAME}:''${PWD}\007"'
-
-        ff(){
-          emacsclient $@ &
-        }
       '';
     };
   }
@@ -7721,6 +7707,28 @@ Here includes a series of small command line utilities.
     imports = [
       <<cli-module-extra>>
     ];
+
+    programs.bash = {
+      enable = true;
+
+      profileExtra = ''
+        [[ -f ~/.bashrc ]] && . ~/.bashrc
+      '';
+
+      initExtra = ''
+        alias ls="ls --color"
+        alias ll="ls -alh --color"
+        alias cat="bat"
+
+        mkcd(){
+            mkdir -p -- "$1" && cd -P -- "$1"
+        }
+
+        ff(){
+          emacsclient $@ &
+        }
+      '';
+    };
 
     home.packages = [ pkgs.tree pkgs.curl pkgs.htop pkgs.inetutils ];
   }
