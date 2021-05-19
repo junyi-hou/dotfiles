@@ -52,6 +52,10 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
             };
           };
         };
+      
+        home.activation.fixNotmuchConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          $DRY_RUN_CMD ln $VERBOSE_ARG -s ~/.config/notmuch/notmuchrc ~/.notmuch-config
+        '';
       }
       {
         programs.afew.enable = true;

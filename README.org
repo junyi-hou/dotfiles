@@ -41,6 +41,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 *** 2021-05-19 Wed
 
 - move bash specific config out of vterm module.
+- fix notmuch config file bug.
 
 *** 2021-05-18 Tue
 
