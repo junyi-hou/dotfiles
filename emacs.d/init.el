@@ -3774,7 +3774,7 @@ Taken from `slack-room-display'."
    "<" #'outline-previous-heading
    ">" #'outline-next-heading))
 
-(defun gatsby:switch-home ()
+(defun gatsby:update-home ()
   "Make an asynchronous process tangling, building and switch to `home-manager' configuration defined in `flake.nix'. Print stdout to `*flake-process*' buffer.
 
 The exact configuration to be built is determined by the output of \"uname\". This flake currently support x86_64-linux and x86_64-darwin platforms.

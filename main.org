@@ -25,7 +25,7 @@ To install this configuration, clone this repository and run
 
 *** Update Configuration
 
-The script ~update-user-config~ is used to initialize or update configuration. This script does two things. First, it start an new ~emacs~ process in batch mode and tangle ~main.org~, which updates all relevant NixOS modules and user configurations. Second, it runs ~nix build~ to implement those updates. Therefore, the preferred way of updating is to edit ~main.org~ and make changes as see fit, then call ~gatsby:switch-home~ in ~emacs~ or run ~./update-user-config~ in shell to automatically update (tangle) the new setting.
+The script ~update-user-config~ is used to initialize or update configuration. This script does two things. First, it start an new ~emacs~ process in batch mode and tangle ~main.org~, which updates all relevant NixOS modules and user configurations. Second, it runs ~nix build~ to implement those updates. Therefore, the preferred way of updating is to edit ~main.org~ and make changes as see fit, then call ~gatsby:update-home~ in ~emacs~ or run ~./update-user-config~ in shell to automatically update (tangle) the new setting.
 
 Alternatively, one can manually edit ~*.nix~ and run
 #+begin_src shell
@@ -44,10 +44,16 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-21 Fri
+
+- implement new nix snippets
+- rename ~gatsby:switch-home~ to ~gatsby:update-home~
+
 *** 2021-05-19 Wed
 
 - move bash specific config out of vterm module.
 - fix notmuch config file bug.
+
 
 *** 2021-05-18 Tue
 
@@ -5029,7 +5035,7 @@ To receive and send emails from the comfort in ~emacs~, I use
       };
 
       home.activation.fixNotmuchConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        $DRY_RUN_CMD ln $VERBOSE_ARG -s ~/.config/notmuch/notmuchrc ~/.notmuch-config
+        $DRY_RUN_CMD ln $VERBOSE_ARG -sf ~/.config/notmuch/notmuchrc ~/.notmuch-config
       '';
     }
 #+end_src
@@ -7834,7 +7840,7 @@ Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ fro
 Then the within-emacs updating function.
 
 #+begin_src emacs-lisp
-  (defun gatsby:switch-home ()
+  (defun gatsby:update-home ()
     "Make an asynchronous process tangling, building and switch to `home-manager' configuration defined in `flake.nix'. Print stdout to `*flake-process*' buffer.
 
   The exact configuration to be built is determined by the output of \"uname\". This flake currently support x86_64-linux and x86_64-darwin platforms.
