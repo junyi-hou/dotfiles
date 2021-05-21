@@ -3448,7 +3448,198 @@ Taken from `slack-room-display'."
       (apply fn args)
       (goto-char ori-point)))
   
-  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion))
+  (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
+  (defun gatsby:nix-snippet-update-body (regexp &rest updates)
+    "Update the current content identified by REGEXP using UPDATES.
+  
+  REGEXP should contain 3 groups.  Group 1 is the beginning of the section.  Group
+  2 is the current content.  Group 3 is the end of the section.
+  
+  UPDATE is either strings to be added to the current content, or a function that
+  takes listified current content as the only argument and return a modified list
+  of strings as the updated content.
+  
+  This function first separate the current content into a list of lines.  This
+  list is then fed into `gatsby:nix-snippet--process-content' along with UPDATE.
+  The content then gets updated and inserted back to the buffer.
+  
+  This function updates the BODY of a let block.  To update the BINDING of a let
+  block, use `gatsby:nix-snippet-update-bind' instead.
+  
+  Return nil."
+    (save-excursion
+      (when (re-search-forward regexp nil 'no-error)
+        (let* ((beg (match-end 1))
+               (end (match-beginning 3))
+               (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
+               (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+          (goto-char beg)
+          (delete-region beg end)
+          (insert "\n")
+          (->> updates
+            (gatsby:nix-snippet--process-content content)
+            (--remove (string= it ""))
+            (--map (concat padding it "\n"))
+            (apply #'concat)
+            insert))))
+    nil)
+  
+  (defun gatsby:nix-snippet-update-inputs (&rest inputs)
+    "Update the current content in flake inputs block using UPDATES.
+  
+  INPUTS should be strings defining new flakes inputs.
+  
+  Return nil."
+    (save-excursion
+      (goto-char (point-min))
+      (re-search-forward "\\(?1:[[:space:]]*inputs = {\\)\\(?2:\\(.*\n\\)*?\\)\\(?3:[[:space:]]*};\\)")
+      (let* ((beg (match-end 1))
+             (end (match-beginning 3))
+             (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
+             (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+        (goto-char beg)
+        (delete-region beg end)
+        (insert "\n")
+        (->> inputs
+          (--map (concat padding it "\n"))
+          (apply #'concat)
+          insert)))
+    nil)
+  
+  (defun gatsby:nix-snippet-update-bind (&rest updates)
+    "Update the content of the current let bind with UPDATES.
+  
+  UPDATE is either strings to be added to the current content, or a function that
+  takes listified current content as the only argument and return a modified list
+  of strings as the updated content.
+  
+  This function first separate the current content into a list of node strings.  This
+  list is then fed into `gatsby:nix-snippet--process-content' along with UPDATE.
+  The content then gets updated and inserted back to the buffer.
+  
+  Return nil."
+    (let* ((root (tree-sitter-node-at-point 'let))
+           (node (tsc-get-nth-named-child root 0))
+           (beg (1+ (tsc-node-end-position (tsc-get-nth-child root 0))))
+           end content padding)
+      (while (eq (tsc-node-type node) 'bind)
+        (setq content `(,@content ,(tsc-node-text node))
+              node (tsc-get-next-sibling node)
+              end (tsc-node-end-position node)))
+      (setq padding (progn (goto-char end)
+                           (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+      (goto-char beg)
+      (delete-region beg (- end 2))
+      (->> updates
+        (gatsby:nix-snippet--process-content content)
+        (--map (concat padding it "\n"))
+        (apply #'concat)
+        insert)
+      (insert (substring padding 2)))
+    (call-interactively #'evil-open-above)
+    nil)
+  
+  (defun gatsby:nix-snippet--process-content (content updates)
+    "Update CONTENT recursively using UPDATES.
+  
+  Elements of UPDATES can either be a function, which takes CONTENT as the
+  only argument and returns an updated list of content, or a string.  In the
+  latter case, the string will be simply appended to the end of CONTENT.
+  
+  Return the updated content."
+    (let* ((updated (pcase (car updates)
+                      ((pred functionp) (funcall (car updates) content))
+                      ((pred stringp) `(,@content ,(car updates)))
+                      (_ (user-error "UPDATES must be a function or a string"))))
+           (next (cdr updates)))
+      (if next
+          (gatsby:nix-snippet--process-content updated next)
+        updated)))
+  
+  (defmacro gatsby:nix-snippet--include-python-pkgs (&rest pkgs)
+    `(lambda (content)
+       (if-let* ((idx (--find-index (string-match "(python\\.withPackages (p: with p; \\[\\(?1:.*\\)]))" it) content))
+                 (string (nth idx content)))
+           (if (not (-difference (list ,@pkgs) (s-split "[[:space:]]+" (match-string 1 string) t)))
+               content
+             (-replace-at idx (format "(python.withPackages (p: with p; [ %s %s ]))"
+                                      (match-string 1 string) (s-join " " (list ,@pkgs)))
+                          content))
+         `(,@content ,(format "(python.withPackages (p: with p; [ %s ]))" (s-join " " (list ,@pkgs)))))))
+  (defun gatsby:nix-snippet--in-let-bind-p ()
+    "Return t if `point' is inside a `let' bind block."
+    (let* ((let-node (tree-sitter-node-at-point 'let))
+           (in-node (tsc-get-prev-sibling (tsc-get-child-by-field let-node :body)))
+           (beg (tsc-node-start-position let-node))
+           (end (tsc-node-start-position in-node)))
+      (and (< (point) end) (> (point) beg))))
+  (defun gatsby:nix-snippet-dispatcher ()
+    "Use `completing-read' to select and insert snippets."
+    (interactive)
+    (call-interactively
+     (intern
+      (completing-read "Select snippet: "
+                       gatsby:nix-snippets))))
+  
+  (general-define-key :keymaps 'nix-mode-map :states 'insert
+    "<M-RET>" #'gatsby:nix-snippet-dispatcher)
+  
+  (defcustom gatsby:nix-snippets
+    '(gatsby:nix-snippet-python gatsby:nix-snippet-r)
+    "Snippets used in the `nix-mode'."
+    :type '(repeat function)
+    :group 'nix)
+  
+  (defun gatsby:nix-snippet-python ()
+    (interactive)
+    ;; apply only when the cursor is inside a let bind block
+    (when (gatsby:nix-snippet--in-let-bind-p)
+      (gatsby:nix-snippet-update-bind
+       "python = pkgs.python39;")
+  
+      (gatsby:nix-snippet-update-body
+       "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
+       "(python.withPackages (p: with p; [ jupyter ]))"
+       "pkgs.nodePackages.pyright")))
+  
+  (defun gatsby:nix-snippet-r ()
+    (interactive)
+    (when (gatsby:nix-snippet--in-let-bind-p)
+      (gatsby:nix-snippet-update-bind
+       (lambda (content)
+         (if (--filter (s-matches-p "^python[[:space:]]*=" it) content)
+             content
+           `(@,content "python = pkgs.python39;")))
+       "rEnv = with pkgs; rWrapper.override {
+    packages = with rPackages; [
+      IRkernel
+      languageserver
+      tidyverse
+    ];
+  };"
+       "rKernel = pkgs.writeTextDir \"kernels/irkernel/kernel.json\"
+    (builtins.toJSON {
+      display_name = \"R\";
+      language = \"R\";
+      argv = [
+        \"\${rEnv}/bin/R\"
+        \"--slave\"
+        \"-e\"
+        \"IRkernel::main()\"
+        \"--args\"
+        \"{connection_file}\"
+      ];
+    });")
+  
+      (gatsby:nix-snippet-update-body
+       "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
+       (gatsby:nix-snippet--include-python-pkgs "jupyter")
+       "rEnv"
+       "rKernel"
+       )
+      (gatsby:nix-snippet-update-body
+       "\\(?1:devShell\\(.*\n\\)*[[:space:]]*shellHook = ''\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*'';\\)"
+       "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}"))))
 
 (defun gatsby:tree-sitter-install-and-load-nix ()
   "Download, compile, and register nix grammar for tree-sitter if haven't done so."

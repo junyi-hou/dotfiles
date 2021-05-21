@@ -1,3 +1,4 @@
+# -*- mode: snippet -*-
 # key: new
 # name: new-shell
 # expand-env: ((yas-indent-line 'fixed))
