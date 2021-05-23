@@ -38,6 +38,10 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-22 Sat
+
+- update ~Pragmata Pro~ font to version 0.829
+
 *** 2021-05-21 Fri
 
 - implement new nix snippets
@@ -47,7 +51,6 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 - move bash specific config out of vterm module.
 - fix notmuch config file bug.
-
 
 *** 2021-05-18 Tue
 

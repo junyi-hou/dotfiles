@@ -10,7 +10,7 @@
     };
 
     pragmata-pro = {
-      url = "file:///home/junyi/Downloads/PragmataPro0.828-2.zip";
+      url = "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz";
       flake = false;
     };
     gmail-oauth2-tools = {

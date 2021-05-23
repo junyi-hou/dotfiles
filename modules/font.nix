@@ -2,9 +2,8 @@ inputs: with inputs; { pkgs, ... }:
 let
   pragmataPro = pkgs.stdenv.mkDerivation {
     pname = "PragmataPro";
-    version = "0.828";
+    version = "0.829";
     src = pragmata-pro;
-    nativeBuildInputs = [ pkgs.unzip ];
     installPhase = ''
       mkdir -p $out/share/fonts/PragmataPro
       cp *.ttf $out/share/fonts/PragmataPro

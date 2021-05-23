@@ -44,6 +44,10 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-22 Sat
+
+- update ~Pragmata Pro~ font to version 0.829
+
 *** 2021-05-21 Fri
 
 - implement new nix snippets
@@ -53,7 +57,6 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 - move bash specific config out of vterm module.
 - fix notmuch config file bug.
-
 
 *** 2021-05-18 Tue
 
@@ -706,7 +709,7 @@ To install fonts, first register source files in ~flake~.
 
 #+begin_src nix :noweb-ref flake-input
   pragmata-pro = {
-    url = "file:///home/junyi/Downloads/PragmataPro0.828-2.zip";
+    url = "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz";
     flake = false;
   };
 #+end_src
@@ -762,9 +765,8 @@ With the help of this custom module, I can include fonts (and their configuratio
   let
     pragmataPro = pkgs.stdenv.mkDerivation {
       pname = "PragmataPro";
-      version = "0.828";
+      version = "0.829";
       src = pragmata-pro;
-      nativeBuildInputs = [ pkgs.unzip ];
       installPhase = ''
         mkdir -p $out/share/fonts/PragmataPro
         cp *.ttf $out/share/fonts/PragmataPro

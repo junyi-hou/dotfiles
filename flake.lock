@@ -148,13 +148,13 @@
     "pragmata-pro": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-5qpkwQOEM73hWsvnPxzvGVXneE80hMb2NlfS8gCIZSw=",
+        "narHash": "sha256-i0h1KoEdzfB6yXlsx3Fp9VmifwnE3QGPLVM/zvFAO3k=",
         "type": "tarball",
-        "url": "file:///home/junyi/Downloads/PragmataPro0.828-2.zip"
+        "url": "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "file:///home/junyi/Downloads/PragmataPro0.828-2.zip"
+        "url": "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz"
       }
     },
     "qmk-firmwork-loader": {
