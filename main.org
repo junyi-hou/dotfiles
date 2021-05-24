@@ -44,6 +44,13 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-24 Mon
+
+- switch to ~gruvbox~ theme
+- fix ~zathuraInverseSearch~ bug
+- update ~alacritty~ settings
+- improves robustness of the updated scripts
+
 *** 2021-05-22 Sat
 
 - update ~Pragmata Pro~ font to version 0.829
@@ -177,7 +184,7 @@ I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system pac
 
 *** MacOS
 
-On MacOS system, those components are builtin, and I don't need to worry about it.
+On MacOS system, display, sound and network modules are all builtin, so I don't need to worry about it.
 
 * ~emacs~ Configuration
 

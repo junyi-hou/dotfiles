@@ -38,6 +38,13 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-24 Mon
+
+- switch to ~gruvbox~ theme
+- fix ~zathuraInverseSearch~ bug
+- update ~alacritty~ settings
+- improves robustness of the updated scripts
+
 *** 2021-05-22 Sat
 
 - update ~Pragmata Pro~ font to version 0.829
