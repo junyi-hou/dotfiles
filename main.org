@@ -7786,8 +7786,8 @@ The Linux version goes:
       (pkgs.writeScriptBin "zathuraInverseSearch" ''
         #!${pkgs.stdenv.shell}
         focused_window=$(i3-msg -t get_tree | jq -r 'recurse(.nodes[]) | select( .focused == true)')
-        left=$(echo $focused_window | jq .window_rect.x)
-        top=$(echo $focused_window | jq .window_rect.y)
+        left=$(echo $focused_window | jq .rect.x)
+        top=$(echo $focused_window | jq .rect.y)
         width=$(echo $focused_window | jq .window_rect.width)
         height=$(echo $focused_window | jq .window_rect.height)
 
