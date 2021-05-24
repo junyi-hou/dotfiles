@@ -204,9 +204,9 @@
 
 (setq alert-fade-time 60)
 
-(use-package lab-themes)
+(use-package gruvbox-theme)
 (setq custom-safe-themes t)
-(lab-themes-load-style 'dark)
+(load-theme 'gruvbox-dark-medium)
 
 (setq-default fringe-indicator-alist
               '((continuation nil nil)
@@ -1093,7 +1093,15 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (use-package org
   :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
-                 :files ("*.el" "lisp/*.el" "contrib/lisp/*.el")))
+                 :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
+  :config
+  (setq org-startup-with-latex-preview t
+        org-preview-latex-image-directory ".org-latex-imgcache/")
+  (setq org-use-sub-superscripts nil)
+  (setq org-hide-leading-stars nil)
+  (set-face-extend 'org-block t)
+  (set-face-extend 'org-block-begin-line t)
+  (set-face-extend 'org-block-end-line t))
 
 (defun gatsby:org--enable-extra-pairs ()
   (make-variable-buffer-local 'electric-pair-pairs)
@@ -1103,15 +1111,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (defun gatsby:org--fix-indent () (setq tab-width 2))
 (add-hook 'org-mode-hook #'gatsby:org--fix-indent)
-
-(setq org-startup-indented t
-      org-startup-with-latex-preview t
-      org-preview-latex-image-directory ".org-latex-imgcache/")
-
-(setq org-use-sub-superscripts nil)
-
-(setq org-hide-leading-stars nil
-      org-indent-mode-turns-on-hiding-stars nil)
 
 (defun gatsby:org--complete-keywords ()
   "Allow company to complete org keywords after ^#+"

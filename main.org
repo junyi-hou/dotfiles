@@ -607,9 +607,9 @@ The stock ~emacs~ looks horrible. This section concerns mainly the aesthetics.
 I like the color theme to provide enough visual cue (to read code) but not too colorful and distracting. ~lab-theme~ provide just the right balance for me.
 
 #+begin_src emacs-lisp
-  (use-package lab-themes)
+  (use-package gruvbox-theme)
   (setq custom-safe-themes t)
-  (lab-themes-load-style 'dark)
+  (load-theme 'gruvbox-dark-medium)
 #+end_src
 
 *** fringe bitmaps
@@ -2440,10 +2440,12 @@ Enable ~vterm~ in MacOS and Linux.
 
 Historically, ~org-mode~ grew out of ~outline-mode~, which is used to fold text parts. ~org-mode~ inherit this functionality. Yet, the folding in ~org-mode~ depends on ~overlays~, which can be very slow. [[https://github.com/yantar92/org/tree/6afe70e63509214b4c305f2d8f2d713056b165ed][this repository]] re-implement the folding mechanism by using ~text properties~.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :noweb yes
   (use-package org
     :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
-                   :files ("*.el" "lisp/*.el" "contrib/lisp/*.el")))
+                   :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
+    :config
+    <<org-config>>)
 #+end_src
 
 ~org-mode~ has a few frequently used pairs that are not registered in ~elec-pair~ (e.g., "~" for inline code). I make those pairs available by modifying ~electric-pair-pairs~.
@@ -2464,28 +2466,24 @@ Set the indent width to 2 in the ~org-mode~.
 #+end_src
 
 ~org-mode~ allows users to customize how it presents the content when opening a new file. Those variables can also be set on a per-file basis. I include the following settings that makes sense to me:
-+ automatically enable ~org-indent-mode~, so the sections are automatically
-  indented according to their levels
 + enable previewing the latex segments.
 + customize where the latex cache is saved so it does not get in the way,
 
-#+begin_src emacs-lisp
-  (setq org-startup-indented t
-        org-startup-with-latex-preview t
+#+begin_src emacs-lisp :tangle no :noweb-ref org-config
+  (setq org-startup-with-latex-preview t
         org-preview-latex-image-directory ".org-latex-imgcache/")
 #+end_src
 
 Although ~org~ try to be smart and guess which character(s) after "^" or "_" are super/subscripts, it is unnecessary. I can always group them using curly scripts to avoid any confusion.
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no :noweb-ref org-config
   (setq org-use-sub-superscripts nil)
 #+end_src
 
 ~org~ provides an option to hide the leading stars that indicates the level the section is in. I find leading stars helpful in providing a visual cue. So I turn off the option below:
 
-#+begin_src emacs-lisp
-  (setq org-hide-leading-stars nil
-        org-indent-mode-turns-on-hiding-stars nil)
+#+begin_src emacs-lisp :tangle no :noweb-ref org-config
+  (setq org-hide-leading-stars nil)
 #+end_src
 
 To allow ~company~ to add org keywords to its candidates, I add the following hook.
@@ -2556,6 +2554,14 @@ I rarely use ~<RET>~ to change line in the normal state, so I bind it to open li
 #+begin_src emacs-lisp
   (general-define-key :keymaps 'org-mode-map :states 'normal
     "RET" #'org-open-at-point)
+#+end_src
+
+Make ~org-block~, ~org-block-begin-line~ and ~org-block-end-line~ faces look better.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref org-config
+  (set-face-extend 'org-block t)
+  (set-face-extend 'org-block-begin-line t)
+  (set-face-extend 'org-block-end-line t)
 #+end_src
 
 *** org-appear
