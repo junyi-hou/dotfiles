@@ -7827,7 +7827,11 @@ First the updating script.
 
   <<update-user-config-hook>>
 
-  nix build . --experimental-features "nix-command flakes" && ./result/activate
+  project_root=$(git rev-parse --show-toplevel)
+
+  nix build $project_root --experimental-features "nix-command flakes"
+
+  $project_root/result/activate
 #+end_src
 
 Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.
