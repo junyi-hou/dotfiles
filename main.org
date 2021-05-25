@@ -63,7 +63,8 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - fix ~zathuraInverseSearch~ bug
 - update ~alacritty~ settings
 - improves robustness of the updated scripts
-- use ~digestif~ as LaTeX LSP.
+- use ~digestif~ as LaTeX LSP
+- drop ~direnv~ workaround, fixed in upstream
 
 *** 2021-05-22 Sat
 
@@ -4647,10 +4648,8 @@ An big advantage of ~nix~ is that it can create reproducible isolate production 
 
 To address this problem, I use ~envrc~, which makes ~process-environment~ a buffer-local variable. I first need to enable ~direnv~ and ~nix-direnv~ support in ~home-manager~.
 
-#+begin_src nix :noweb yes :tangle ./modules/direnv.nix :mkdirp yes
+#+begin_src nix :tangle ./modules/direnv.nix :mkdirp yes
   inputs: with inputs; {
-    <<nix-direnv-overlays>>
-
     programs.direnv = {
       enable = true;
       enableNixDirenvIntegration = true;
@@ -4662,23 +4661,6 @@ To address this problem, I use ~envrc~, which makes ~process-environment~ a buff
       };
     };
   }
-#+end_src
-
-There is a [[https://github.com/nix-community/nix-direnv/issues/70][bug]] in the current version of the ~nix-direnv~ cannot support the ~strict_env~ setting in ~direnv~, as it will leave ~NIX_BIN_PREFIX~ variable unset. The following snippet taken from the same discussion fix this.
-
-#+begin_src nix :noweb-ref nix-direnv-overlays
-  nixpkgs.overlays = [
-    (final: prev: {
-      nix-direnv = prev.nix-direnv.overrideAttrs (oldAttrs: rec {
-        # Substitute instead of wrapping because the resulting file is getting sourced, not executed:
-        postPatch = ''
-            substituteInPlace direnvrc \
-              --replace "\''${NIX_BIN_PREFIX}" "\''${NIX_BIN_PREFIX:-${prev.nix}/bin/}" \
-              --replace "grep" "${prev.gnugrep}/bin/grep"
-          '';
-      });
-    })
-  ];
 #+end_src
 
 Make sure ~direnv~ is enabled in both Linux and MacOS.
