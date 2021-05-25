@@ -3523,6 +3523,8 @@ Taken from `slack-room-display'."
         (delete-region beg end)
         (insert "\n")
         (->> inputs
+          (gatsby:nix-snippet--process-content content)
+          (--remove (string= it ""))
           (--map (concat padding it "\n"))
           (apply #'concat)
           insert)))
@@ -3595,6 +3597,12 @@ Taken from `slack-room-display'."
            (beg (tsc-node-start-position let-node))
            (end (tsc-node-start-position in-node)))
       (and (< (point) end) (> (point) beg))))
+  (defcustom gatsby:nix-snippets
+    '(gatsby:nix-snippet-python gatsby:nix-snippet-r gatsby:nix-snippet-stata)
+    "Snippets used in the `nix-mode'."
+    :type '(repeat function)
+    :group 'nix)
+  
   (defun gatsby:nix-snippet-dispatcher ()
     "Use `completing-read' to select and insert snippets."
     (interactive)
@@ -3606,19 +3614,12 @@ Taken from `slack-room-display'."
   (general-define-key :keymaps 'nix-mode-map :states 'insert
     "<M-RET>" #'gatsby:nix-snippet-dispatcher)
   
-  (defcustom gatsby:nix-snippets
-    '(gatsby:nix-snippet-python gatsby:nix-snippet-r)
-    "Snippets used in the `nix-mode'."
-    :type '(repeat function)
-    :group 'nix)
-  
   (defun gatsby:nix-snippet-python ()
     (interactive)
     ;; apply only when the cursor is inside a let bind block
     (when (gatsby:nix-snippet--in-let-bind-p)
       (gatsby:nix-snippet-update-bind
        "python = pkgs.python39;")
-  
       (gatsby:nix-snippet-update-body
        "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
        "(python.withPackages (p: with p; [ jupyter ]))"
@@ -3631,37 +3632,89 @@ Taken from `slack-room-display'."
        (lambda (content)
          (if (--filter (s-matches-p "^python[[:space:]]*=" it) content)
              content
-           `(@,content "python = pkgs.python39;")))
-       "rEnv = with pkgs; rWrapper.override {
-    packages = with rPackages; [
-      IRkernel
-      languageserver
-      tidyverse
-    ];
-  };"
-       "rKernel = pkgs.writeTextDir \"kernels/irkernel/kernel.json\"
-    (builtins.toJSON {
-      display_name = \"R\";
-      language = \"R\";
-      argv = [
-        \"\${rEnv}/bin/R\"
-        \"--slave\"
-        \"-e\"
-        \"IRkernel::main()\"
-        \"--args\"
-        \"{connection_file}\"
-      ];
-    });")
-  
+           `(,@content "python = pkgs.python39;")))
+       "rEnv = with pkgs; rWrapper.override {"
+       "  packages = with rPackages; ["
+       "    IRkernel"
+       "    languageserver"
+       "    tidyverse"
+       "  ];"
+       "};"
+       "rKernel = pkgs.writeTextDir \"kernels/irkernel/kernel.json\""
+       "  (builtins.toJSON {"
+       "    display_name = \"R\";"
+       "    language = \"R\";"
+       "    argv = ["
+       "      \"${rEnv}/bin/R\""
+       "      \"--slave\""
+       "      \"-e\""
+       "      \"IRkernel::main()\""
+       "      \"--args\""
+       "      \"{connection_file}\""
+       "    ];"
+       "  });")
       (gatsby:nix-snippet-update-body
        "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
        (gatsby:nix-snippet--include-python-pkgs "jupyter")
        "rEnv"
-       "rKernel"
-       )
+       "rKernel")
       (gatsby:nix-snippet-update-body
        "\\(?1:devShell\\(.*\n\\)*[[:space:]]*shellHook = ''\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*'';\\)"
-       "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}"))))
+       "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}")))
+  
+  (defun gatsby:nix-snippet-stata ()
+    (interactive)
+    (when (gatsby:nix-snippet--in-let-bind-p)
+      (gatsby:nix-snippet-update-bind
+       (lambda (content)
+         (if (--filter (s-matches-p "^python[[:space:]]*=" it) content)
+             content
+           `(,@content "python = pkgs.python39;")))
+       "stataKernel = python.pkgs.buildPythonPackage rec {"
+       "  pname = \"stata_kernel\";"
+       "  version = \"1.12.2\";"
+       "  src = stata-kernel;"
+       "  propagatedBuildInputs = with python.pkgs; ["
+       "    beautifulsoup4"
+       "    jupyter"
+       "    pandas"
+       "    packaging"
+       "    pillow"
+       "    pexpect"
+       "    pygments"
+       "    requests"
+       "  ];"
+       "  doCheck = false;"
+       "  postInstall = ''"
+       "    mkdir -p $out/kernels/stata_kernel"
+       "    echo '${builtins.toJSON {"
+       "      display_name = \"Stata\";"
+       "      language = \"stata\";"
+       "      argv = [ \"python\" \"-m\" \"stata_kernel\" \"-f\" \"{connection_file}\" ];"
+       "    }}' > \$out/kernels/stata_kernel/kernel.json"
+       "  '';"
+       "};")
+      (gatsby:nix-snippet-update-inputs
+       "stata-kernel = {"
+       "  url = \"github.com:kylebarron/stata_kernel\";"
+       "  flake = false;"
+       "};")
+      (gatsby:nix-snippet-update-body
+       "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
+       (gatsby:nix-snippet--include-python-pkgs "jupyter" "stataKernel"))
+      (gatsby:nix-snippet-update-body
+       "\\(?1:devShell\\(.*\n\\)*[[:space:]]*shellHook = ''\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*'';\\)"
+       "cat > ${projectRoot}/.stata_kernel.conf <<EOF"
+       "  [stata_kernel]"
+       "  stata_path = stata-bin"
+       "  execution_mode = console"
+       "  cache_directory = ~/.cache/stata_kernel_cache"
+       "  graph_format = svg"
+       "  graph_scale = 1"
+       "  user_graph_keywords = coefplot,vioplot"
+       "EOF"
+       "export STATA_KERNEL_USER_CONFIG_PATH=${projectRoot}/.stata_kernel.conf"
+       "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}"))))
 
 (defun gatsby:tree-sitter-install-and-load-nix ()
   "Download, compile, and register nix grammar for tree-sitter if haven't done so."
