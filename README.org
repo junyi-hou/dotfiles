@@ -51,6 +51,11 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+
+*** 2021-05-25 Tue
+
+- aesthetic improvements for org-mode under ~gruvbox~ theme
+
 *** 2021-05-24 Mon
 
 - switch to ~gruvbox~ theme

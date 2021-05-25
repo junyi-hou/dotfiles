@@ -1095,10 +1095,12 @@ If there is already a eshell buffer open for that directory, switch to that buff
   :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
                  :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
   :config
-  (setq org-startup-with-latex-preview t
+  (setq org-startup-indented t
+        org-startup-with-latex-preview t
         org-preview-latex-image-directory ".org-latex-imgcache/")
   (setq org-use-sub-superscripts nil)
-  (setq org-hide-leading-stars nil)
+  (setq org-indent-mode-turns-on-hiding-stars nil
+        org-hide-leading-stars nil)
   (set-face-extend 'org-block t)
   (set-face-extend 'org-block-begin-line t)
   (set-face-extend 'org-block-end-line t))
@@ -1111,6 +1113,27 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (defun gatsby:org--fix-indent () (setq tab-width 2))
 (add-hook 'org-mode-hook #'gatsby:org--fix-indent)
+
+(defun gatsby:org--indent-mode-with-correct-wrap (level indentation &optional heading)
+  (let* ((line (aref (pcase heading
+                           (`nil org-indent--text-line-prefixes)
+                           (`inlinetask org-indent--inlinetask-line-prefixes)
+                           (_ org-indent--heading-line-prefixes))
+                         level))
+           (wrap
+            (concat line
+                  (org-add-props
+                        (if heading (concat (make-string level ?*) " ")
+                              (make-string indentation ?\s))
+                        nil 'face (if (eq (car (org-element-at-point)) 'src-block)
+                                    'org-block
+                                  'org-indent)))))
+    ;; Add properties down to the next line to indent empty lines.
+    (add-text-properties (line-beginning-position) (line-beginning-position 2)
+                               `(line-prefix ,line wrap-prefix ,wrap)))
+  (forward-line))
+
+(advice-add #'org-indent-set-line-properties :override #'gatsby:org--indent-mode-with-correct-wrap)
 
 (defun gatsby:org--complete-keywords ()
   "Allow company to complete org keywords after ^#+"
@@ -3471,7 +3494,7 @@ Taken from `slack-room-display'."
         (let* ((beg (match-end 1))
                (end (match-beginning 3))
                (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
-               (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+               (padding (make-string (+ tab-width (current-indentation)) ?\s)))
           (goto-char beg)
           (delete-region beg end)
           (insert "\n")
@@ -3495,7 +3518,7 @@ Taken from `slack-room-display'."
       (let* ((beg (match-end 1))
              (end (match-beginning 3))
              (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
-             (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+             (padding (make-string (+ tab-width (current-indentation)) ?\s)))
         (goto-char beg)
         (delete-region beg end)
         (insert "\n")

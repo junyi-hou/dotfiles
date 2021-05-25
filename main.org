@@ -57,6 +57,11 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+
+*** 2021-05-25 Tue
+
+- aesthetic improvements for org-mode under ~gruvbox~ theme
+
 *** 2021-05-24 Mon
 
 - switch to ~gruvbox~ theme
@@ -2492,9 +2497,36 @@ Set the indent width to 2 in the ~org-mode~.
 + customize where the latex cache is saved so it does not get in the way,
 
 #+begin_src emacs-lisp :tangle no :noweb-ref org-config
-  (setq org-startup-with-latex-preview t
+  (setq org-startup-indented t
+        org-startup-with-latex-preview t
         org-preview-latex-image-directory ".org-latex-imgcache/")
 #+end_src
+
+Using ~org-indent~ creates ugly blanks in front of the wrapped lines in src-blocks as discussed [[https://emacs-china.org/t/truncate-lines/17317][here]]. The following function fix this display issue.
+
+#+begin_src emacs-lisp
+  (defun gatsby:org--indent-mode-with-correct-wrap (level indentation &optional heading)
+    (let* ((line (aref (pcase heading
+                             (`nil org-indent--text-line-prefixes)
+                             (`inlinetask org-indent--inlinetask-line-prefixes)
+                             (_ org-indent--heading-line-prefixes))
+                           level))
+             (wrap
+              (concat line
+                    (org-add-props
+                          (if heading (concat (make-string level ?*) " ")
+                                (make-string indentation ?\s))
+                          nil 'face (if (eq (car (org-element-at-point)) 'src-block)
+                                      'org-block
+                                    'org-indent)))))
+      ;; Add properties down to the next line to indent empty lines.
+      (add-text-properties (line-beginning-position) (line-beginning-position 2)
+                                 `(line-prefix ,line wrap-prefix ,wrap)))
+    (forward-line))
+
+  (advice-add #'org-indent-set-line-properties :override #'gatsby:org--indent-mode-with-correct-wrap)
+#+end_src
+
 
 Although ~org~ try to be smart and guess which character(s) after "^" or "_" are super/subscripts, it is unnecessary. I can always group them using curly scripts to avoid any confusion.
 
@@ -2505,7 +2537,8 @@ Although ~org~ try to be smart and guess which character(s) after "^" or "_" are
 ~org~ provides an option to hide the leading stars that indicates the level the section is in. I find leading stars helpful in providing a visual cue. So I turn off the option below:
 
 #+begin_src emacs-lisp :tangle no :noweb-ref org-config
-  (setq org-hide-leading-stars nil)
+  (setq org-indent-mode-turns-on-hiding-stars nil
+        org-hide-leading-stars nil)
 #+end_src
 
 To allow ~company~ to add org keywords to its candidates, I add the following hook.
@@ -7345,7 +7378,7 @@ First, the following functions add/modify the text identified by regexp/tree-sit
         (let* ((beg (match-end 1))
                (end (match-beginning 3))
                (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
-               (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+               (padding (make-string (+ tab-width (current-indentation)) ?\s)))
           (goto-char beg)
           (delete-region beg end)
           (insert "\n")
@@ -7369,7 +7402,7 @@ First, the following functions add/modify the text identified by regexp/tree-sit
       (let* ((beg (match-end 1))
              (end (match-beginning 3))
              (content (-map #'s-trim (s-split "\n" (match-string 2) t)))
-             (padding (apply #'concat (-repeat (+ tab-width (current-indentation)) " "))))
+             (padding (make-string (+ tab-width (current-indentation)) ?\s)))
         (goto-char beg)
         (delete-region beg end)
         (insert "\n")
