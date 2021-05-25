@@ -19,6 +19,6 @@ $project_root/update-readme $project_root/main.org $project_root/README.org
 
 project_root=$(git rev-parse --show-toplevel)
 
-nix build $project_root --experimental-features "nix-command flakes"
+nix build $project_root
 
 $project_root/result/activate

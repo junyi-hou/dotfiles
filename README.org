@@ -8,14 +8,16 @@
 
 Make sure the ~nix~ package manager is available in the current system, experimental features ~nix-command~ and ~flakes~ are turned on, and the current user is a trusted user.
 
-~nix~ and ~nix-flakes~ can be installed via
+~nix~ and ~nix-flakes~ can be installed by running
 
 #+begin_src shell
   sh <(curl -L https://nixos.org/nix/install) --daemon
   nix-env -iA nixpkgs.nixUnstable
 #+end_src
 
-Then add the following to ~/etc/nix/nix.conf~. Make sure to replace ~USER-NAME~ with the actual user name used in the system.
+Note that to install ~nix~ in multiuser mode (i.e., daemon mode), ~git~ and ~rsync~ must also be installed.
+
+After installing ~nix-flake~, add the following to ~/etc/nix/nix.conf~. Make sure to replace ~USER-NAME~ with the actual user name used in the system.
 
 #+begin_src shell
   experimental-features = nix-command flakes
