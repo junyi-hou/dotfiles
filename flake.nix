@@ -23,10 +23,6 @@
       flake = false;
     };
     emacs-overlay.url = "github:nix-community/emacs-overlay";
-    # stata = {
-    #   url = "file:///home/lactaid/Downloads/stata";
-    #   flake = false;
-    # };
     rnix-lsp = {
       url = "github:nix-community/rnix-lsp";
     };
@@ -92,45 +88,6 @@
                 package = pkgs.emacsGit;
               };
             }
-            # {
-            #   home.packages = [
-            #     (
-            #       let
-            #         STATA = pkgs.stdenv.mkDerivation {
-            #           name = "stata-14";
-            #           src = stata;
-            #           # FIXME: still complaining not finding the following libraries
-            #           # installing from arch for now
-            #           # (libpng12; ncurses5-compat-libs)
-            #           propagatedBuildInputs = with pkgs; [ ncurses5 libpng12 ];
-            #           installPhase = ''
-            #             export plat=linux.64
-            
-            #             buildDir=$(pwd)
-            #             mkdir -p $out
-            #             cp unix/linux.64/ado.taz $out/ado.tar.Z
-            #             cp unix/linux.64/base.taz $out/base.tar.Z
-            #             cp unix/linux.64/bins.taz $out/bins.tar.Z
-            #             cp unix/linux.64/docs.taz $out/docs.tar.Z
-            #             cp unix/linux.64/setrwxp $out/setrwxp
-            #             cp unix/linux.64/inst2 $out/inst2
-            
-            #             cd $out
-            #             ./inst2 now
-            
-            #             # install license file
-            #             cp $buildDir/stata.lic ./
-            #           '';
-            #         };
-            #       in
-            #         (
-            #           pkgs.writeShellScriptBin "stata-bin" ''
-            #             ${STATA}/stata-mp
-            #           ''
-            #         )
-            #     )
-            #   ];
-            # }
             {
               home.packages = [
                 pkgs.xdotool

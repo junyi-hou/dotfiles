@@ -55,6 +55,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 *** 2021-05-25 Tue
 
 - aesthetic improvements for org-mode under ~gruvbox~ theme
+- fix ~gatsby:nix-nisppet~ bugs; improve indentation for snippets
 
 *** 2021-05-24 Mon
 
