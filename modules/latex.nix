@@ -17,6 +17,16 @@ inputs: with inputs; { pkgs, ... }: {
 
   home.packages =  [
     pkgs.texlive.combined.scheme-full
-    pkgs.texlab
+    (
+      pkgs.stdenv.mkDerivation {
+        pname = "digestif";
+        version = "0.3-master";
+        src = digestif;
+        installPhase = ''
+        mkdir -p $out/bin
+        cp scripts/digestif $out/bin
+      '';
+      }
+    )
   ];
 }

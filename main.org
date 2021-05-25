@@ -63,6 +63,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - fix ~zathuraInverseSearch~ bug
 - update ~alacritty~ settings
 - improves robustness of the updated scripts
+- use ~digestif~ as LaTeX LSP.
 
 *** 2021-05-22 Sat
 
@@ -7707,7 +7708,16 @@ Furthermore, tex has many wired pairs (like $). It does not play well with ~elec
 
 *** LaTeX:LSP
 
-First install ~textlive~ and the LSP via ~flake~. I use ~texlab~ instead of more light-weighted ~digestif~ since the latter works only in ~linux~ but not ~macOS~.
+First install ~texlive~ and the LSP via ~flake~. I use a light-weighted LSP ~digestif~. I use the ~master~ branch of the ~digestif~ package.
+
+#+begin_src nix :noweb-ref flake-input
+  digestif = {
+    url = "github:astoff/digestif";
+    flake = false;
+  };
+#+end_src
+
+Make ~texlive~ and ~digestif~ available system-wide.
 
 #+begin_src nix :noweb yes :tangle ./modules/latex.nix :mkdirp yes
   inputs: with inputs; { pkgs, ... }: {
@@ -7718,10 +7728,23 @@ First install ~textlive~ and the LSP via ~flake~. I use ~texlab~ instead of more
 
     home.packages =  [
       pkgs.texlive.combined.scheme-full
-      pkgs.texlab
+      (
+        pkgs.stdenv.mkDerivation {
+          pname = "digestif";
+          version = "0.3-master";
+          src = digestif;
+          installPhase = ''
+          mkdir -p $out/bin
+          cp scripts/digestif $out/bin
+        '';
+        }
+      )
     ];
   }
+
 #+end_src
+
+Make sure to load LaTeX module in both Linux and MacOS.
 
 #+begin_src nix :noweb-ref common-modules
   self.homeModules."latex.nix"
@@ -7849,7 +7872,7 @@ First the updating script.
 
   project_root=$(git rev-parse --show-toplevel)
 
-  nix build $project_root --experimental-features "nix-command flakes"
+  nix build $project_root
 
   $project_root/result/activate
 #+end_src

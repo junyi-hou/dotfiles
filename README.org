@@ -57,6 +57,7 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 - fix ~zathuraInverseSearch~ bug
 - update ~alacritty~ settings
 - improves robustness of the updated scripts
+- use ~digestif~ as LaTeX LSP.
 
 *** 2021-05-22 Sat
 

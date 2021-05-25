@@ -30,6 +30,10 @@
     rnix-lsp = {
       url = "github:nix-community/rnix-lsp";
     };
+    digestif = {
+      url = "github:astoff/digestif";
+      flake = false;
+    };
     nix-gl = {
       url = "github:guibou/nixGL";
       flake = false;

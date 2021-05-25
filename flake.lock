@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "digestif": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1617463020,
+        "narHash": "sha256-o7CsWOP3hxgN61XsJj3tnMfoTMLW6WHZAZLXebthT6k=",
+        "owner": "astoff",
+        "repo": "digestif",
+        "rev": "4a38eaa93505463983d4befdd537cdc6faa07583",
+        "type": "github"
+      },
+      "original": {
+        "owner": "astoff",
+        "repo": "digestif",
+        "type": "github"
+      }
+    },
     "emacs-overlay": {
       "locked": {
         "lastModified": 1619836013,
@@ -195,6 +211,7 @@
     },
     "root": {
       "inputs": {
+        "digestif": "digestif",
         "emacs-overlay": "emacs-overlay",
         "gmail-oauth2-tools": "gmail-oauth2-tools",
         "home-manager": "home-manager",
