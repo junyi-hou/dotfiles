@@ -59,6 +59,7 @@ in
       pragmataPro
       pkgs.source-han-sans
       pkgs.dejavu_fonts
+      (pkgs.nerdfonts.override { fonts = [ "DejaVuSansMono" ]; })
     ];
     fontconfig.enable = true;
   };
