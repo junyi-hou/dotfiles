@@ -2915,7 +2915,7 @@ I try to use the same set of key bindings for mini buffer selection and autocomp
     "<tab>" 'company-complete-selection)
 #+end_src
 
-When I type ".", "," or "(" when ~company~ is active, it should exit with the current selection. ~company~ has a builtin variable ~company-auto-commit-char~. If the input event matches any element in this list, ~company~ will exit with the current selection and then insert the character associated with the input event to the buffer. However, this method is not available in ~company-search-mode~. I define a ~complete-and-insert-char~ to mimic this behavior.
+When I type ".", "," or "(" while ~company~ is active, it should exit with the current selection. ~company~ has a builtin variable ~company-auto-commit-char~. If the input event matches any element in this list, ~company~ will exit with the current selection and then insert the character associated with the input event to the buffer. However, this method is not available in ~company-search-mode~. I define a ~complete-and-insert-char~ to mimic this behavior.
 
 #+begin_src emacs-lisp
   (setq company-auto-commit-chars '(?\( ?. 44))
@@ -2959,7 +2959,7 @@ Now the backends.
                            (company-dabbrev-code company-dabbrev)))
 #+end_src
 
-Finally, ~prescient~ (introduced in the [[prescient]] section) provides a nice sorting mechanism for ~company~ depend on selection history and other stuffs.
+Finally, [[prescient]] provides a nice sorting mechanism for ~company~ depend on selection history and other stuffs.
 
 #+begin_src emacs-lisp
   (use-package company-prescient :hook (company-mode . company-prescient-mode))
