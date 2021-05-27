@@ -4231,12 +4231,6 @@ I specify the list of files that need to be ignore in all git repositories. Thes
     "*.xwm"
   #+end_src
 
-+ ~stata-kernel~ config files
-
-  #+begin_src conf :noweb-ref gitignore
-    ".stata_kernel.conf"
-  #+end_src
-
 *** magit
 
 ~magit~ is one of the best ~git~ frontend. It embodies a fundamental strength of ~emacs~: utilizes the superior ability of ~emacs~ to provide an interface of an otherwise complicated software.
