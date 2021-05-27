@@ -2,6 +2,8 @@
 #! nix-shell -i bash -p bash emacs
 
 set -e
+project_root=$(git rev-parse --show-toplevel)
+cd $project_root
 
 if [ "$1" == "--no-tangle" ]; then
     echo "--no-tangle flag is on, skip tangling..."
@@ -9,16 +11,13 @@ elif [ "$1" != "" ]; then
     echo "unsupported flag $1"
 else
     echo "start tangling modules..."
-    project_root=$(git rev-parse --show-toplevel)
-    emacs -Q --batch $project_root/main.org -f org-babel-tangle
+    emacs -Q --batch ./main.org -f org-babel-tangle
     echo "done"
 fi
 
-project_root=$(git rev-parse --show-toplevel)
-$project_root/update-readme $project_root/main.org $project_root/README.org
+nix flake lock --update-input emacs-module
+./update-readme ./main.org ./README.org
 
-project_root=$(git rev-parse --show-toplevel)
+nix build .
 
-nix build $project_root
-
-$project_root/result/activate
+./result/activate

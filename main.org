@@ -266,6 +266,12 @@ Import this subflake alongside with ~emacs-overlay~ from ~nix-community~ to obta
   emacs-overlay.url = "github:nix-community/emacs-overlay";
 #+end_src
 
+Changes made in the ~emacs-module~ subflake will not automatically made available to the main flake due to the lock file. As a result, I specifically ask the main flake to update subflake before building.
+
+#+begin_src shell :noweb-ref update-user-config-hook
+  nix flake lock --update-input emacs-module
+#+end_src
+
 To install ~emacs~ in Linux, call ~emacsModule~ function with the ~emacsGcc~ derivation from ~emacs-overlay~.
 
 #+begin_src nix :noweb-ref linux-modules
@@ -3862,7 +3868,6 @@ To check spelling, I use ~flyspell~ and ~flyspell-correct~ frontend, which in tu
 #+end_src
 
 #+begin_src nix :noweb-ref emacs-packages
-  epkgs.flyspell
   epkgs.flyspell-correct
 #+end_src
 
@@ -8135,16 +8140,16 @@ First the updating script.
   #! nix-shell -i bash -p bash emacs
 
   set -e
+  project_root=$(git rev-parse --show-toplevel)
+  cd $project_root
 
   <<update-user-config-tangle-p>>
 
   <<update-user-config-hook>>
 
-  project_root=$(git rev-parse --show-toplevel)
+  nix build .
 
-  nix build $project_root
-
-  $project_root/result/activate
+  ./result/activate
 #+end_src
 
 Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.
@@ -8156,8 +8161,7 @@ Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ fro
       echo "unsupported flag $1"
   else
       echo "start tangling modules..."
-      project_root=$(git rev-parse --show-toplevel)
-      emacs -Q --batch $project_root/main.org -f org-babel-tangle
+      emacs -Q --batch ./main.org -f org-babel-tangle
       echo "done"
   fi
 #+end_src
@@ -8241,8 +8245,7 @@ And the within-emacs version.
 Automatically update ~README.org~ when updating the whole configuration.
 
 #+begin_src shell :noweb-ref update-user-config-hook
-  project_root=$(git rev-parse --show-toplevel)
-  $project_root/update-readme $project_root/main.org $project_root/README.org
+  ./update-readme ./main.org ./README.org
 #+end_src
 
 ** Command Line Utilities
