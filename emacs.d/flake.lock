@@ -1,0 +1,148 @@
+{
+  "nodes": {
+    "beacon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1592116346,
+        "narHash": "sha256-OSjf8DusSk2MzT/F2dBj/coZk1BGmx4G9V6UZ2r4Ua8=",
+        "owner": "junyi-hou",
+        "repo": "beacon",
+        "rev": "f2552464dc14cdcfd7e294ed59a9bc815a3ea5cf",
+        "type": "github"
+      },
+      "original": {
+        "owner": "junyi-hou",
+        "repo": "beacon",
+        "type": "github"
+      }
+    },
+    "emacs-calfw": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1500160229,
+        "narHash": "sha256-NkC42Op0FeT8aVYHv1sXVU+PTRmmuDseAnaQIVBHnH0=",
+        "owner": "tumashu",
+        "repo": "emacs-calfw",
+        "rev": "8ff7e75331dde007ff7b6aca6a18828d9c2ac532",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tumashu",
+        "repo": "emacs-calfw",
+        "type": "github"
+      }
+    },
+    "flymake-childframe": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1618871651,
+        "narHash": "sha256-Llw9XjauxrqNeyC0JNTcbxSMk+gvEZEJgFSnm3l9iuc=",
+        "owner": "junyi-hou",
+        "repo": "flymake-childframe",
+        "rev": "26f03352a83b8dd70f0b17059bbe2218a8ef1a23",
+        "type": "github"
+      },
+      "original": {
+        "owner": "junyi-hou",
+        "repo": "flymake-childframe",
+        "type": "github"
+      }
+    },
+    "ligature": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1620458049,
+        "narHash": "sha256-6/DovexdnrVq9GzaJwjoPwg+IGqHHJCUsSSKA5J6Xv0=",
+        "owner": "mickeynp",
+        "repo": "ligature.el",
+        "rev": "3923baf1fb9bf509cc95b4b14d7d0e2f7c88e53c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mickeynp",
+        "repo": "ligature.el",
+        "type": "github"
+      }
+    },
+    "org": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1622033473,
+        "narHash": "sha256-yGk9nPeo9NTsMiEx9ZuIWXmvPABUf8u5MWabcsHM1JQ=",
+        "owner": "yantar92",
+        "repo": "org",
+        "rev": "b8e07edf8783ba97f723d3f23334433d29900902",
+        "type": "github"
+      },
+      "original": {
+        "owner": "yantar92",
+        "ref": "feature/org-fold-universal-core",
+        "repo": "org",
+        "type": "github"
+      }
+    },
+    "org-appear": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1612444361,
+        "narHash": "sha256-ZBgwhM816uwYSQvUyuUOllS+ZbJZ9Jb6hBdrxKKtqJQ=",
+        "owner": "awth13",
+        "repo": "org-appear",
+        "rev": "32bc72590c4bfc2ba9871382af10ec4306bf98a5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "awth13",
+        "ref": "feature/org-fold-support",
+        "repo": "org-appear",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "beacon": "beacon",
+        "emacs-calfw": "emacs-calfw",
+        "flymake-childframe": "flymake-childframe",
+        "ligature": "ligature",
+        "org": "org",
+        "org-appear": "org-appear",
+        "stata-mode": "stata-mode",
+        "tree-sitter-fold": "tree-sitter-fold"
+      }
+    },
+    "stata-mode": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1615920260,
+        "narHash": "sha256-qN1EXKxA9VZkcD7nZorR/PpPJQZfvSPvl4VjYDBrbYc=",
+        "owner": "junyi-hou",
+        "repo": "stata-mode",
+        "rev": "d98a1daf139de705a3d33c57d6c8c454d77ff308",
+        "type": "github"
+      },
+      "original": {
+        "owner": "junyi-hou",
+        "repo": "stata-mode",
+        "type": "github"
+      }
+    },
+    "tree-sitter-fold": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1621271739,
+        "narHash": "sha256-UOMehL8HxrYI3A7EuzN9iMHJ5tFIPiM7nc4Pf9EB+JM=",
+        "owner": "junyi-hou",
+        "repo": "tree-sitter-fold",
+        "rev": "510f3ff119c265bde080de92173f9d14da0e0a05",
+        "type": "github"
+      },
+      "original": {
+        "owner": "junyi-hou",
+        "repo": "tree-sitter-fold",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

@@ -229,9 +229,12 @@ I use a subflake to manage ~emacs~ and its packages. This flake defines a  funct
       emacsModule = emacsPkg: { pkgs, lib, config, ... }: {
 
         home = {
-          file.".emacs.d" = {
-            source = ./emacs.d;
-            recursive = true;
+          file = {
+            ".emacs.d/etc" = {
+              source = ./etc;
+              recursive = true;
+            };
+            ".emacs.d/init.el".source = ./init.el;
           };
           sessionVariables = {
             EDITOR = "emacsclient -c";
@@ -1088,7 +1091,7 @@ The stock version of ~beacon~ have an UI issue: ~beacon~ work by adding spaces (
 
 #+begin_src nix :noweb-ref emacs-flake-input
   beacon = {
-    url = "github:junyi/beacon";
+    url = "github:junyi-hou/beacon";
     flake = false;
   };
 #+end_src
@@ -3295,25 +3298,9 @@ Enable ~help-childframe-mode~ globally.
 
 ~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~.
 
-#+begin_src nix :noweb-ref emacs-flake-input
-  emacs-tree-sitter = {
-    url = "github:ubolonton/emacs-tree-sitter";
-    flake = false;
-  };
-#+end_src
-
 #+begin_src nix :noweb-ref emacs-packages
-  (emacsPkg.pkgs.melpaBuild {
-    pname = "tree-sitter";
-    ename = "tree-sitter";
-    version = "9999";
-    recipe = builtins.toFile "recipe" ''
-      (tree-sitter :fetcher github
-                   :repo "ubolonton/emacs-tree-sitter"
-                   :files ("core/*.el" "lisp/*.el" "langs/*.el" "langs/bin" "langs/queries"))
-    '';
-    src = emacs-tree-sitter;
-  })
+  epkgs.tree-sitter
+  epkgs.tree-sitter-langs
 #+end_src
 
 #+begin_src emacs-lisp :noweb yes
@@ -3322,12 +3309,6 @@ Enable ~help-childframe-mode~ globally.
     <<tree-sitter-hook>>)
 
   (use-package tree-sitter-langs)
-
-  ;; overriding `:files' attribute breaks hard-coded variable
-  ;; `tree-sitter-langs-git-dir', which points to
-  ;; `straight/repos/tree-sitter-langs/'. Move it to the correct location
-  ;; `straight/repos/emacs-tree-sitter/langs/' instead.
-  (setq tree-sitter-langs-git-dir (straight--build-dir "emacs-tree-sitter/langs"))
 #+end_src
 
 ~tree-sitter~ can be enable by adding ~tree-sitter-mode~ to the relevant mode hook.

@@ -1392,12 +1392,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (use-package tree-sitter-langs)
 
-;; overriding `:files' attribute breaks hard-coded variable
-;; `tree-sitter-langs-git-dir', which points to
-;; `straight/repos/tree-sitter-langs/'. Move it to the correct location
-;; `straight/repos/emacs-tree-sitter/langs/' instead.
-(setq tree-sitter-langs-git-dir (straight--build-dir "emacs-tree-sitter/langs"))
-
 (use-package tree-sitter-fold)
 
 (use-package comint)
@@ -1543,7 +1537,12 @@ If there is already a eshell buffer open for that directory, switch to that buff
                         (buffer-list))
         (with-current-buffer it
           (setq-local gatsby:comint-repl-buffer nil))))
-    (kill-buffer-and-window)))
+
+    (let ((process (get-buffer-process (current-buffer))))
+      (set-process-query-on-exit-flag process nil)
+      (when (process-live-p process)
+        (delete-process process))
+      (kill-buffer-and-window))))
 
 (general-define-key :keymaps 'comint-mode-map :states '(normal motion visual) :prefix "SPC"
   "q" 'gatsby:comint-exit-repl)
@@ -1888,8 +1887,7 @@ List of CANDIDATES is given by flyspell for the WORD."
   "c" 'magit-commit
   "p" 'magit-push
   "f" 'magit-fetch
-  "F" 'magit-pull
-  "C-u" 'evil-scroll-up)
+  "F" 'magit-pull)
 
 (general-define-key :keymaps '(motion normal visual) :prefix "SPC"
   "gg" #'magit-status

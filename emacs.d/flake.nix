@@ -7,7 +7,7 @@
       flake = false;
     };
     beacon = {
-      url = "github:junyi/beacon";
+      url = "github:junyi-hou/beacon";
       flake = false;
     };
     org = {
@@ -20,10 +20,6 @@
     };
     flymake-childframe = {
       url = "github:junyi-hou/flymake-childframe";
-      flake = false;
-    };
-    emacs-tree-sitter = {
-      url = "github:ubolonton/emacs-tree-sitter";
       flake = false;
     };
     tree-sitter-fold = {
@@ -44,9 +40,12 @@
     emacsModule = emacsPkg: { pkgs, lib, config, ... }: {
 
       home = {
-        file.".emacs.d" = {
-          source = ./emacs.d;
-          recursive = true;
+        file = {
+          ".emacs.d/etc" = {
+            source = ./etc;
+            recursive = true;
+          };
+          ".emacs.d/init.el".source = ./init.el;
         };
         sessionVariables = {
           EDITOR = "emacsclient -c";
@@ -112,17 +111,8 @@
           epkgs.company
           epkgs.yasnippet
           epkgs.eglot
-          (emacsPkg.pkgs.melpaBuild {
-            pname = "tree-sitter";
-            ename = "tree-sitter";
-            version = "9999";
-            recipe = builtins.toFile "recipe" ''
-              (tree-sitter :fetcher github
-                           :repo "ubolonton/emacs-tree-sitter"
-                           :files ("core/*.el" "lisp/*.el" "langs/*.el" "langs/bin" "langs/queries"))
-            '';
-            src = emacs-tree-sitter;
-          })
+          epkgs.tree-sitter
+          epkgs.tree-sitter-langs
           (emacsPkg.pkgs.trivialBuild {
             pname   = "tree-sitter-fold";
             version = "9999";
@@ -130,7 +120,6 @@
           })
           epkgs.jupyter
           epkgs.ein
-          epkgs.flyspell
           epkgs.flyspell-correct
           epkgs.langtool
           epkgs.password-store
