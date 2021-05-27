@@ -3583,7 +3583,12 @@ When shutting down REPL buffers, clean up the ~gatsby:comint-repl-buffer~ variab
                           (buffer-list))
           (with-current-buffer it
             (setq-local gatsby:comint-repl-buffer nil))))
-      (kill-buffer-and-window)))
+
+      (let ((process (get-buffer-process (current-buffer))))
+        (set-process-query-on-exit-flag process nil)
+        (when (process-live-p process)
+          (delete-process process))
+        (kill-buffer-and-window))))
 
   (general-define-key :keymaps 'comint-mode-map :states '(normal motion visual) :prefix "SPC"
     "q" 'gatsby:comint-exit-repl)
