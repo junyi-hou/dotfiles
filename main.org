@@ -211,9 +211,113 @@ On MacOS system, display, sound and network modules are all builtin, so I don't 
 
 * ~emacs~ Configuration
 
-This section contains the code and explanation of my personal configuration for ~emacs~ editor. This configuration is meant to be used with the native comp branch and a running emacs server (with ~server-start~).
+This section contains the code and explanation of my personal configuration for ~emacs~ editor.
 
-In lieu of a proper namespace, I prefix all custom functions, variables with ~gatsby:~, which is the name of my dog.
+** Package Management
+
+I use a subflake to manage ~emacs~ and its packages. This flake defines a  function called ~emacsModule~ which takes an ~emacs~ derivation as the only argument, and returns a ~home-manager~ module with all ~emacs~-related configuration.
+
+#+begin_src nix :tangle ./emacs.d/flake.nix :noweb yes
+  {
+    description = "using flakes to manage emacs packages";
+
+    inputs = {
+      <<emacs-flake-input>>
+    };
+
+    outputs = { self, ... }@inputs: with inputs; {
+      emacsModule = emacsPkg: { pkgs, lib, config, ... }: {
+
+        home = {
+          file.".emacs.d" = {
+            source = ./emacs.d;
+            recursive = true;
+          };
+          sessionVariables = {
+            EDITOR = "emacsclient -c";
+            VISUAL = "emacsclient -c";
+          };
+        };
+
+        programs.emacs = {
+          enable = true;
+          package = emacsPkg.pkgs.withPackages (epkgs: [
+            epkgs.use-package
+            <<emacs-packages>>
+          ]);
+        };
+
+        services.emacs = {
+          enable = true;
+          client.enable = true;
+        };
+      };
+    };
+  }
+#+end_src
+
+Import this subflake alongside with ~emacs-overlay~ from ~nix-community~ to obtain derivations for the latest git version of ~emacs~.
+
+#+begin_src nix :noweb-ref flake-input
+  emacs-module.url = "path:./emacs.d";
+  emacs-overlay.url = "github:nix-community/emacs-overlay";
+#+end_src
+
+To install ~emacs~ in Linux, call ~emacsModule~ function with the ~emacsGcc~ derivation from ~emacs-overlay~.
+
+#+begin_src nix :noweb-ref linux-modules
+  (
+    let
+      pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
+    in
+      (emacs-module.emacsModule pkgs.emacsGcc)
+  )
+#+end_src
+
+For MacOS, I need to wrap library around the default derivation and pass ~--with-ns~ flag when building ~emacs~ in order to use the ~cocoa~ API. I follow this [[https://github.com/twlz0ne/nix-gccemacs-darwin][repo]] for this task.
+
+#+begin_src nix :noweb-ref darwin-modules
+  (
+    let
+      pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
+      libPath = with pkgs; lib.concatStringsSep ":" [
+        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
+        "${lib.getLib stdenv.cc.cc}/lib"
+        "${lib.getLib stdenv.glibc}/lib"
+      ];
+      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
+        old: {
+          configureFlags = (lib.remove "--with-xft" old.configureFlags)
+            ++ [ "--with-ns" ];
+          postInstall = old.postInstall or "" + ''
+            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
+            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
+            cat <<EOF> $out/bin/run-emacs.sh
+            #!/usr/bin/env bash
+            set -e
+            exec $out/bin/emacs-28.0.50 "\$@"
+            EOF
+            chmod a+x $out/bin/run-emacs.sh
+            ln -snf ./run-emacs.sh $out/bin/emacs
+          '';
+        }
+      );
+      emacsDarwinGcc = pkgs.symlinkJoin {
+        name = "emacsGccDarwin";
+        paths = [ emacsNsGcc ];
+        buildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/emacs \
+          --set LIBRARY_PATH ${libPath}
+        '';
+        meta.platforms = pkgs.lib.platforms.darwin;
+        passthru.nativeComp = true;
+        src = emacsNsGcc.src;
+      };
+    in
+      (emacs-module.emacsModule emacsDarwinGcc)
+  )
+#+end_src
 
 ** Lexical Binding
 
@@ -222,6 +326,8 @@ First, make sure that the init file is lexcially bind.
 #+begin_src emacs-lisp
   ;; -*- lexical-binding: t; -*-
 #+end_src
+
+In lieu of a proper namespace, I prefix all custom functions, variables with ~gatsby:~, which is the name of my dog.
 
 ** Opinionated Defaults
 
@@ -355,36 +461,19 @@ One of the key advantage of ~emacs~ over other editors like ~vs-code~ and ~subli
   (setq scroll-step 1)
 #+end_src
 
-** Package Manager
-
-I use ~straight.el~ as my main ~emacs~ package manager. The key advantage of ~straight.el~ over other managers (e.g., the builtin ~package.el~ and ~quelpa.el~) is its reproducibility. For someone who often rebuild ~emacs~ and my ~.emacs.d~ for various reasons like me, reproducibility is a big plus. Other minor advantages of ~straight.el~ includes the ability to install packages from github (or any other git repository). Here I simply bootstrap ~straight.el~ following its [[https://github.com/raxod502/straight.el#getting-started][document]].
-
-#+begin_src emacs-lisp
-  (setq straight-repository-branch "develop"
-        straight-use-package-by-default t
-        straight-vc-git-default-protocol 'https)
-
-  (defvar bootstrap-version)
-  (let ((bootstrap-file
-         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-        (bootstrap-version 5))
-    (unless (file-exists-p bootstrap-file)
-      (with-current-buffer
-          (url-retrieve-synchronously
-           "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-           'silent 'inhibit-cookies)
-        (goto-char (point-max))
-        (eval-print-last-sexp)))
-    (load bootstrap-file nil 'nomessage))
-
-  (straight-use-package 'use-package)
-#+end_src
-
 ** Core Packages
 
 *** Libraries
 
-~dash.el~, ~f.el~, ~s.el~ provides haskell-like libraries to list, file and string manipulations. They may not be more efficient than the builtin ~seq.el~, ~file.el~ and ~string.el~, but they offer a consistent interface for almost all functions.
+~dash.el~, ~f.el~, ~s.el~ provides unified libraries to list, file and string manipulations. They may not be more efficient than the builtin ~seq.el~, ~file.el~ and ~string.el~, but they offer a consistent interface for almost all functions. [[https://yoo2080.wordpress.com/2014/02/23/threading-macros-from-dash-for-emacs-lisp/][This article]] provides a good explanation on ~dash.el~ and friends.
+
+Register those libraries with nix flake:
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.dash epkgs.s epkgs.f
+#+end_src
+
+Enable them in ~emacs~:
 
 #+begin_src emacs-lisp
   (use-package dash)
@@ -395,6 +484,10 @@ I use ~straight.el~ as my main ~emacs~ package manager. The key advantage of ~st
 *** garbage collector magic hack (gcmh)
 
 ~gcmh~ is a great package that is trying to be smart about when to run garbage collection. Essentially, it sets a large enough threshold during normal use, and trigger garbage collection only when ~emacs~ is idle.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.gcmh
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package gcmh :demand t)
@@ -425,6 +518,10 @@ Now enable ~gcmh~ mode.
 *** general
 
 ~general.el~ provides a uniform interface of defining and removing keybindings. In particular, it is evil-friendly, which makes my life very easy.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.general
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package general :demand t)
@@ -493,6 +590,10 @@ I use ~general.el~ mostly through its ~use-package~ keyword ~:general~. A drawba
 
 ~no-littering~ regularizes how other emacs packages saves config/temp files, so the ~~/.emacs.d/~ folder is clean and organized.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.no-littering
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package no-littering)
 
@@ -508,7 +609,7 @@ I use ~general.el~ mostly through its ~use-package~ keyword ~:general~. A drawba
 ~saveplace~ is a builtin package that records and restores the cursor position when closing files. This is helpful to pick up any works left last time.
 
 #+begin_src emacs-lisp
-  (use-package saveplace :straight (:type built-in) :hook (after-init . save-place-mode))
+  (use-package saveplace :hook (after-init . save-place-mode))
 
   (setq save-place-file (expand-file-name "save-place.el" no-littering-var-directory))
 #+end_src
@@ -534,7 +635,7 @@ It is always helpful to know where the pairing deliminator is when editing files
 ~simple~ is a builtin package offering a variety of small useful tricks. I use two of them: ~visual-line-mode~ which breaks long lines visually (into "visual lines") for ease of read/edit. ~auto-fill-mode~ which automatically breaks long single-line comments into multi-line comments for better aestheticity.
 
 #+begin_src emacs-lisp
-  (use-package simple :straight (:type built-in))
+  (use-package simple)
 #+end_src
 
 **** visual-line-mode
@@ -547,10 +648,11 @@ It is always helpful to know where the pairing deliminator is when editing files
 
 Alongside with the builtin ~visual-line-mode~, there is also ~visual-fill-column-mode~ that applies the visual break at ~fill-column~ instead of the window edge.
 
-Before loading the package, I set ~visual-fill-column-inhibit-sensible-window-split~ to ~t~ to prevent ~visual-fill-column-mode~ to change the ~split-window-preferred-function~ I set in [[split window rule]].
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.visual-fill-column
+#+end_src
 
 #+begin_src emacs-lisp
-  (setq visual-fill-column-inhibit-sensible-window-split t)
   (use-package visual-fill-column)
 #+end_src
 
@@ -597,7 +699,7 @@ I also add a key to refresh the ~*Message*~ buffer.
 ~whitespace~ automatically clean them up when saving the file.
 
 #+begin_src emacs-lisp
-  (use-package whitespace :straight (:type built-in) :hook (before-save . whitespace-cleanup))
+  (use-package whitespace :hook (before-save . whitespace-cleanup))
 #+end_src
 
 *** autorevert
@@ -611,6 +713,10 @@ I also add a key to refresh the ~*Message*~ buffer.
 *** alert
 
 ~alert.el~ allow ~emacs~ use the system notification popups to show information. It requires ~libnotify~ and a notification frontend (I use ~mako~ on wayland) gnu/linux system. On macOS system, it uses the builtin ~osx-notifier~, which does not have extra dependency.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.alert
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package alert :commands alert)
@@ -634,7 +740,11 @@ The stock ~emacs~ looks horrible. This section concerns mainly the aesthetics.
 
 *** package
 
-I like the color theme to provide enough visual cue (to read code) but not too colorful and distracting. ~lab-theme~ provide just the right balance for me.
+I like the color theme to provide enough visual cue (to read code) but not too colorful and distracting.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.gruvbox-theme
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package gruvbox-theme)
@@ -837,8 +947,25 @@ Since ~fontconfig~ is available in both Linux and MacOS, make font configuration
 
 Ligatures are multi-byte characters (like Chinese) that represent some commonly used mathematical symbols (e.g., != and >=). Displaying ligatures properly is not only aesthetically pleasing, but also makes the code easier to read. Before this package, only the ~emacs-plus~ build on macOS supports universal ligature. Now I can have ligatures on GNU version of the emacs as well.
 
+ligature.el is not available on ~elpa~ or ~melpa~ yet, so I need to build it from source.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  ligature = {
+    url = "github:mickeynp/ligature.el";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname   = "ligature";
+    version = "9999";
+    src = ligature;
+  })
+#+end_src
+
 #+begin_src emacs-lisp
-  (use-package ligature :straight (ligature :host github :repo "mickeynp/ligature.el"))
+  (use-package ligature)
 #+end_src
 
 Different font offers different ligatures, and I need to register the proper ligatures that are compatible with the font that I am using. I follow the example configuration for ~Pragmata Pro~ in the [[https://github.com/mickeynp/ligature.el/issues/8#issuecomment-685015141][ligature repository]] to register ligatures.
@@ -940,12 +1067,14 @@ Indentation is important for both aesthetics and syntax (in ~python~). Here, I f
 
 Second, I use ~highlight-indent-guides~ to provide visual cues on the level of indentation for each code blocks.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.highlight-indent-guides
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package highlight-indent-guides
-
     :hook
     (prog-mode . highlight-indent-guides-mode)
-
     :custom
     (highlight-indent-guides-method 'bitmap)
     (highlight-indent-guides-responsive nil))
@@ -955,14 +1084,30 @@ Second, I use ~highlight-indent-guides~ to provide visual cues on the level of i
 
 ~beacon~ provides a temporary visual cue of the current cursor position when a buffer/window/frame/... gains focus.
 
+The stock version of ~beacon~ have an UI issue: ~beacon~ work by adding spaces (and highlight its background) when the cursor is near the right edge of the window, the extra spaces could cause ~visual-line-mode~ to wrap line around. After the blinking ends, these spaces are removed and thus the line become unwrapped. This process causes small "flicks" happening every now and then, which is annoying. I amend ~beacon~ to allow it to blink backwards so it will not create the extra spaces.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  beacon = {
+    url = "github:junyi/beacon";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname   = "beacon";
+    version = "master";
+    src = beacon;
+  })
+#+end_src
+
 #+begin_src emacs-lisp
-  (use-package beacon :straight (beacon :host github :repo "junyi-hou/beacon") :hook (after-init . beacon-mode))
+  (use-package beacon :hook (after-init . beacon-mode))
 #+end_src
 
 I adjust the following setting:
 
 + do not blink when I stay in the same window and just scroll up and down: I rarely lose track when I do that.
-+ The stock version of ~beacon~ have an UI issue: ~beacon~ work by adding spaces (and highlight its background) when the cursor is near the right edge of the window, the extra spaces could cause ~visual-line-mode~ to wrap line around. After the blinking ends, these spaces are removed and thus the line become unwrapped. This process causes small "flicks" happening every now and then, which is annoying. I amend ~beacon~ to allow it to blink backwards so it will not create the extra spaces.
 + I set the size of the blink to be 15 because why not.
 
 #+begin_src emacs-lisp
@@ -974,6 +1119,10 @@ I adjust the following setting:
 *** highlight keywords
 
 ~hl-todo~ is a package provides visual emphasis in places when future attention is warranted.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.hl-todo
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package hl-todo :hook (after-init . global-hl-todo-mode))
@@ -1021,6 +1170,10 @@ By default, line numbers in ~display-line-numbers~ are left-align. The following
 *** eldoc-box
 
 ~eldoc~ is a nice builtin package that displays useful information in the mini-window. Since I limits the size of mini-window to 1 in [[mini-window size]], multi-line messages will get truncated and not display in its full. ~eldoc-box~ solves this problem by displaying ~eldoc~ messages in a separate child frame.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.eldoc-box
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package eldoc-box
@@ -1073,13 +1226,14 @@ The main job of ~emacs~ is interacting with text. This section contains settings
 
 I like the customizability and extensibility ~emacs~ offers, but I am not a big fan of key combinations. Rather, I am more used to vim's modal editing paradigm. ~evil~ allows me to have the best of both worlds.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.evil
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package evil
-
     :custom (evil-undo-system 'undo-redo)
-
     :init (evil-mode 1)
-
     :general
     (:keymaps '(motion normal visual)
      "j" 'evil-next-visual-line
@@ -1133,6 +1287,10 @@ I like the customizability and extensibility ~emacs~ offers, but I am not a big 
 
 ~evil-surround~ ports ~vim-surround~ to evil.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.evil-surround
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package evil-surround :hook (after-init . global-evil-surround-mode))
 #+end_src
@@ -1141,13 +1299,14 @@ I like the customizability and extensibility ~emacs~ offers, but I am not a big 
 
 ~evil-nerd-commenter~ provides quick ways to comment/uncomment visually select lines.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.evil-nerd-commenter
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package evil-nerd-commenter
-
     :after evil
-
     :commands evilnc-comment-or-uncomment-lines
-
     :general
     (:keymaps '(normal visual)
      :prefix "SPC"
@@ -1157,6 +1316,10 @@ I like the customizability and extensibility ~emacs~ offers, but I am not a big 
 *** expand-region
 
 ~expand-region~ is a package that could automatically enlarge/shrink selected region.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.expand-region
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package expand-region
@@ -1317,9 +1480,12 @@ minibuffer is a mechanism in ~emacs~ to query user input interactively. For this
 
 ~selectrum~ offers a narrowing and selection framework build on the builtin ~completing-read~ function.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.selectrum
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package selectrum
-    :straight (selectrum :host github :repo "raxod502/selectrum")
     :defines (selectrum-minibuffer-bindings selectrum-should-sort)
     :custom (selectrum-fix-vertical-window-height t)
     :init (selectrum-mode 1)
@@ -1499,9 +1665,12 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 
 ~selectrum~ offers the basic narrowing and selecting mechanism. ~prescient~ improves the narrowing mechanism by considering fuzzy matching from a list of substrings or initials. In addition, it also offers a sorting mechanism based on selection histories for each individual command that queries user input.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.prescient
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package prescient
-
     :config
     (setq prescient-save-file (concat no-littering-var-directory "prescient-save.el"))
     (prescient-persist-mode 1))
@@ -1510,6 +1679,10 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 #+end_src
 
 *** consult
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.consult
+#+end_src
 
 ~consult~ is a package providing some useful functions by using the query framework offered by ~selectrum~. The ones that I use on a daily basis are ~consult-line~, ~consult-outline~, ~consult-flymake~ (since I use the builtin ~flymake~).
 
@@ -1599,7 +1772,6 @@ Finally, ~consult~ provides a compatibility patch to use with ~selectrum~, which
 
 #+begin_src emacs-lisp
   (use-package consult-selectrum
-    :straight (:type built-in)
     :after (consult selectrum))
 #+end_src
 
@@ -1609,11 +1781,17 @@ Finally, ~consult~ provides a compatibility patch to use with ~selectrum~, which
 
 + symbol type (command/function/(local/global) variable/advice-p/etc...)
 + symbol docstring
-+ file or buffer
++ file mode
++ default-directory
 + key bindings
++ ...
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.marginalia
+#+end_src
 
 #+begin_src emacs-lisp
-  (use-package marginalia :straight (marginalia :host github :repo "minad/marginalia" :branch "main"))
+  (use-package marginalia)
   (marginalia-mode 1)
 #+end_src
 
@@ -1730,7 +1908,7 @@ Finally, when typing into a ~eshell~ buffer, automatically scroll to the last pr
 In addition to the above setting, I also need to use ~em-term~ package for correctly parsing ANSI escape sequences in ~eshell~ buffers.
 
 #+begin_src emacs-lisp
-  (use-package em-term :straight (em-term :type built-in) :after eshell)
+  (use-package em-term :after eshell)
 #+end_src
 
 Like other shells, ~eshell~ support defining alias.
@@ -1975,8 +2153,8 @@ As a quick way to call ~eshell~, I define two functions. The first one opens an 
 ~tramp~ is a way ~emacs~ communicate with remote machines using ~ssh~ as backend. It is also the backend for ~sudo~ or ~su~ command in ~eshell~. To use those, I need to load the ~em-tramp~ package.
 
 #+begin_src emacs-lisp
-  (use-package tramp :straight (:type built-in))
-  (use-package em-tramp :straight (:type built-in))
+  (use-package tramp)
+  (use-package em-tramp)
 #+end_src
 
 Sometimes, ~tramp~ may have some problems with the ~PATH~ variables. The following setting fix those problems
@@ -2472,10 +2650,30 @@ Enable ~vterm~ in MacOS and Linux.
 
 Historically, ~org-mode~ grew out of ~outline-mode~, which is used to fold text parts. ~org-mode~ inherit this functionality. Yet, the folding in ~org-mode~ depends on ~overlays~, which can be very slow. [[https://github.com/yantar92/org/tree/6afe70e63509214b4c305f2d8f2d713056b165ed][this repository]] re-implement the folding mechanism by using ~text properties~.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  org = {
+    url = "github:yantar92/org/feature/org-fold-universal-core";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.melpaBuild {
+    pname = "org";
+    ename = "org";
+    version = "9999";
+    recipe = builtins.toFile "recipe" ''
+      (org :fetcher github
+            :repo "yantar92/org"
+            :branch "feature/org-fold-universal-core"
+            :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
+    '';
+    src = org;
+  })
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package org
-    :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
-                   :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
     :config
     <<org-config>>)
 #+end_src
@@ -2628,9 +2826,23 @@ Make ~org-block~, ~org-block-begin-line~ and ~org-block-end-line~ faces look bet
 
 Org-mode automatically renders links like [[org-appear][this]]. ~org-appear~ expands those links when the cursor is on them to make editing them easier. The master branch of ~org-appear~ does not support the ~fold~ feature branch I currently use as discussed [[https://github.com/awth13/org-appear/issues/5][here]]. Instead, ~feature/org-fold-support~ adds such support and thus I will use this branch for now.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  org-appear = {
+    url = "github:awth13/org-appear/feature/org-fold-support";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname   = "org-appear";
+    version = "master";
+    src = org-appear;
+  })
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package org-appear
-    :straight (org-appear :type git :host github :repo "awth13/org-appear" :branch "feature/org-fold-support")
     :hook (org-mode . org-appear-mode))
 
   (setq org-appear-autolinks t)
@@ -2768,6 +2980,10 @@ The following function is taken from [[https://github.com/dakra/dmacs/blob/maste
 
 Instead of the popular and more powerful ~flycheck~, I use the builtin ~flymake~ package to display syntax error. This is because 1. ~flymake~ integrates better with ~eglot~, my LSP client package than ~flycheck~, and 2, ~flymake~ is good enough for my purpose.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.flymake
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package flymake :hook (prog-mode . flymake-mode))
 #+end_src
@@ -2818,9 +3034,23 @@ I also want to turn off ~eldoc~ integration and use ~flymake-childframe~ instead
 
 Instead of using underline and a dedicate buffer ~flymake-diagnostics~ , I write a small package that display syntax error in a child frame.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  flymake-childframe = {
+    url = "github:junyi-hou/flymake-childframe";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname   = "flymake-childframe";
+    version = "9999";
+    src = flymake-childframe;
+  })
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package flymake-childframe
-    :straight (flymake-childframe :repo "junyi-hou/flymake-childframe" :host github)
     :hook (flymake-mode . flymake-childframe-mode))
 #+end_src
 
@@ -2839,9 +3069,12 @@ With the help of ~ligagture.el~ and ~Pragmata Pro~ fonts, I could have fancy pre
 
 ~company~ is an autocomplete engine for ~emacs~.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.company
+#+end_src
+
 #+begin_src emacs-lisp
-  (use-package company
-    :straight (company :files (:defaults "icons")))
+  (use-package company)
   (add-hook 'prog-mode-hook #'company-mode)
 #+end_src
 
@@ -2971,6 +3204,10 @@ This concludes the settings for ~company~.
 
 ~yasnippet~ is the goto snippet engine for ~emacs~.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.yasnippet
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package yasnippet
     :hook
@@ -3019,6 +3256,10 @@ I put ~completing-read~ on top to ~yas-prompt-functions~ so I can use [[selectru
 
 ~eglot~ is an excellent light-weight LSP client that requires very little configuration. On the other hand, it does not provide the fancy UI like ~LSP~ mode does with document, peak definition, jump to definition/reference etc. But these functionalities are easy to implement with the help of ~eglot~.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.eglot
+#+end_src
+
 #+begin_src emacs-lisp
 (use-package eglot
   :custom-face
@@ -3032,14 +3273,12 @@ I also don't want ~eglot~ to change my ~company-backends~ setting.
   (setq eglot-stay-out-of '(company))
 #+end_src
 
-*** unified documentation-displaying mechanism: help-childframe
+*** COMMENT unified documentation-displaying mechanism: help-childframe
 
 I rely mostly on [[helpful mode]] and [[LSP: eglot]] to provide documentation. I wrote a small package ~help-childframe~ to display documentation retrieved by those backends in a child frame.
 
 #+begin_src emacs-lisp :noweb yes
   (use-package help-childframe
-    :straight
-    (help-childframe :host github :repo "junyi-hou/help-childframe.el")
     :general
     (:keymaps '(normal visual motion)
      :prefix "SPC"
@@ -3056,21 +3295,39 @@ Enable ~help-childframe-mode~ globally.
 
 ~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  emacs-tree-sitter = {
+    url = "github:ubolonton/emacs-tree-sitter";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.melpaBuild {
+    pname = "tree-sitter";
+    ename = "tree-sitter";
+    version = "9999";
+    recipe = builtins.toFile "recipe" ''
+      (tree-sitter :fetcher github
+                   :repo "ubolonton/emacs-tree-sitter"
+                   :files ("core/*.el" "lisp/*.el" "langs/*.el" "langs/bin" "langs/queries"))
+    '';
+    src = emacs-tree-sitter;
+  })
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package tree-sitter
-    :straight
-    (:files (:defaults "langs/*.el" "langs/bin" "langs/queries"))
     :hook
     <<tree-sitter-hook>>)
 
-  (use-package tree-sitter-langs
-    :straight (:type built-in))
+  (use-package tree-sitter-langs)
 
   ;; overriding `:files' attribute breaks hard-coded variable
   ;; `tree-sitter-langs-git-dir', which points to
   ;; `straight/repos/tree-sitter-langs/'. Move it to the correct location
   ;; `straight/repos/emacs-tree-sitter/langs/' instead.
-  (setq tree-sitter-langs-git-dir (straight--repos-dir "emacs-tree-sitter/langs"))
+  (setq tree-sitter-langs-git-dir (straight--build-dir "emacs-tree-sitter/langs"))
 #+end_src
 
 ~tree-sitter~ can be enable by adding ~tree-sitter-mode~ to the relevant mode hook.
@@ -3083,9 +3340,23 @@ On its own, ~tree-sitter-mode~ does not provide any direct benefits since all it
 
 ~tree-sitter~ can also be used to fold code. ~tree-sitter-fold~ package can be use to achieve this goal.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  tree-sitter-fold = {
+    url = "github:junyi-hou/tree-sitter-fold";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname   = "tree-sitter-fold";
+    version = "9999";
+    src = tree-sitter-fold;
+  })
+#+end_src
+
 #+begin_src emacs-lisp
-  (use-package tree-sitter-fold
-    :straight (:host github :repo "junyi-hou/tree-sitter-fold"))
+  (use-package tree-sitter-fold)
 #+end_src
 
 I enable ~tree-sitter-fold-mode~ whenever ~tree-sitter-mode~ is enabled.
@@ -3141,7 +3412,7 @@ In some way, REPL provides shell-like environment for other programming language
 ~comint-mode~ is a builtin REPL mode that serves as the basis of many REPL defined in ~emacs~. Therefore, by configuring ~comint-mode~, I can simultaneously configure many REPL settings.
 
 #+begin_src emacs-lisp
-  (use-package comint  :straight (:type built-in))
+  (use-package comint)
 #+end_src
 
 Like in ~eshell~, the last prompt is always the most important prompt. Therefore it is useful to jump to there with a single keystroke.
@@ -3326,15 +3597,12 @@ The builtin ~comint~ mode lacks some features important for data scientists. For
 
 There are two attempts to integrate ~jupyter~ with ~emacs~: the first is the ~ein~ package, which provides a fully-fledged ~jupyter~ notebook frontend. the second is the ~emacs-jupyter~ package, which is less ambitious in its scope and provide only the REPL thought a dedicated REPL mode (that works like ~jupyter-console~) and an org-babel integration. Since I do not need the fancy features of the notebook, I use the ~emacs-jupyter~ package.
 
-#+begin_src emacs-lisp
-  (use-package jupyter
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.jupyter
 #+end_src
 
-As of March 1st 2021, ~emacs-jupyter~ does not play well with the native-comp of ~emacs~ (discussed [[https://github.com/nnicandro/emacs-jupyter/issues/297][here]]). I instruct ~straight~ to turn off native-complie for ~emacs-jupyter~.
-
 #+begin_src emacs-lisp
-  :straight
-  (:no-native-compile t :host github :repo "nnicandro/emacs-jupyter")
+  (use-package jupyter
 #+end_src
 
 I first need to fix some issues of ~emacs-jupyter~. Its traceback face does not have the ~extend~ keywords added in ~emacs~ 27.1.
@@ -3364,15 +3632,6 @@ I first need to fix some issues of ~emacs-jupyter~. Its traceback face does not 
       (funcall fn (encode-coding-string str 'utf-8))))
 
   (advice-add #'jupyter-eval-string :around #'gatsby:jupyter--encode-before-eval)
-#+end_src
-
-~emacs-jupyter~ also have issues on the font locks it uses (see discussion [[https://github.com/nnicandro/emacs-jupyter/issues/219][here]]), I need to temporarily disable font look in the REPL buffer for now.
-
-#+begin_src emacs-lisp
-  (defun jupyter-repl-font-lock-override (_ignore beg end &optional verbose)
-    `(jit-lock-bounds ,beg . ,end))
-
-  (advice-add #'jupyter-repl-font-lock-fontify-region :override #'jupyter-repl-font-lock-override)
 #+end_src
 
 ~emacs-jupyter~ sets up its own ~isearch~ functions that do not interact well with evil search. I turn these isearch functions off.
@@ -3580,6 +3839,10 @@ This concludes the configuration for ~emacs-jupyter~.
 
 I do not use ~jupyter notebook~, but I need an interface to read ~.ipynb~ files. ~emacs-ipython-notebook~ (~ein~) is an all-in-one packages that deals with ~.ipynb~ files.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.ein
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package ein)
 #+end_src
@@ -3610,6 +3873,11 @@ To check spelling, I use ~flyspell~ and ~flyspell-correct~ frontend, which in tu
       aspell aspellDicts.en aspellDicts.en-computers aspellDicts.en-science
     ];
   }
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.flyspell
+  epkgs.flyspell-correct
 #+end_src
 
 #+begin_src emacs-lisp
@@ -3656,6 +3924,10 @@ When in ~text-mode~, I want the spelling checker to check all my text. But when 
 #+end_src
 
 To check grammar, I use ~langtool~, which uses ~languagetool~ as backend. ~langtool~ is a fairly old package, and it does not support checking grammar on-the-go. So I am thinking about writing/updating a new ~languagetool~ integration.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.langtool
+#+end_src
 
 #+begin_src nix :noweb-ref grammar-module
   {
@@ -3772,7 +4044,6 @@ Second, I enable ~epa~ package in ~emacs~.
 
 #+begin_src emacs-lisp
   (use-package epa
-
     :custom
     (epg-pinentry-mode 'loopback)
     (epa-file-cache-passphrase-for-symmetric-encryption t)
@@ -3805,6 +4076,10 @@ First, install the ~pass~ package using ~home-manager~.
 #+end_src
 
 Second, enable ~password-store~ package to interacting with ~pass~ inside ~emacs~.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.password-store
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package password-store)
@@ -3852,6 +4127,10 @@ Finally, enable ~pass~ modules in both Linux and MacOS.
 #+end_src
 
 ** sudo-edit
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.sudo-edit
+#+end_src
 
 Sometimes I need to edit some file as ~root~. One way to do it is to close the file and re-open it with ~sudo~ in ~eshell~. I find this process suboptimal. So I use ~sudo-edit~, which allows me to become the ~root~ user and edit the current buffer.
 
@@ -4235,6 +4514,10 @@ I specify the list of files that need to be ignore in all git repositories. Thes
 
 ~magit~ is one of the best ~git~ frontend. It embodies a fundamental strength of ~emacs~: utilizes the superior ability of ~emacs~ to provide an interface of an otherwise complicated software.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.magit
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package magit)
 #+end_src
@@ -4379,6 +4662,10 @@ First enable ~delta~ with ~home-manager~.
 
 Then enable the ~magit-delta~ package.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.magit-delta
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package magit-delta)
 #+end_src
@@ -4405,7 +4692,7 @@ The only customization I need is to pass the correct command line options to ~de
 ~git-rebase-mode~ provides a visual and interactive way to do rebase.
 
 #+begin_src emacs-lisp
-  (use-package git-rebase :straight (:type built-in))
+  (use-package git-rebase)
 #+end_src
 
 Similar to ~magit~, I should not be modifying the ~git-rebase-mode~. Hence I put it in the ~motion~ state.
@@ -4431,6 +4718,10 @@ I do not need to configure ~git-rebase-mode~ besides keybindings.
 *** forge
 
 ~forge~ provides a ~magit~-like way to interact with github/gitlab features like issues, pull request, etc.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.forge
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package forge)
@@ -4582,6 +4873,10 @@ A project is defined by a directory tree whose root is identified using special 
 
 For the first two features, I use ~projectile~.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.projectile
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package projectile
     :hook
@@ -4623,6 +4918,10 @@ For the last feature, I use ~deadgrep~ to search for text in projects. ~deadgrep
   {
     home.packages = [ pkgs.ripgrep ];
   }
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.deadgrep
 #+end_src
 
 #+begin_src emacs-lisp
@@ -4702,6 +5001,10 @@ Make sure ~direnv~ is enabled in both Linux and MacOS.
 #+end_src
 
 Then register ~envrc~ within ~emacs~.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.envrc
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package envrc)
@@ -4861,7 +5164,7 @@ Since ~dired~ buffers are not really text buffer, it should be readonly. I put ~
 #+end_src
 
 #+begin_src emacs-lisp
-  (use-package dired :straight (:type built-in))
+  (use-package dired)
 #+end_src
 
 ~dired~ supports customizing the ~ls~ switches.
@@ -4919,6 +5222,10 @@ Now define the entry point of ~dired~.
 #+end_src
 
 The builtin ~dired~ mode lacks some aesthetic features, like marking different types of files with different colors, and collapse directories with only 1 file/subdirectory. I accomplish these by using ~dired-rainbow~ and ~dired-collapse~ packages.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.dired-rainbow epkgs.dired-collapse
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package dired-rainbow
@@ -5442,6 +5749,10 @@ I then export my account information to ~emacs~.
 
 *** notmuch
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.notmuch
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package notmuch
 
@@ -5869,6 +6180,10 @@ Finally, just to make sure that I send the email using the right account, I forc
 
 Both my personal and work calendars are managed by Google. I use ~org-gcal~ to sync my local event list (in several ~org-mode~ files) with Google Calendar.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.org-gcal
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package org-gcal)
 #+end_src
@@ -6270,7 +6585,7 @@ Updating the reminder after fetching/synchronizing requires using ~emacs-deferre
 Now load ~appt~ package and overrides how to show reminder.
 
 #+begin_src emacs-lisp
-  (use-package appt :straight (:type built-in))
+  (use-package appt)
 #+end_src
 
 ~appt~ supports customize how many minutes before the event starts to send the reminder, as well as how many reminders to send for one event. I want a 5 minute buffer time between the reminder and the event, and display the reminder only once.
@@ -6305,6 +6620,23 @@ Schedule ~org-cal~ to sync with the remote calendar every 30 minutes and start ~
 
 Although the builtin ~org-agenda~ can serve as the frontend for displaying calendar events. It is less intuitive. ~calfw~ offers a TUI-like interface to display calendar events.
 
+I use the ~calfw~ forked by ~tumashu~. This fork makes two improvements over the stack version. First, it uses the preferred ~cl-lib.el~ to replace the deprecated ~cl.el~. Second, it confirms the namespace conventional for ~emacs~ packages.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  emacs-calfw = {
+    url = "github:tumashu/emacs-calfw";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname = "emacs-calfw";
+    version = "9999";
+    src = emacs-calfw;
+  })
+#+end_src
+
 Three other comments on configuring ~calfw~:
 
 + ~calfw~ is an old package that likes to define its own faces. Oftentimes, these faces are inconsistent with the theme I use. To correct this, I redefine ~calfw~ faces to inherit from builtin faces.
@@ -6313,7 +6645,6 @@ Three other comments on configuring ~calfw~:
 
 #+begin_src emacs-lisp
   (use-package calfw
-    :straight (:host github :repo "tumashu/emacs-calfw" :files ("calfw-org.el" "calfw.el"))
     :custom-face
     (calfw-face-title ((t (:inherit default :height 2.0))))
     (calfw-face-toolbar ((t (:inherit default))))
@@ -6369,7 +6700,7 @@ Three other comments on configuring ~calfw~:
 I mainly use ~calfw~ to display events in org format. So I need to load the ~calfw-org~ library.
 
 #+begin_src emacs-lisp
-  (use-package calfw-org :straight (:type built-in))
+  (use-package calfw-org)
 #+end_src
 
 To put events onto ~calfw~ calendar, I need to first register it using ~calfw-create-calendar-component-buffer~. To register a set of events, I need to
@@ -6470,7 +6801,11 @@ like in ~org-mode~.
 
 Slack is an important tool for communication in a corporate setting. ~emacs~ has a reasonably workable Slack client.
 
-Like ~calfw~, the Slack package comes with some hard-coded faces.
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.slack
+#+end_src
+
+Register ~slack~. Like ~calfw~, the Slack package comes with some hard-coded faces.
 
 #+begin_src emacs-lisp
   (use-package slack
@@ -6646,110 +6981,10 @@ Finally, add key bindings for reactions.
 * Production Environment
 ** Emacs-Lisp
 
-*** Emacs:flake
-
-Use ~emacs-overlay~ from ~nix-community~ to obtain the latest git version of ~emacs~.
-
-#+begin_src nix :noweb-ref flake-input
-  emacs-overlay.url = "github:nix-community/emacs-overlay";
-#+end_src
-
-#+begin_src nix :tangle ./modules/emacs.nix :mkdirp yes
-  inputs: with inputs; {
-    nixpkgs.overlays = [ emacs-overlay.overlay ];
-
-    home = {
-      file.".emacs.d" = {
-        source = ../emacs.d;
-        recursive = true;
-      };
-      sessionVariables = {
-        EDITOR = "emacsclient -c";
-        VISUAL = "emacsclient -c";
-      };
-    };
-
-    services.emacs = {
-      enable = true;
-      client.enable = true;
-    };
-  }
-#+end_src
-
-For ~linux~ system, ~emacs-overlay~ provides derivation for ~native-comp~ version, so I can just use it.
-
-#+begin_src nix :noweb-ref linux-modules
-  {
-    programs.emacs = {
-      enable = true;
-      package = pkgs.emacsGit;
-    };
-  }
-#+end_src
-
-For ~macOS~, I follow the method used [[https://github.com/twlz0ne/nix-gccemacs-darwin][here]] to enable ~cocona~ and wrap ~emacsGit~ with ~macOS~ specific library path.
-
-#+begin_src nix :noweb-ref darwin-modules
-  (
-    let
-      libPath = with pkgs; lib.concatStringsSep ":" [
-        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
-        "${lib.getLib stdenv.cc.cc}/lib"
-        "${lib.getLib stdenv.glibc}/lib"
-      ];
-
-      emacsNsGcc = pkgs.emacsGit.overrideAttr (
-        old: {
-          configureFlags = (lib.remove "--with-xft" old.configureFlags)
-            ++ [ "--with-ns" "--with-native-compilation" ];
-          postInstall = old.postInstall or "" + ''
-            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
-            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
-            cat <<EOF> $out/bin/run-emacs.sh
-            #!/usr/bin/env bash
-            set -e
-            exec $out/bin/emacs-28.0.50 "\$@"
-            EOF
-            chmod a+x $out/bin/run-emacs.sh
-            ln -snf ./run-emacs.sh $out/bin/emacs
-          '';
-        }
-      );
-
-    in
-
-    {
-      programs.emacs = {
-        enable = true;
-        package = (
-          pkgs.symlinkJoin {
-            name = "emacsGccDarwin";
-            paths = [ emacsNsGcc ];
-            buildInputs = [ pkgs.makeWrapper ];
-            postBuild = ''
-              wrapProgram $out/bin/emacs \
-              --set LIBRARY_PATH ${libPath}
-            '';
-            meta.platforms = pkgs.lib.platforms.darwin;
-            passthru.nativeComp = true;
-            src = emacsNsGcc.src;
-          }
-        );
-      };
-    }
-  )
-#+end_src
-
-Enable ~emacs~ in both supported platforms.
-
-#+begin_src nix :noweb-ref common-modules
-  self.homeModules."emacs.nix"
-#+end_src
-
 The builtin ~elisp-mode~ is, of course, good enough for editing ~elisp~ file.
 
 #+begin_src emacs-lisp
-  (use-package elisp-mode :straight (:type built-in))
+  (use-package elisp-mode)
 #+end_src
 
 Set the ~tab-width~ to 2 in ~elisp-mode~, as lisp do not look good with too many spaces.
@@ -6767,7 +7002,6 @@ Although I have ~eval-last-sexp~ to evaluate lisp expressions, it is useful some
 
 #+begin_src emacs-lisp :noweb yes
   (use-package ielm
-    :straight (:type built-in)
     :init
     <<ielm-init>>
     :config
@@ -6842,6 +7076,10 @@ Finally, define the entry point of REPL.
 
 ~emacs~ is self-documented. The docstrings of any function or variable can be retrieved and displayed in the ~*help*~ buffer. ~helpful-mode~ improves upon the builtin ~*help*~ buffer to display more information.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.helpful
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package helpful)
 #+end_src
@@ -6869,21 +7107,26 @@ Finally, define entry point for ~helpful~ mode.
 
 ~aggressive-indent-mode~ is useful to automatically adjusting indent lisp codes.
 
-#+begin_src emacs-lisp
-  (use-package aggressive-indent)
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.aggressive-indent
+#+end_src
 
-  (add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
+#+begin_src emacs-lisp
+  (use-package aggressive-indent
+    :hook (emacs-lisp-mode . aggressive-indent-mode))
 #+end_src
 
 *** easy escape
 
 It is difficult to read regexp in ~elisp~, since I need to escape the escape character (\) itself, resulting in strings like "\\\\(\\\\)" ~easy-escape~ mode solves this problem by applying additional font locks to the escaped characters, making them easier to read.
 
-#+begin_src emacs-lisp
-  (use-package easy-escape)
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.easy-escape
+#+end_src
 
-  (add-hook 'emacs-lisp-mode-hook #'easy-escape-minor-mode)
-  (add-hook 'ielm-mode-hook #'easy-escape-minor-mode)
+#+begin_src emacs-lisp
+  (use-package easy-escape
+    :hook ((emacs-lisp-mode ielm-mode) . easy-escape-minor-mode))
 #+end_src
 
 ** Python
@@ -7010,9 +7253,23 @@ I'd like to use ~emacs~ to replace STATA's builtin IDE. To do so, I need to be a
 
 There is no official major mode for stata ~do~ script files. ~ess~ (emacs speak statistics) used to offer an integrated development environment for STATA (in addition to R and other statistical packages). Yet, ~ess-stata-mode~ became [[http://ess.r-project.org/Manual/news.html][obsolete]] since version 19.03. I use a stripped down version of ~stata-mode~ to work in STATA script files.
 
+#+begin_src nix :noweb-ref emacs-flake-input
+  stata-mode = {
+    url = "github:junyi-hou/stata-mode";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref emacs-packages
+  (emacsPkg.pkgs.trivialBuild {
+    pname = "stata-mode";
+    version = "9999";
+    src = stata-mode;
+  })
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package stata-mode
-    :straight (stata-mode :repo "junyi-hou/stata-mode" :host github)
     :mode ("\\.do'" . stata-mode)
     :config
     <<stata-config>>
@@ -7045,6 +7302,10 @@ Setup the keybinding in STATA-mode just as other modes utilizing ~emacs-jupyter~
 ~R~ is an open source statistical package, which makes it attractive to people outside of economists. ~emacs~ can edit ~R~ files.
 
 *** R:major-mode
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.ess
+#+end_src
 
 #+begin_src emacs-lisp :noweb yes
   (use-package ess
@@ -7147,10 +7408,12 @@ I use nix to manage my dotfiles and development environments. nix uses its own l
 
 *** Nix:major-mode
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.nix-mode
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
   (use-package nix-mode
-    :straight (nix-mode :host github :repo "nixOS/nix-mode"
-                        :files (:defaults "*.el"))
     :mode ("\\.nix\\'" "\\.nix.in\\'")
     :hook
     <<nix-hook>>
@@ -7565,6 +7828,10 @@ I then define the snippet functions below.
 
 ~emacs~ is also useful to edit and read non-code text as well. The first of which is ~markdown~ files.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.markdown-mode
+#+end_src
+
 #+begin_src emacs-lisp
 (use-package markdown-mode)
 #+end_src
@@ -7611,9 +7878,12 @@ This concludes the configuration for ~man~.
 
 I use AUCTeX to edit tex source file in ~emacs~. AUCTeX is a gigantic package that aims at providing a tex IDE for ~emacs~. Although I already use [[LaTeX:LSP][a LSP]] to handles label, autocomplete, etc. I still need AUCTeX to conveniently interact with tex command line utilities (mainly via ~TeX-command-sequence~ function)
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.auctex
+#+end_src
+
 #+begin_src emacs-lisp :noweb yes
-  (use-package tex
-    :straight auctex
+  (use-package auctex
     :custom
     <<tex-custom>>
     :custom-face
@@ -8136,5 +8406,3 @@ To refresh the keyboard firmware, connect it to the computer in DFU mode and run
 check out https://developers.google.com/calendar/v3/reference/events/insert
 
 ** ein: freezes ~emacs~
-** replace straight.el with nix-flake
-check out https://github.com/vlaci/nix-straight.el

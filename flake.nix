@@ -9,6 +9,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    emacs-module.url = "path:./emacs.d";
+    emacs-overlay.url = "github:nix-community/emacs-overlay";
     pragmata-pro = {
       url = "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz";
       flake = false;
@@ -22,7 +24,6 @@
       url = "github:robn/sasl2-oauth";
       flake = false;
     };
-    emacs-overlay.url = "github:nix-community/emacs-overlay";
     rnix-lsp = {
       url = "github:nix-community/rnix-lsp";
     };
@@ -82,12 +83,12 @@
             {
               home.sessionPath = [ "/usr/bin" ];
             }
-            {
-              programs.emacs = {
-                enable = true;
-                package = pkgs.emacsGit;
-              };
-            }
+            (
+              let
+                pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
+              in
+                (emacs-module.emacsModule pkgs.emacsGcc)
+            )
             {
               home.packages = [
                 pkgs.xdotool
@@ -133,7 +134,6 @@
             self.homeModules."direnv.nix"
             (self.homeModules."mail.nix" homeDirectory)
             self.homeModules."calendar.nix"
-            self.homeModules."emacs.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"
@@ -152,16 +152,16 @@
           imports = [
             (
               let
+                pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
                 libPath = with pkgs; lib.concatStringsSep ":" [
                   "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
                   "${lib.getLib stdenv.cc.cc}/lib"
                   "${lib.getLib stdenv.glibc}/lib"
                 ];
-            
-                emacsNsGcc = pkgs.emacsGit.overrideAttr (
+                emacsNsGcc = pkgs.emacsGcc.overrideAttr (
                   old: {
                     configureFlags = (lib.remove "--with-xft" old.configureFlags)
-                      ++ [ "--with-ns" "--with-native-compilation" ];
+                      ++ [ "--with-ns" ];
                     postInstall = old.postInstall or "" + ''
                       ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
                       ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
@@ -175,28 +175,20 @@
                     '';
                   }
                 );
-            
-              in
-            
-              {
-                programs.emacs = {
-                  enable = true;
-                  package = (
-                    pkgs.symlinkJoin {
-                      name = "emacsGccDarwin";
-                      paths = [ emacsNsGcc ];
-                      buildInputs = [ pkgs.makeWrapper ];
-                      postBuild = ''
-                        wrapProgram $out/bin/emacs \
-                        --set LIBRARY_PATH ${libPath}
-                      '';
-                      meta.platforms = pkgs.lib.platforms.darwin;
-                      passthru.nativeComp = true;
-                      src = emacsNsGcc.src;
-                    }
-                  );
+                emacsDarwinGcc = pkgs.symlinkJoin {
+                  name = "emacsGccDarwin";
+                  paths = [ emacsNsGcc ];
+                  buildInputs = [ pkgs.makeWrapper ];
+                  postBuild = ''
+                    wrapProgram $out/bin/emacs \
+                    --set LIBRARY_PATH ${libPath}
+                  '';
+                  meta.platforms = pkgs.lib.platforms.darwin;
+                  passthru.nativeComp = true;
+                  src = emacsNsGcc.src;
                 };
-              }
+              in
+                (emacs-module.emacsModule emacsDarwinGcc)
             )
             self.homeModules."font.nix"
             self.homeModules."tree-sitter.nix"
@@ -208,7 +200,6 @@
             self.homeModules."direnv.nix"
             (self.homeModules."mail.nix" homeDirectory)
             self.homeModules."calendar.nix"
-            self.homeModules."emacs.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"

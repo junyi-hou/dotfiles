@@ -282,7 +282,6 @@ inputs: with inputs; { pkgs, config, ... }: {
         
         # xwatermark package
         "*.xwm"
-        ".stata_kernel.conf"
       ];
       extraConfig = {
         github = {

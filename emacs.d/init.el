@@ -66,25 +66,6 @@
 
 (setq scroll-step 1)
 
-(setq straight-repository-branch "develop"
-      straight-use-package-by-default t
-      straight-vc-git-default-protocol 'https)
-
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
-
-(straight-use-package 'use-package)
-
 (use-package dash)
 (use-package f)
 (use-package s)
@@ -165,7 +146,7 @@
 
 (load custom-file 'noerror)
 
-(use-package saveplace :straight (:type built-in) :hook (after-init . save-place-mode))
+(use-package saveplace :hook (after-init . save-place-mode))
 
 (setq save-place-file (expand-file-name "save-place.el" no-littering-var-directory))
 
@@ -173,11 +154,10 @@
 
 (use-package subword :hook (after-init . global-subword-mode))
 
-(use-package simple :straight (:type built-in))
+(use-package simple)
 
 (add-hook 'after-init-hook #'global-visual-line-mode)
 
-(setq visual-fill-column-inhibit-sensible-window-split t)
 (use-package visual-fill-column)
 
 (add-hook 'text-mode-hook #'visual-fill-column-mode)
@@ -194,7 +174,7 @@
 (general-define-key :keymaps 'messages-buffer-mode-map :states 'normal :prefix "C-c"
   "C-l" #'gatsby:core-refresh-message-buffer)
 
-(use-package whitespace :straight (:type built-in) :hook (before-save . whitespace-cleanup))
+(use-package whitespace :hook (before-save . whitespace-cleanup))
 
 (use-package autorevert :hook (after-init . global-auto-revert-mode))
 
@@ -273,7 +253,7 @@
                                                    ,(+ 3 (string-width (gatsby:format-right-mode-line))))))))
                     '(:eval (gatsby:format-right-mode-line))))
 
-(use-package ligature :straight (ligature :host github :repo "mickeynp/ligature.el"))
+(use-package ligature)
 
 (ligature-set-ligatures
  'prog-mode
@@ -344,15 +324,13 @@
 (setq backward-delete-char-untabify-method 'all)
 
 (use-package highlight-indent-guides
-
   :hook
   (prog-mode . highlight-indent-guides-mode)
-
   :custom
   (highlight-indent-guides-method 'bitmap)
   (highlight-indent-guides-responsive nil))
 
-(use-package beacon :straight (beacon :host github :repo "junyi-hou/beacon") :hook (after-init . beacon-mode))
+(use-package beacon :hook (after-init . beacon-mode))
 
 (setq beacon-blink-when-window-scrolls nil
       beacon-can-go-backwards t
@@ -403,11 +381,8 @@
 (add-hook 'eldoc-box-frame-hook #'gatsby:eldoc-box--set-font-size)
 
 (use-package evil
-
   :custom (evil-undo-system 'undo-redo)
-
   :init (evil-mode 1)
-
   :general
   (:keymaps '(motion normal visual)
    "j" 'evil-next-visual-line
@@ -459,11 +434,8 @@
 (use-package evil-surround :hook (after-init . global-evil-surround-mode))
 
 (use-package evil-nerd-commenter
-
   :after evil
-
   :commands evilnc-comment-or-uncomment-lines
-
   :general
   (:keymaps '(normal visual)
    :prefix "SPC"
@@ -560,7 +532,6 @@
   "q" #'gatsby:kill-buffer-and-or-window)
 
 (use-package selectrum
-  :straight (selectrum :host github :repo "raxod502/selectrum")
   :defines (selectrum-minibuffer-bindings selectrum-should-sort)
   :custom (selectrum-fix-vertical-window-height t)
   :init (selectrum-mode 1)
@@ -697,7 +668,6 @@
   "<C-return>" #'selectrum-become)
 
 (use-package prescient
-
   :config
   (setq prescient-save-file (concat no-littering-var-directory "prescient-save.el"))
   (prescient-persist-mode 1))
@@ -767,10 +737,9 @@ If ARG is non-nil, run `consult-outline' instead."
   "<C-return>" #'gatsby:consult-line-from-evil)
 
 (use-package consult-selectrum
-  :straight (:type built-in)
   :after (consult selectrum))
 
-(use-package marginalia :straight (marginalia :host github :repo "minad/marginalia" :branch "main"))
+(use-package marginalia)
 (marginalia-mode 1)
 
 (use-package eshell)
@@ -828,7 +797,7 @@ If ARG is non-nil, run `consult-outline' instead."
 
 (setq eshell-scroll-to-bottom-on-input 'all)
 
-(use-package em-term :straight (em-term :type built-in) :after eshell)
+(use-package em-term :after eshell)
 
 (defun gatsby:eshell-history ()
   "Search history"
@@ -1015,8 +984,8 @@ If there is already a eshell buffer open for that directory, switch to that buff
 (general-define-key :keymaps '(motion normal visual) :prefix "SPC"
   "os" 'gatsby:eshell-open-here)
 
-(use-package tramp :straight (:type built-in))
-(use-package em-tramp :straight (:type built-in))
+(use-package tramp)
+(use-package em-tramp)
 
 (setq tramp-histfile-override "/dev/null")
 (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
@@ -1092,8 +1061,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
   (advice-add #'eshell/cd :after #'gatsby:envrc--update-after-cd))
 
 (use-package org
-  :straight (org :host github :repo "yantar92/org" :branch "feature/org-fold"
-                 :files ("*.el" "lisp/*.el" "contrib/lisp/*.el"))
   :config
   (setq org-startup-indented t
         org-startup-with-latex-preview t
@@ -1182,7 +1149,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
   "RET" #'org-open-at-point)
 
 (use-package org-appear
-  :straight (org-appear :type git :host github :repo "awth13/org-appear" :branch "feature/org-fold-support")
   :hook (org-mode . org-appear-mode))
 
 (setq org-appear-autolinks t)
@@ -1293,7 +1259,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 (advice-add #'flymake-eldoc-function :override #'ignore)
 
 (use-package flymake-childframe
-  :straight (flymake-childframe :repo "junyi-hou/flymake-childframe" :host github)
   :hook (flymake-mode . flymake-childframe-mode))
 
 (setq flymake-childframe-prefix '((note . "[INFO]")
@@ -1303,8 +1268,7 @@ If there is already a eshell buffer open for that directory, switch to that buff
 (ligature-set-ligatures 'flymake-childframe-buffer-mode
                         '("[INFO]" "[WARN]" "[ERR]"))
 
-(use-package company
-  :straight (company :files (:defaults "icons")))
+(use-package company)
 (add-hook 'prog-mode-hook #'company-mode)
 
 (setq company-idle-delay nil
@@ -1421,36 +1385,22 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (setq eglot-stay-out-of '(company))
 
-(use-package help-childframe
-  :straight
-  (help-childframe :host github :repo "junyi-hou/help-childframe.el")
-  :general
-  (:keymaps '(normal visual motion)
-   :prefix "SPC"
-   "rh" #'help-childframe-show))
-
-(add-hook 'after-init-hook #'global-help-childframe-mode)
-
 (use-package tree-sitter
-  :straight
-  (:files (:defaults "langs/*.el" "langs/bin" "langs/queries"))
   :hook
   (tree-sitter-mode . tree-sitter-hl-mode)
   (tree-sitter-mode . tree-sitter-fold-mode))
 
-(use-package tree-sitter-langs
-  :straight (:type built-in))
+(use-package tree-sitter-langs)
 
 ;; overriding `:files' attribute breaks hard-coded variable
 ;; `tree-sitter-langs-git-dir', which points to
 ;; `straight/repos/tree-sitter-langs/'. Move it to the correct location
 ;; `straight/repos/emacs-tree-sitter/langs/' instead.
-(setq tree-sitter-langs-git-dir (straight--repos-dir "emacs-tree-sitter/langs"))
+(setq tree-sitter-langs-git-dir (straight--build-dir "emacs-tree-sitter/langs"))
 
-(use-package tree-sitter-fold
-  :straight (:host github :repo "junyi-hou/tree-sitter-fold"))
+(use-package tree-sitter-fold)
 
-(use-package comint  :straight (:type built-in))
+(use-package comint)
 
 (defun gatsby:comint-goto-last-prompt ()
   "Goto current prompt and continue editting."
@@ -1600,9 +1550,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (use-package jupyter
 
-:straight
-(:no-native-compile t :host github :repo "nnicandro/emacs-jupyter")
-
 :custom-face
 (jupyter-repl-traceback ((t (:extend t :background "firebrick")))))
 
@@ -1623,11 +1570,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
     (funcall fn (encode-coding-string str 'utf-8))))
 
 (advice-add #'jupyter-eval-string :around #'gatsby:jupyter--encode-before-eval)
-
-(defun jupyter-repl-font-lock-override (_ignore beg end &optional verbose)
-  `(jit-lock-bounds ,beg . ,end))
-
-(advice-add #'jupyter-repl-font-lock-fontify-region :override #'jupyter-repl-font-lock-override)
 
 (advice-add #'jupyter-repl-isearch-setup :override #'ignore)
 
@@ -1827,7 +1769,6 @@ List of CANDIDATES is given by flyspell for the WORD."
 (require 'gatsby:accounts)
 
 (use-package epa
-
   :custom
   (epg-pinentry-mode 'loopback)
   (epa-file-cache-passphrase-for-symmetric-encryption t)
@@ -1947,7 +1888,8 @@ List of CANDIDATES is given by flyspell for the WORD."
   "c" 'magit-commit
   "p" 'magit-push
   "f" 'magit-fetch
-  "F" 'magit-pull)
+  "F" 'magit-pull
+  "C-u" 'evil-scroll-up)
 
 (general-define-key :keymaps '(motion normal visual) :prefix "SPC"
   "gg" #'magit-status
@@ -1966,7 +1908,7 @@ List of CANDIDATES is given by flyspell for the WORD."
                                "--plus-emph-color=#00b300"
                                "--color-only"))
 
-(use-package git-rebase :straight (:type built-in))
+(use-package git-rebase)
 
 (add-to-list 'evil-motion-state-modes 'git-rebase-mode)
 
@@ -2246,7 +2188,7 @@ List of CANDIDATES is given by flyspell for the WORD."
 
 (add-to-list 'evil-motion-state-modes 'dired-mode)
 
-(use-package dired :straight (:type built-in))
+(use-package dired)
 
 (setq dired-listing-switches "-lh")
 
@@ -2930,7 +2872,7 @@ Set SILENT to non-nil to inhibit notifications."
 
 (advice-add #'org-gcal-sync :override #'gatsby:org-gcal-sync)
 
-(use-package appt :straight (:type built-in))
+(use-package appt)
 
 (setq appt-message-warning-time 5
       appt-display-interval appt-message-warning-time)
@@ -2949,7 +2891,6 @@ Set SILENT to non-nil to inhibit notifications."
 (appt-activate 1)
 
 (use-package calfw
-  :straight (:host github :repo "tumashu/emacs-calfw" :files ("calfw-org.el" "calfw.el"))
   :custom-face
   (calfw-face-title ((t (:inherit default :height 2.0))))
   (calfw-face-toolbar ((t (:inherit default))))
@@ -3001,7 +2942,7 @@ Set SILENT to non-nil to inhibit notifications."
    "TAB" #'calfw-details-navi-next-item-command
    "<backtab>" #'calfw-details-navi-prev-item-command))
 
-(use-package calfw-org :straight (:type built-in))
+(use-package calfw-org)
 
 (defconst gatsby:calfw-candidate-colors
   '("#268bd2" "#8DC85F" "#e06c75" "#e5c07b" "#ECA964" "#FF96B3" "#D1A5FF")
@@ -3209,7 +3150,7 @@ Taken from `slack-room-display'."
   "r" #'slack-message-add-reaction
   "R" #'slack-message-remove-reaction)
 
-(use-package elisp-mode :straight (:type built-in))
+(use-package elisp-mode)
 
 (defun gatsby:lisp--set-tab-width ()
   (setq-local tab-width 2))
@@ -3217,7 +3158,6 @@ Taken from `slack-room-display'."
 (add-hook 'emacs-lisp-mode-hook #'gatsby:lisp--set-tab-width)
 
 (use-package ielm
-  :straight (:type built-in)
   :init
   (defun gatsby:ielm-repl ()
     "Start an ielm REPL."
@@ -3273,14 +3213,11 @@ Taken from `slack-room-display'."
   "hv" 'helpful-variable
   "hm" 'describe-mode)
 
-(use-package aggressive-indent)
+(use-package aggressive-indent
+  :hook (emacs-lisp-mode . aggressive-indent-mode))
 
-(add-hook 'emacs-lisp-mode-hook #'aggressive-indent-mode)
-
-(use-package easy-escape)
-
-(add-hook 'emacs-lisp-mode-hook #'easy-escape-minor-mode)
-(add-hook 'ielm-mode-hook #'easy-escape-minor-mode)
+(use-package easy-escape
+  :hook ((emacs-lisp-mode ielm-mode) . easy-escape-minor-mode))
 
 (use-package python
   :mode ("\\.py'" . python-mode)
@@ -3349,7 +3286,6 @@ Taken from `slack-room-display'."
       python-indent-guess-indent-offset-verbose nil)
 
 (use-package stata-mode
-  :straight (stata-mode :repo "junyi-hou/stata-mode" :host github)
   :mode ("\\.do'" . stata-mode)
   :config
   (add-to-list 'gatsby:jupyter-repl-function-alist '(stata-mode . "stata"))
@@ -3417,8 +3353,6 @@ Taken from `slack-room-display'."
   (tree-sitter-require 'r))
 
 (use-package nix-mode
-  :straight (nix-mode :host github :repo "nixOS/nix-mode"
-                      :files (:defaults "*.el"))
   :mode ("\\.nix\\'" "\\.nix.in\\'")
   :hook
   (nix-mode . eglot-ensure)
@@ -3758,8 +3692,7 @@ Taken from `slack-room-display'."
   
   (advice-add #'man :around #'gatsby:man--maybe-use-current-window))
 
-(use-package tex
-  :straight auctex
+(use-package auctex
   :custom
   (tex-fontify-script nil)
   (font-latex-fontify-script nil)

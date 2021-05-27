@@ -11,7 +11,7 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
 
       # authorization script
       cat > $out/bin/gmail-get-token <<EOF
-      #! /usr/bin/env bash
+      #!${stdenv.shell}
       ID=\$(${pass}/bin/pass google-api/id)
       SECRET=\$(${pass}/bin/pass google-api/secret)
       TOKEN=\$(${pass}/bin/pass google-api/\$1)
