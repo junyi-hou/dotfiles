@@ -23,8 +23,8 @@ inputs: with inputs; { lib, ... }: {
       maxCacheTtl = 720000;
       defaultCacheTtlSsh = 720000;
       maxCacheTtlSsh = 720000;
-      pinentryFlavor = "tty";
       extraConfig = ''
+        allow-loopback-pinentry
         allow-emacs-pinentry
       '';
     };
