@@ -22,10 +22,6 @@
       url = "github:junyi-hou/flymake-childframe";
       flake = false;
     };
-    tree-sitter-fold = {
-      url = "github:junyi-hou/tree-sitter-fold";
-      flake = false;
-    };
     emacs-calfw = {
       url = "github:tumashu/emacs-calfw";
       flake = false;
@@ -114,13 +110,6 @@
           epkgs.company-prescient
           epkgs.yasnippet
           epkgs.eglot
-          epkgs.tree-sitter
-          epkgs.tree-sitter-langs
-          (emacsPkg.pkgs.trivialBuild {
-            pname   = "tree-sitter-fold";
-            version = "9999";
-            src = tree-sitter-fold;
-          })
           epkgs.jupyter
           epkgs.ein
           epkgs.flyspell-correct

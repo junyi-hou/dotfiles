@@ -3319,7 +3319,7 @@ Enable ~help-childframe-mode~ globally.
   (add-hook 'after-init-hook #'global-help-childframe-mode)
 #+end_src
 
-*** incremental syntax tree parsing: tree-sitter
+*** COMMENT incremental syntax tree parsing: tree-sitter
 
 ~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~.
 
@@ -7184,7 +7184,7 @@ Enable LSP, ~tree-sitter~ mode, and the local tab width when loading python file
 #+begin_src emacs-lisp :tangle no :noweb-ref python-hook
   (python-mode . gatsby:python--set-indent-width)
   (python-mode . eglot-ensure)
-  (python-mode . tree-sitter-mode)
+  ;; (python-mode . tree-sitter-mode)
 #+end_src
 
 #+begin_src emacs-lisp :tangle no :noweb-ref python-init
@@ -7384,7 +7384,7 @@ Make sure to run ~eglot~ along with R to enable the language server when editing
   (ess-r-mode . eglot-ensure)
 #+end_src
 
-*** R:tree-sitter
+*** COMMENT R:tree-sitter
 
 ~emacs-tree-sitter~ does not include ~R~ grammar. I need to compile ~R~ grammar from source. First check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ from github and compile it.
 
@@ -7541,7 +7541,7 @@ to format my nix code before save.
   (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
 #+end_src
 
-*** Nix:tree-sitter
+*** COMMENT Nix:tree-sitter
 
 Nix is not included in the grammar bundle provided by ~emacs-tree-sitter~. I need to download and compile it from source.
 

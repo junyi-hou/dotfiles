@@ -56,11 +56,10 @@
         "ligature": "ligature",
         "org": "org",
         "org-appear": "org-appear",
-        "stata-mode": "stata-mode",
-        "tree-sitter-fold": "tree-sitter-fold"
+        "stata-mode": "stata-mode"
       },
       "locked": {
-        "narHash": "sha256-Y0BdNgdj8bGQOey7IbP6E1SWCxKwu62ECwxwp95yNaQ=",
+        "narHash": "sha256-CCBq+FOgTXRooW8X1yBCp0142AfiVsb5rNvoSBglvYY=",
         "path": "./emacs.d",
         "type": "path"
       },
@@ -356,22 +355,6 @@
       "original": {
         "owner": "junyi-hou",
         "repo": "stata-mode",
-        "type": "github"
-      }
-    },
-    "tree-sitter-fold": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1621271739,
-        "narHash": "sha256-UOMehL8HxrYI3A7EuzN9iMHJ5tFIPiM7nc4Pf9EB+JM=",
-        "owner": "junyi-hou",
-        "repo": "tree-sitter-fold",
-        "rev": "510f3ff119c265bde080de92173f9d14da0e0a05",
-        "type": "github"
-      },
-      "original": {
-        "owner": "junyi-hou",
-        "repo": "tree-sitter-fold",
         "type": "github"
       }
     },

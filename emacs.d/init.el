@@ -1385,15 +1385,6 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (setq eglot-stay-out-of '(company))
 
-(use-package tree-sitter
-  :hook
-  (tree-sitter-mode . tree-sitter-hl-mode)
-  (tree-sitter-mode . tree-sitter-fold-mode))
-
-(use-package tree-sitter-langs)
-
-(use-package tree-sitter-fold)
-
 (use-package comint)
 
 (defun gatsby:comint-goto-last-prompt ()
@@ -3222,7 +3213,7 @@ Taken from `slack-room-display'."
   :hook
   (python-mode . gatsby:python--set-indent-width)
   (python-mode . eglot-ensure)
-  (python-mode . tree-sitter-mode)
+  ;; (python-mode . tree-sitter-mode)
   :init
   (defun gatsby:python--set-indent-width ()
     (setq-local tab-width 4))
@@ -3301,8 +3292,6 @@ Taken from `slack-room-display'."
 (use-package ess
   :hook
   (ess-r-mode . eglot-ensure)
-  (ess-r-mode . tree-sitter-mode)
-  (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
   :config
   (add-to-list 'gatsby:jupyter-repl-function-alist '(ess-r-mode . "irkernel"))
   (defun gatsby:r-pipe ()
@@ -3330,34 +3319,10 @@ Taken from `slack-room-display'."
    "rz" #'jupyter-repl-associate-buffer
    "rZ" #'jupyter-repl-restart-kernel))
 
-(defun gatsby:tree-sitter--install-and-load-r ()
-  ;; pull tree-sitter R source code
-  (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/r"))
-    (let ((default-directory tree-sitter-langs-git-dir))
-      (tree-sitter-langs--call
-       "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r")))
-
-  ;; compile using tree-sitter-cli tool
-  (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
-    ;; do not open a new buffer to display compile information
-    (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
-      (tree-sitter-langs-compile 'r)))
-
-  ;; register ess-r-mode with r grammar
-  (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
-    (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
-
-  ;; register tree-sitter
-  (tree-sitter-require 'r))
-
 (use-package nix-mode
   :mode ("\\.nix\\'" "\\.nix.in\\'")
   :hook
   (nix-mode . eglot-ensure)
-  ;; the order is important: `tree-sitter-mode' needs to be after
-  ;; `install-and-load-nix'
-  (nix-mode . tree-sitter-mode)
-  (nix-mode . gatsby:tree-sitter-install-and-load-nix)
   :init
   (defun gatsby:nix-shell-in-storage (storage)
     "Open an eshell/vterm in the directory of STORAGE."
@@ -3647,24 +3612,6 @@ Taken from `slack-room-display'."
        "EOF"
        "export STATA_KERNEL_USER_CONFIG_PATH=${projectRoot}/.stata_kernel.conf"
        "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${stataKernel}"))))
-
-(defun gatsby:tree-sitter-install-and-load-nix ()
-  "Download, compile, and register nix grammar for tree-sitter if haven't done so."
-
-  (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/nix"))
-    (let ((default-directory tree-sitter-langs-git-dir))
-      (tree-sitter-langs--call
-       "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix")))
-
-  (unless (--filter (string= (f-base it) "nix") (f-entries (tree-sitter-langs--bin-dir)))
-    ;; do not open a new buffer to display compile information
-    (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
-      (tree-sitter-langs-compile 'nix)))
-
-  (unless (assq 'nix-mode tree-sitter-major-mode-language-alist)
-    (add-to-list 'tree-sitter-major-mode-language-alist '(nix-mode . nix)))
-
-  (tree-sitter-require 'nix))
 
 (use-package markdown-mode)
 

@@ -125,7 +125,6 @@
               }
             )
             self.homeModules."font.nix"
-            self.homeModules."tree-sitter.nix"
             self.homeModules."grammar.nix"
             self.homeModules."gpg.nix"
             (self.homeModules."pass.nix" homeDirectory)
@@ -191,7 +190,6 @@
                 (emacs-module.emacsModule emacsDarwinGcc)
             )
             self.homeModules."font.nix"
-            self.homeModules."tree-sitter.nix"
             self.homeModules."grammar.nix"
             self.homeModules."gpg.nix"
             (self.homeModules."pass.nix" homeDirectory)
