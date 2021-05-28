@@ -1676,6 +1676,7 @@ I now implement the first case, which I call ~selectrum-become~. The idea is ver
 
 #+begin_src nix :noweb-ref emacs-packages
   epkgs.prescient
+  epkgs.selectrum-prescient
 #+end_src
 
 #+begin_src emacs-lisp
@@ -2980,6 +2981,10 @@ The following function is taken from [[https://github.com/dakra/dmacs/blob/maste
 
 ~org-async~ allows code in the source code blocks run asynchronously (i.e., non-blocking) so I can keep typing while the code runs in the background.
 
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.ob-async
+#+end_src
+
 #+begin_src emacs-lisp
   (use-package ob-async)
 #+end_src
@@ -3202,6 +3207,10 @@ Now the backends.
 #+end_src
 
 Finally, [[prescient]] provides a nice sorting mechanism for ~company~ depend on selection history and other stuffs.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.company-prescient
+#+end_src
 
 #+begin_src emacs-lisp
   (use-package company-prescient :hook (company-mode . company-prescient-mode))
@@ -6625,6 +6634,11 @@ I use the ~calfw~ forked by ~tumashu~. This fork makes two improvements over the
     pname = "emacs-calfw";
     version = "9999";
     src = emacs-calfw;
+
+    # remove howm backend support
+    preBuild = ''
+      rm calfw-howm.el
+    '';
   })
 #+end_src
 

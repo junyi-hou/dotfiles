@@ -83,6 +83,7 @@
           epkgs.expand-region
           epkgs.selectrum
           epkgs.prescient
+          epkgs.selectrum-prescient
           epkgs.consult
           epkgs.marginalia
           (emacsPkg.pkgs.melpaBuild {
@@ -102,6 +103,7 @@
             version = "master";
             src = org-appear;
           })
+          epkgs.ob-async
           epkgs.flymake
           (emacsPkg.pkgs.trivialBuild {
             pname   = "flymake-childframe";
@@ -109,6 +111,7 @@
             src = flymake-childframe;
           })
           epkgs.company
+          epkgs.company-prescient
           epkgs.yasnippet
           epkgs.eglot
           epkgs.tree-sitter
@@ -137,6 +140,11 @@
             pname = "emacs-calfw";
             version = "9999";
             src = emacs-calfw;
+          
+            # remove howm backend support
+            preBuild = ''
+              rm calfw-howm.el
+            '';
           })
           epkgs.slack
           epkgs.helpful
