@@ -217,6 +217,16 @@ This section contains the code and explanation of my personal configuration for 
 
 I use a subflake to manage ~emacs~ and its packages. This flake defines a  function called ~emacsModule~ which takes an ~emacs~ derivation as the only argument, and returns a ~home-manager~ module with all ~emacs~-related configuration.
 
+The advantage of using a flake to manage ~emacs~ packages over the more conventional methods (e.g., via ~package.el~ or ~straight.el~) is twofold. First, it provides a clean and intuitive way of pinning package versions. This allows reproducible development environment over several machines. Second, subflake allows me to integrate the ~emacs~ package management workflow with my general configuration management process.
+
+There are two disadvantages of the current approach. First, the mechanism of pinning ~emacs~ package version is not perfect. In particular, packages inherit from ~epkgs~ are pinned to the version contained in ~epkgs~. This mechanism prohibits updating a single package while keeping the versions of other packages from ~epkgs~. The only way to update a package from ~epkgs~ is to update the whole ~epkgs~ repository.
+
+To circumvent this issue, I define packages that needs separate updates using ~emacs.pkgs.trivialBuild~ or ~emacs.pkgs.meplaBuild~ to define packages from flakes input source. In this way, I can update a specific package using ~nix flake lock --upcate-input~ while keeping other packages pinned to the same version.
+
+The second disadvantage of the current approach is its inflexibility. Since all package management functionalities are now handled by nix flake, I won't be able to run a simple ~(use-package foo)~ to quickly install ~foo~ package to try out. Instead, I need to modify ~/emacs.d/flake.nix~ to include the new package, run ~nix build .~ and restart ~emacs~ to enable the new package.
+
+Below includes the structure of the subflake for all ~emacs~-related configuration.
+
 #+begin_src nix :tangle ./emacs.d/flake.nix :noweb yes
   {
     description = "using flakes to manage emacs packages";
