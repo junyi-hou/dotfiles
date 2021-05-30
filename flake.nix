@@ -180,7 +180,7 @@
                   buildInputs = [ pkgs.makeWrapper ];
                   postBuild = ''
                     wrapProgram $out/bin/emacs \
-                    --set LIBRARY_PATH ${libPath}
+                      --set LIBRARY_PATH ${libPath}
                   '';
                   meta.platforms = pkgs.lib.platforms.darwin;
                   passthru.nativeComp = true;

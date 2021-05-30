@@ -330,7 +330,7 @@ For MacOS, I need to wrap library around the default derivation and pass ~--with
         buildInputs = [ pkgs.makeWrapper ];
         postBuild = ''
           wrapProgram $out/bin/emacs \
-          --set LIBRARY_PATH ${libPath}
+            --set LIBRARY_PATH ${libPath}
         '';
         meta.platforms = pkgs.lib.platforms.darwin;
         passthru.nativeComp = true;
@@ -3322,14 +3322,222 @@ Enable ~help-childframe-mode~ globally.
   (add-hook 'after-init-hook #'global-help-childframe-mode)
 #+end_src
 
-*** COMMENT incremental syntax tree parsing: tree-sitter
+*** incremental syntax tree parsing: tree-sitter
 
-~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~.
+~tree-sitter~ provides a powerful and super fast incremental syntax parsing engine. ~emacs-tree-sitter~ implements ~tree-sitter~ parsing tools in ~emacs~. I first define the structure of ~tree-sitter~ package below.
 
-#+begin_src nix :noweb-ref emacs-packages
-  epkgs.tree-sitter
-  epkgs.tree-sitter-langs
+#+begin_src nix :noweb-ref emacs-packages :noweb yes
+  (
+    let
+      <<tree-sitter-component>>
+    in
+      <<tree-sitter-final-package>>
+  )
 #+end_src
+
+~emacs-tree-sitter~ actually contains 3 different packages: ~tsc.el~, ~tree-sitter~, and ~tree-sitter-langs~. Installation of ~tsc.el~ and ~tree-sitter-langs~ involve downloading binaries from release page. As nix build environment does not contain network access, I need to modify the build scripts to install those packages.
+
+I first install ~tsc.el~. During build process, ~tsc.el~ will download a architecture-specific library ~tsc.so/tsc.dylib/tsc.dll~, which is included only in the release tarball. I override the source of the default ~tsc.el~ package and customize the build script to install the library files in addition to the usual ~emacs~ library ~*.el~.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  tsc-module = {
+    url = "https://github.com/ubolonton/emacs-tree-sitter/releases/download/0.15.1/tsc-0.15.1.tar.gz";
+    flake = false;
+  };
+#+end_src
+
+I also need to disable the fetching step in the installation phase so that nix would not complaint about not able to download.
+
+#+begin_src diff :tangle ./emacs.d/tree-sitter-patches/tsc-do-not-download.patch :mkdirp yes
+  diff --git a/tsc.el b/tsc.el
+  index 717705c..ceb7543 100644
+  --- a/tsc.el
+  +++ b/tsc.el
+  @@ -26,8 +26,9 @@
+   (eval-and-compile
+     (defconst tsc--dyn-version "0.15.1"
+       "Required version of the dynamic module `tsc-dyn'.")
+  -  (require 'tsc-dyn-get)
+  -  (tsc-dyn-get-ensure tsc--dyn-version))
+  +  ;; (require 'tsc-dyn-get)
+  +  ;; (tsc-dyn-get-ensure tsc--dyn-version)
+  +  )
+
+   (require 'tsc-dyn)
+#+end_src
+
+Finally, I modify the build script:
+
+#+begin_src nix :noweb-ref tree-sitter-component
+  tsc = emacsPkg.pkgs.trivialBuild {
+    pname = "tsc";
+    version = "0.15.1";
+    src = tsc-module;
+    patches = [ ./tree-sitter-patches/tsc-do-not-download.patch ];
+    installPhase = ''
+      runHook preInstall
+
+      LISPDIR=$out/share/emacs/site-lisp
+      install -d $LISPDIR
+      cp *.el *.elc *.so *.dylib *.dll $LISPDIR
+
+      runHook postInstall
+    '';
+  };
+#+end_src
+
+Install ~tree-sitter~ from source.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  emacs-tree-sitter = {
+    url = "github:ubolonton/emacs-tree-sitter";
+    flake = false;
+  };
+#+end_src
+
+Replace the builtin ~tsc.el~ dependency with the modified version.
+
+#+begin_src diff :tangle ./emacs.d/tree-sitter-patches/tree-sitter-remove-buildin-tsc-dependency.patch :mkdirp yes
+  diff --git a/lisp/tree-sitter.el b/lisp/tree-sitter.el
+  index a854bda..4787b99 100644
+  --- a/lisp/tree-sitter.el
+  +++ b/lisp/tree-sitter.el
+  @@ -6,7 +6,7 @@
+   ;; Keywords: languages tools parsers tree-sitter
+   ;; Homepage: https://github.com/ubolonton/emacs-tree-sitter
+   ;; Version: 0.15.1
+  -;; Package-Requires: ((emacs "25.1") (tsc "0.15.1"))
+  +;; Package-Requires: ((emacs "25.1"))
+   ;; SPDX-License-Identifier: MIT
+
+   ;;; Commentary:
+#+end_src
+
+Apply this patch when building ~tree-sitter~ and make sure ~tsc.el~ is in its build environment.
+
+#+begin_src nix :noweb-ref tree-sitter-component
+  tree-sitter = emacsPkg.pkgs.trivialBuild {
+    pname = "tree-sitter";
+    version = "9999";
+    src = emacs-tree-sitter;
+    packageRequires = [ tsc ];
+    patches = [ ./tree-sitter-patches/tree-sitter-remove-buildin-tsc-dependency.patch ];
+    buildPhase = ''
+      runHook preBuild
+
+      cp lisp/*.el ./
+      emacs -L . --batch -f batch-byte-compile *.el
+
+      runHook postBuild
+    '';
+  };
+#+end_src
+
+Finally, install ~tree-sitter-langs~ from source.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  emacs-tree-sitter-langs = {
+    url = "github:ubolonton/tree-sitter-langs";
+    flake = false;
+  };
+#+end_src
+
+Two changes must be made. First, remove the fetching code from installation script, and add back ~tsc~ and ~tree-sitter~ dependencies.
+
+#+begin_src diff :tangle ./emacs.d/tree-sitter-patches/tree-sitter-langs-do-not-require-bundled-grammars.patch :mkdirp yes
+  diff --git a/tree-sitter-langs.el b/tree-sitter-langs.el
+  index 2d4468c..7baf2c2 100644
+  --- a/tree-sitter-langs.el
+  +++ b/tree-sitter-langs.el
+  @@ -53,11 +53,6 @@
+     "Grammar bundle for `tree-sitter'."
+     :group 'tree-sitter)
+
+  -(defvar tree-sitter-langs--testing)
+  -(eval-and-compile
+  -  (unless (bound-and-true-p tree-sitter-langs--testing)
+  -    (tree-sitter-langs-install-grammars :skip-if-installed)))
+  -
+   (defun tree-sitter-langs-ensure (lang-symbol)
+     "Return the language object identified by LANG-SYMBOL.
+   If it cannot be loaded, this function tries to compile the grammar.
+#+end_src
+
+#+begin_src nix :noweb-ref tree-sitter-component
+  tree-sitter-langs = emacsPkg.pkgs.trivialBuild {
+    pname = "tree-sitter-langs";
+    version = "9999";
+    src = emacs-tree-sitter-langs;
+    packageRequires = [ tree-sitter ];
+    patches = [ ./tree-sitter-patches/tree-sitter-langs-do-not-require-bundled-grammars.patch ];
+    installPhase = ''
+      runHook preInstall
+
+      LISPDIR=$out/share/emacs/site-lisp
+      install -d $LISPDIR
+      cp *.el *.elc $LISPDIR
+      cp -r queries $LISPDIR
+
+      runHook postInstall
+    '';
+  };
+#+end_src
+
+Since this custom version of ~tree-sitter-langs~ does not download bundled grammars, I have to build grammars separately.
+
+#+begin_src nix :noweb-ref tree-sitter-component :noweb yes
+  tree-sitter-grammar = pkgs.stdenv.mkDerivation {
+    name = "tree-sitter-grammars";
+    srcs = [
+      <<tree-sitter-grammar>>
+    ];
+    buildInputs = [ pkgs.nodejs pkgs.tree-sitter ];
+    unpackPhase = ''
+      for i in $srcs; do
+          cp -r $i .
+      done
+      sourceRoot=.
+      chmod -R u+w -- "$sourceRoot"
+    '';
+    buildPhase = ''
+      mkdir -p $out/bin
+      export TREE_SITTER_DIR=$out
+      for d in *; do
+          if [ -d "$d" ]; then
+              cd "$d"
+              tree-sitter generate
+              tree-sitter test
+              cd ..
+          fi
+      done
+    '';
+    installPhase = ''
+      true
+    '';
+  };
+#+end_src
+
+Combine ~tree-sitter-langs~ and the grammars built above. Note that instead of symlinking the ~.so~ libraries to ~tree-sitter-langs~, I hard-code the ~tree-sitter-langs-grammar-dir~ variable to ~tree-sitter-grammar~ as suggested [[https://github.com/NixOS/nixpkgs/issues/108089][here]]. The reason for this hack is that ~tree-sitter~ seems unable to follow symlink when searching for grammar libraries, which leads to an ~Module is not GPL compatible~ error as mentioned in [[https://github.com/ubolonton/emacs-tree-sitter/issues/100][this issue]].
+
+I also put in a ~tree-sitter-package-extra~ field in case I need any other tree-sitter-related packages.
+
+#+begin_src nix :noweb-ref tree-sitter-final-package :noweb yes
+  pkgs.symlinkJoin {
+    name = "tree-sitter-langs-with-grammars";
+    paths = [
+      (tree-sitter-langs.overrideAttrs (oldAttrs: {
+        postPatch = oldAttrs.postPatch or "" + ''
+          substituteInPlace ./tree-sitter-langs-build.el \
+          --replace "tree-sitter-langs-grammar-dir tree-sitter-langs--dir"  "tree-sitter-langs-grammar-dir \"${tree-sitter-grammar}\""
+        '';
+      }))
+      tree-sitter-grammar
+      <<tree-sitter-package-extra>>
+    ];
+  }
+#+end_src
+
+Finally, load ~tree-sitter~ and ~tree-sitter-langs~ in ~emacs~:
 
 #+begin_src emacs-lisp :noweb yes
   (use-package tree-sitter
@@ -3356,12 +3564,13 @@ On its own, ~tree-sitter-mode~ does not provide any direct benefits since all it
   };
 #+end_src
 
-#+begin_src nix :noweb-ref emacs-packages
+#+begin_src nix :noweb-ref tree-sitter-package-extra
   (emacsPkg.pkgs.trivialBuild {
-    pname   = "tree-sitter-fold";
-    version = "9999";
-    src = tree-sitter-fold;
-  })
+        pname   = "tree-sitter-fold";
+        version = "9999";
+        src = tree-sitter-fold;
+        packageRequires = [ tree-sitter ];
+      })
 #+end_src
 
 #+begin_src emacs-lisp
@@ -3369,41 +3578,9 @@ On its own, ~tree-sitter-mode~ does not provide any direct benefits since all it
 #+end_src
 
 I enable ~tree-sitter-fold-mode~ whenever ~tree-sitter-mode~ is enabled.
+
 #+begin_src emacs-lisp :tangle no :noweb-ref tree-sitter-hook
   (tree-sitter-mode . tree-sitter-fold-mode)
-#+end_src
-
-To compile tree-sitter grammars for different languages, I need to install the tree-sitter command-line utility. The tree-sitter repository provides pre-built binary of the command-line utility. However, before [[https://github.com/NixOS/nix/pull/4153][this pull request]] gets merged, ~flake~ do not support using plain binary files as inputs. As a workaround, I have to manually specific their checksums when building them:
-
-#+begin_src nix :tangle ./modules/tree-sitter.nix :mkdirp yes
-  inputs: with inputs; { pkgs, ... }:
-  let
-    tree-sitter = pkgs.stdenv.mkDerivation {
-      pname = "tree-sitter";
-      version = "0.19.4";
-      src = builtins.fetchurl {
-        url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.19.4/tree-sitter-linux-x64.gz";
-        sha256 = "0z4l8sl89z1n4p0xjd89sd7lvs957hfzhsyirrkidx5ycr7dfj30";
-      };
-      unpackPhase = ''
-        cp $src tree-sitter.gz
-        gzip -df tree-sitter.gz
-      '';
-      installPhase = ''
-        mkdir -p $out/bin
-        install -t $out/bin *
-      '';
-    };
-  in
-  {
-    home.packages = [ tree-sitter pkgs.nodejs ];
-  }
-#+end_src
-
-Make ~tree-sitter CLI~ available in both Linux and MacOS.
-
-#+begin_src nix :noweb-ref common-modules
-  self.homeModules."tree-sitter.nix"
 #+end_src
 
 *** REPL
@@ -5559,7 +5736,7 @@ I include my email accounts here. I have two accounts. A personal one ([[junyi.y
   accounts.email = let
     mailDir = "${homeDirectory}/.mail";
     mbsyncExtraConf = {
-      Create = "Slave";
+      Create = "Near";
       Expunge = "Both";
       SyncState = "*";
       Sync = "all";
@@ -5649,28 +5826,28 @@ I then export my account information to ~emacs~.
             extraConfig = mbsyncExtraConf;
           };
           "sent" = {
-            masterPattern = "[Gmail]/Sent Mail";
-            slavePattern = "sent";
+            farPattern = "[Gmail]/Sent Mail";
+            nearPattern = "sent";
             extraConfig = mbsyncExtraConf;
           };
           "archive" = {
-            masterPattern = "[Gmail]/All Mail";
-            slavePattern = "archive";
+            farPattern = "[Gmail]/All Mail";
+            nearPattern = "archive";
             extraConfig = mbsyncExtraConf;
           };
           "drafts" = {
-            masterPattern = "[Gmail]/Drafts";
-            slavePattern = "drafts";
+            farPattern = "[Gmail]/Drafts";
+            nearPattern = "drafts";
             extraConfig = mbsyncExtraConf;
           };
           "trash" = {
-            masterPattern = "[Gmail]/Bin";
-            slavePattern = "trash";
+            farPattern = "[Gmail]/Bin";
+            nearPattern = "trash";
             extraConfig = mbsyncExtraConf;
           };
           "spam" = {
-            masterPattern = "[Gmail]/Spam";
-            slavePattern = "spam";
+            farPattern = "[Gmail]/Spam";
+            nearPattern = "spam";
             extraConfig = mbsyncExtraConf;
           };
         };
@@ -5715,35 +5892,35 @@ I then export my account information to ~emacs~.
           "inbox" = {
             patterns = [ "INBOX" ];
             extraConfig = {
-              Create = "Slave";
+              Create = "Near";
               Expunge = "Both";
               SyncState = "*";
               Sync = "all";
             };
           };
           "sent" = {
-            masterPattern = "[Gmail]/Sent Mail";
-            slavePattern = "sent";
+            farPattern = "[Gmail]/Sent Mail";
+            nearPattern = "sent";
             extraConfig = mbsyncExtraConf;
           };
           "archive" = {
-            masterPattern = "[Gmail]/All Mail";
-            slavePattern = "archive";
+            farPattern = "[Gmail]/All Mail";
+            nearPattern = "archive";
             extraConfig = mbsyncExtraConf;
           };
           "drafts" = {
-            masterPattern = "[Gmail]/Drafts";
-            slavePattern = "drafts";
+            farPattern = "[Gmail]/Drafts";
+            nearPattern = "drafts";
             extraConfig = mbsyncExtraConf;
           };
           "trash" = {
-            masterPattern = "[Gmail]/Trash";
-            slavePattern = "trash";
+            farPattern = "[Gmail]/Trash";
+            nearPattern = "trash";
             extraConfig = mbsyncExtraConf;
           };
           "spam" = {
-            masterPattern = "[Gmail]/Spam";
-            slavePattern = "spam";
+            farPattern = "[Gmail]/Spam";
+            nearPattern = "spam";
             extraConfig = mbsyncExtraConf;
           };
         };
@@ -7187,7 +7364,6 @@ Enable LSP, ~tree-sitter~ mode, and the local tab width when loading python file
 #+begin_src emacs-lisp :tangle no :noweb-ref python-hook
   (python-mode . gatsby:python--set-indent-width)
   (python-mode . eglot-ensure)
-  ;; (python-mode . tree-sitter-mode)
 #+end_src
 
 #+begin_src emacs-lisp :tangle no :noweb-ref python-init
@@ -7257,6 +7433,27 @@ Now define keybindings.
    :keymaps 'python-mode-map
    [remap evil-shift-left] #'python-indent-shift-left
    [remap evil-shift-right] #'python-indent-shift-right)
+#+end_src
+
+*** Python:tree-sitter
+
+Register and install python grammar for the tree-sitter:
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  tree-sitter-python-grammar = {
+    url = "github:tree-sitter/tree-sitter-python";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref tree-sitter-grammar
+  tree-sitter-python-grammar
+#+end_src
+
+Enable tree-sitter when loading python file.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref python-hook
+  (python-mode . tree-sitter-mode)
 #+end_src
 
 ** STATA
@@ -7387,24 +7584,25 @@ Make sure to run ~eglot~ along with R to enable the language server when editing
   (ess-r-mode . eglot-ensure)
 #+end_src
 
-*** COMMENT R:tree-sitter
+*** R:tree-sitter
 
-~emacs-tree-sitter~ does not include ~R~ grammar. I need to compile ~R~ grammar from source. First check whether ~R~ grammar is downloaded and built. If not, pull ~tree-sitter-R~ from github and compile it.
+Compile ~R~ grammar from source.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  tree-sitter-r-grammar = {
+    url = "github:r-lib/tree-sitter-r";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref tree-sitter-grammar
+  tree-sitter-r-grammar
+#+end_src
+
+Register it with ~tree-sitter-langs~.
 
 #+begin_src emacs-lisp
-  (defun gatsby:tree-sitter--install-and-load-r ()
-    ;; pull tree-sitter R source code
-    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/r"))
-      (let ((default-directory tree-sitter-langs-git-dir))
-        (tree-sitter-langs--call
-         "git" "submodule" "add" "https://github.com/r-lib/tree-sitter-r" "repos/r")))
-
-    ;; compile using tree-sitter-cli tool
-    (unless (--filter (string= (f-base it) "r") (f-entries (tree-sitter-langs--bin-dir)))
-      ;; do not open a new buffer to display compile information
-      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
-        (tree-sitter-langs-compile 'r)))
-
+  (defun gatsby:tree-sitter-load-r ()
     ;; register ess-r-mode with r grammar
     (unless (assq 'ess-r-mode tree-sitter-major-mode-language-alist)
       (add-to-list 'tree-sitter-major-mode-language-alist '(ess-r-mode . r)))
@@ -7417,7 +7615,7 @@ Enable ~tree-sitter-mode~ when loading ~R~ files.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref r-hook
   (ess-r-mode . tree-sitter-mode)
-  (ess-r-mode . gatsby:tree-sitter--install-and-load-r)
+  (ess-r-mode . gatsby:tree-sitter-load-r)
 #+end_src
 
 ** Nix
@@ -7544,23 +7742,26 @@ to format my nix code before save.
   (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
 #+end_src
 
-*** COMMENT Nix:tree-sitter
+*** Nix:tree-sitter
 
-Nix is not included in the grammar bundle provided by ~emacs-tree-sitter~. I need to download and compile it from source.
+Download and compile nix grammar from source.
+
+#+begin_src nix :noweb-ref emacs-flake-input
+  tree-sitter-nix-grammar = {
+    url = "github:cstrahan/tree-sitter-nix";
+    flake = false;
+  };
+#+end_src
+
+#+begin_src nix :noweb-ref tree-sitter-grammar
+  tree-sitter-nix-grammar
+#+end_src
+
+Register the nix grammar with ~tree-sitter~ in ~emacs~.
 
 #+begin_src emacs-lisp
-  (defun gatsby:tree-sitter-install-and-load-nix ()
-    "Download, compile, and register nix grammar for tree-sitter if haven't done so."
-
-    (unless (f-exists-p (concat tree-sitter-langs-git-dir "/repos/nix"))
-      (let ((default-directory tree-sitter-langs-git-dir))
-        (tree-sitter-langs--call
-         "git" "submodule" "add" "https://github.com/cstrahan/tree-sitter-nix" "repos/nix")))
-
-    (unless (--filter (string= (f-base it) "nix") (f-entries (tree-sitter-langs--bin-dir)))
-      ;; do not open a new buffer to display compile information
-      (cl-letf (((symbol-function 'tree-sitter-langs--buffer) (lambda (&rest _) nil)))
-        (tree-sitter-langs-compile 'nix)))
+  (defun gatsby:tree-sitter-load-nix ()
+    "Register nix grammar for tree-sitter if haven't done so."
 
     (unless (assq 'nix-mode tree-sitter-major-mode-language-alist)
       (add-to-list 'tree-sitter-major-mode-language-alist '(nix-mode . nix)))
@@ -7572,7 +7773,7 @@ Nix is not included in the grammar bundle provided by ~emacs-tree-sitter~. I nee
   ;; the order is important: `tree-sitter-mode' needs to be after
   ;; `install-and-load-nix'
   (nix-mode . tree-sitter-mode)
-  (nix-mode . gatsby:tree-sitter-install-and-load-nix)
+  (nix-mode . gatsby:tree-sitter-load-nix)
 #+end_src
 
 *** Nix:snippets

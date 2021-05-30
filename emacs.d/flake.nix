@@ -22,12 +22,40 @@
       url = "github:junyi-hou/flymake-childframe";
       flake = false;
     };
+    tsc-module = {
+      url = "https://github.com/ubolonton/emacs-tree-sitter/releases/download/0.15.1/tsc-0.15.1.tar.gz";
+      flake = false;
+    };
+    emacs-tree-sitter = {
+      url = "github:ubolonton/emacs-tree-sitter";
+      flake = false;
+    };
+    emacs-tree-sitter-langs = {
+      url = "github:ubolonton/tree-sitter-langs";
+      flake = false;
+    };
+    tree-sitter-fold = {
+      url = "github:junyi-hou/tree-sitter-fold";
+      flake = false;
+    };
     emacs-calfw = {
       url = "github:tumashu/emacs-calfw";
       flake = false;
     };
+    tree-sitter-python-grammar = {
+      url = "github:tree-sitter/tree-sitter-python";
+      flake = false;
+    };
     stata-mode = {
       url = "github:junyi-hou/stata-mode";
+      flake = false;
+    };
+    tree-sitter-r-grammar = {
+      url = "github:r-lib/tree-sitter-r";
+      flake = false;
+    };
+    tree-sitter-nix-grammar = {
+      url = "github:cstrahan/tree-sitter-nix";
       flake = false;
     };
   };
@@ -110,6 +138,106 @@
           epkgs.company-prescient
           epkgs.yasnippet
           epkgs.eglot
+          (
+            let
+              tsc = emacsPkg.pkgs.trivialBuild {
+                pname = "tsc";
+                version = "0.15.1";
+                src = tsc-module;
+                patches = [ ./tree-sitter-patches/tsc-do-not-download.patch ];
+                installPhase = ''
+                  runHook preInstall
+              
+                  LISPDIR=$out/share/emacs/site-lisp
+                  install -d $LISPDIR
+                  cp *.el *.elc *.so *.dylib *.dll $LISPDIR
+              
+                  runHook postInstall
+                '';
+              };
+              tree-sitter = emacsPkg.pkgs.trivialBuild {
+                pname = "tree-sitter";
+                version = "9999";
+                src = emacs-tree-sitter;
+                packageRequires = [ tsc ];
+                patches = [ ./tree-sitter-patches/tree-sitter-remove-buildin-tsc-dependency.patch ];
+                buildPhase = ''
+                  runHook preBuild
+              
+                  cp lisp/*.el ./
+                  emacs -L . --batch -f batch-byte-compile *.el
+              
+                  runHook postBuild
+                '';
+              };
+              tree-sitter-langs = emacsPkg.pkgs.trivialBuild {
+                pname = "tree-sitter-langs";
+                version = "9999";
+                src = emacs-tree-sitter-langs;
+                packageRequires = [ tree-sitter ];
+                patches = [ ./tree-sitter-patches/tree-sitter-langs-do-not-require-bundled-grammars.patch ];
+                installPhase = ''
+                  runHook preInstall
+              
+                  LISPDIR=$out/share/emacs/site-lisp
+                  install -d $LISPDIR
+                  cp *.el *.elc $LISPDIR
+                  cp -r queries $LISPDIR
+              
+                  runHook postInstall
+                '';
+              };
+              tree-sitter-grammar = pkgs.stdenv.mkDerivation {
+                name = "tree-sitter-grammars";
+                srcs = [
+                  tree-sitter-python-grammar
+                  tree-sitter-r-grammar
+                  tree-sitter-nix-grammar
+                ];
+                buildInputs = [ pkgs.nodejs pkgs.tree-sitter ];
+                unpackPhase = ''
+                  for i in $srcs; do
+                      cp -r $i .
+                  done
+                  sourceRoot=.
+                  chmod -R u+w -- "$sourceRoot"
+                '';
+                buildPhase = ''
+                  mkdir -p $out/bin
+                  export TREE_SITTER_DIR=$out
+                  for d in *; do
+                      if [ -d "$d" ]; then
+                          cd "$d"
+                          tree-sitter generate
+                          tree-sitter test
+                          cd ..
+                      fi
+                  done
+                '';
+                installPhase = ''
+                  true
+                '';
+              };
+            in
+              pkgs.symlinkJoin {
+                name = "tree-sitter-langs-with-grammars";
+                paths = [
+                  (tree-sitter-langs.overrideAttrs (oldAttrs: {
+                    postPatch = oldAttrs.postPatch or "" + ''
+                      substituteInPlace ./tree-sitter-langs-build.el \
+                      --replace "tree-sitter-langs-grammar-dir tree-sitter-langs--dir"  "tree-sitter-langs-grammar-dir \"${tree-sitter-grammar}\""
+                    '';
+                  }))
+                  tree-sitter-grammar
+                  (emacsPkg.pkgs.trivialBuild {
+                        pname   = "tree-sitter-fold";
+                        version = "9999";
+                        src = tree-sitter-fold;
+                        packageRequires = [ tree-sitter ];
+                      })
+                ];
+              }
+          )
           epkgs.jupyter
           epkgs.ein
           epkgs.flyspell-correct
