@@ -195,7 +195,7 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
     accounts.email = let
       mailDir = "${homeDirectory}/.mail";
       mbsyncExtraConf = {
-        Create = "Slave";
+        Create = "Near";
         Expunge = "Both";
         SyncState = "*";
         Sync = "all";
@@ -228,28 +228,28 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
                   extraConfig = mbsyncExtraConf;
                 };
                 "sent" = {
-                  masterPattern = "[Gmail]/Sent Mail";
-                  slavePattern = "sent";
+                  farPattern = "[Gmail]/Sent Mail";
+                  nearPattern = "sent";
                   extraConfig = mbsyncExtraConf;
                 };
                 "archive" = {
-                  masterPattern = "[Gmail]/All Mail";
-                  slavePattern = "archive";
+                  farPattern = "[Gmail]/All Mail";
+                  nearPattern = "archive";
                   extraConfig = mbsyncExtraConf;
                 };
                 "drafts" = {
-                  masterPattern = "[Gmail]/Drafts";
-                  slavePattern = "drafts";
+                  farPattern = "[Gmail]/Drafts";
+                  nearPattern = "drafts";
                   extraConfig = mbsyncExtraConf;
                 };
                 "trash" = {
-                  masterPattern = "[Gmail]/Bin";
-                  slavePattern = "trash";
+                  farPattern = "[Gmail]/Bin";
+                  nearPattern = "trash";
                   extraConfig = mbsyncExtraConf;
                 };
                 "spam" = {
-                  masterPattern = "[Gmail]/Spam";
-                  slavePattern = "spam";
+                  farPattern = "[Gmail]/Spam";
+                  nearPattern = "spam";
                   extraConfig = mbsyncExtraConf;
                 };
               };
@@ -289,35 +289,35 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
                 "inbox" = {
                   patterns = [ "INBOX" ];
                   extraConfig = {
-                    Create = "Slave";
+                    Create = "Near";
                     Expunge = "Both";
                     SyncState = "*";
                     Sync = "all";
                   };
                 };
                 "sent" = {
-                  masterPattern = "[Gmail]/Sent Mail";
-                  slavePattern = "sent";
+                  farPattern = "[Gmail]/Sent Mail";
+                  nearPattern = "sent";
                   extraConfig = mbsyncExtraConf;
                 };
                 "archive" = {
-                  masterPattern = "[Gmail]/All Mail";
-                  slavePattern = "archive";
+                  farPattern = "[Gmail]/All Mail";
+                  nearPattern = "archive";
                   extraConfig = mbsyncExtraConf;
                 };
                 "drafts" = {
-                  masterPattern = "[Gmail]/Drafts";
-                  slavePattern = "drafts";
+                  farPattern = "[Gmail]/Drafts";
+                  nearPattern = "drafts";
                   extraConfig = mbsyncExtraConf;
                 };
                 "trash" = {
-                  masterPattern = "[Gmail]/Trash";
-                  slavePattern = "trash";
+                  farPattern = "[Gmail]/Trash";
+                  nearPattern = "trash";
                   extraConfig = mbsyncExtraConf;
                 };
                 "spam" = {
-                  masterPattern = "[Gmail]/Spam";
-                  slavePattern = "spam";
+                  farPattern = "[Gmail]/Spam";
+                  nearPattern = "spam";
                   extraConfig = mbsyncExtraConf;
                 };
               };
