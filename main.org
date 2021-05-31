@@ -57,6 +57,10 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-05-31 Mon
+
+- fix Darwin compatibility bug
+
 *** 2021-05-28 Fri
 
 - use flake to manage all ~emacs~ packages
