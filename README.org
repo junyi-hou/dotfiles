@@ -15,6 +15,14 @@ Make sure the ~nix~ package manager is available in the current system, experime
   nix-env -iA nixpkgs.nixUnstable
 #+end_src
 
+For MacOS, a new APFS volume may be needed before running the command above. See [[https://duan.ca/2020/12/13/nix-on-macos-11-big-sur/][this article]] for more information. Alternatively, use
+
+#+begin_src shell
+  sh <(curl -L https://nixos.org/nix/install) --daemon --darwin-use-unencrypted-nix-store-volume
+#+end_src
+
+to install ~nix~.
+
 Note that to install ~nix~ in multiuser mode (i.e., daemon mode), ~git~ and ~rsync~ must also be installed.
 
 After installing ~nix-flake~, add the following to ~/etc/nix/nix.conf~. Make sure to replace ~USER-NAME~ with the actual user name used in the system.
