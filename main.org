@@ -108,6 +108,10 @@ GPL
 
 I use ~flake~ to manage my configuration files. In particular, I define a new output schema ~homeModules~ which automatically imports all ~.nix~ file in the ~./modules/~ folder (and in the current git tree). Those modules then can be imported by ~home-manager~.
 
+Modules are divided into 4 categories: ~home-manager-modules~, ~common-services~, ~linux-modules~, and ~darwin-modules~. The first two categories contain modules that should be applied to both Linux and MacOS systems. Whereas ~linux-modules~ are modules meant to be used in only Linux system, and ~darwin-modules~ are modules meant to be used in only MacOS.
+
+The reason why I have a separate category for services that should be applied to both Linux and MacOS is because Linux (in particular ~home-manager~) and MacOS uses different init systems to launch services. So for those services to work on MacOS, I have to define them as ~nix-darwin~ modules rather than ~home-manager~ modules.
+
 #+begin_src nix :tangle flake.nix :noweb yes
   {
     description = "Junyi's configuration file";
@@ -125,13 +129,6 @@ I use ~flake~ to manage my configuration files. In particular, I define a new ou
 
     outputs = { self, ... }@inputs: {
 
-      supportedPlatforms = {
-        "x86_64-linux" = true;
-        "x86_64-darwin" = true;
-      };
-
-      defaultPackage = builtins.mapAttrs (system: _: self.homeConfigurations."${system}".activationPackage) self.supportedPlatforms;
-
       realUser = "Junyi Hou";
 
       homeModules = let
@@ -142,8 +139,13 @@ I use ~flake~ to manage my configuration files. In particular, I define a new ou
       in
         builtins.mapAttrs importFn (filterAttrs filterFn (builtins.readDir moduleDir));
 
-      homeConfigurations = with inputs; {
-        "x86_64-linux" = home-manager.lib.homeManagerConfiguration rec {
+      # ==========================
+      # x86_64-linux configuration
+      # ==========================
+
+      defaultPackage."x86_64-linux" = self.homeConfigurations."x86_64-linux".activationPackage;
+      homeConfigurations."x86_64-linux" = with inputs; home-manager.lib.homeManagerConfiguration rec
+        {
           system = "x86_64-linux";
           homeDirectory = "/home/junyi";
           username = "junyi";
@@ -151,23 +153,35 @@ I use ~flake~ to manage my configuration files. In particular, I define a new ou
             programs.home-manager.enable = true;
             imports = [
               <<linux-modules>>
-              <<common-modules>>
+              <<home-manager-modules>>
+              <<services-modules>>
             ];
           };
         };
 
-        "x86_64-darwin" = home-manager.lib.homeManagerConfiguration rec {
-          system = "x86_64-darwin";
-          homeDirectory = "/Users/lactaid";
-          username = "lactaid";
-          configuration = { pkgs, lib, config, ... }: {
-            programs.home-manager.enable = true;
-            imports = [
-              <<darwin-modules>>
-              <<common-modules>>
-            ];
-          };
-        };
+      # ===========================
+      # x86_64-darwin configuration
+      # ===========================
+
+      defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin"."junyi.hou".system;
+      homeConfigurations."x86_64-darwin" = with inputs; nix-darwin.lib.darwinSystem rec {
+        system = "x86_64-darwin";
+        nix.package = pkgs.nixUnstable;
+        services.nix-daemon.enable = true;
+
+        modules = [
+          <<services-modules>>
+          <<darwin-modules>>
+          home-manager.darwinModules.home-manager {
+            home-manager.useUserPackages = true;
+            home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
+              programs.home-manager.enable = true;
+              imports = [
+                <<home-manager-modules>>
+              ];
+            };
+          }
+        ];
       };
     };
   }
@@ -210,15 +224,27 @@ I will also need to put ~/usr/bin~ back to my ~$PATH~ in order to use system pac
 
 *** MacOS
 
-On MacOS system, display, sound and network modules are all builtin, so I don't need to worry about it.
+MacOS uses ~launchd~ as its init system while ~home-manager~ only supports ~systemd~ init system. To enable services like ~emacs daemon~, ~mbsync~, and ~gpg-agent~, I include ~nix-darwin~, which is a package designed to tweak MacOS system settings.
+
+#+begin_src nix :noweb-ref flake-input
+  nix-darwin = {
+    url = "github:lnl7/nix-darwin";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+#+end_src
+
+Below is a list of services that needs extra configuration on MacOS:
+- [[Package Management][~emacs~ daemon]]
+- [[epa][gpg-agent]]
+- [[Email Client][periodic mbsync update]]
 
 * ~emacs~ Configuration
 
 This section contains the code and explanation of my personal configuration for ~emacs~ editor.
 
-** Package Management
+** ~emacs~ Package Management
 
-I use a subflake to manage ~emacs~ and its packages. This flake defines a  function called ~emacsModule~ which takes an ~emacs~ derivation as the only argument, and returns a ~home-manager~ module with all ~emacs~-related configuration.
+I use a subflake to manage ~emacs~ and its packages. This flake defines 2 functions ~emacsPackage~ and ~emacsConfig~. ~emacsConfig~ takes no argument and returns a ~home-manager~ module with all ~emacs~-related configuration, while ~emacsPackage~ takes an ~emacs~ derivation as the only argument and returns a ~home-manager~ module
 
 The advantage of using a flake to manage ~emacs~ packages over the more conventional methods (e.g., via ~package.el~ or ~straight.el~) is twofold. First, it provides a clean and intuitive way of pinning package versions. This allows reproducible development environment over several machines. Second, subflake allows me to integrate the ~emacs~ package management workflow with my general configuration management process.
 
@@ -228,7 +254,7 @@ To circumvent this issue, I define packages that needs separate updates using ~e
 
 The second disadvantage of the current approach is its inflexibility. Since all package management functionalities are now handled by nix flake, I won't be able to run a simple ~(use-package foo)~ to quickly install ~foo~ package to try out. Instead, I need to modify ~/emacs.d/flake.nix~ to include the new package, run ~nix build .~ and restart ~emacs~ to enable the new package.
 
-Below includes the structure of the subflake for all ~emacs~-related configuration.
+Below includes the structure of the subflake for all ~emacs~-related configuration. Since ~home-manager~ and ~nix-darwin~ have different API for installing packages (~home.packages~ vs ~environment.systemPackages~), I use a hack to include ~emacs~ output directly in the ~$PATH~ variable in order to make ~emacs~ available.
 
 #+begin_src nix :tangle ./emacs.d/flake.nix :noweb yes
   {
@@ -239,8 +265,7 @@ Below includes the structure of the subflake for all ~emacs~-related configurati
     };
 
     outputs = { self, ... }@inputs: with inputs; {
-      emacsModule = emacsPkg: { pkgs, lib, config, ... }: {
-
+      emacsConfig = { pkgs, lib, config, ... }: {
         home = {
           file = {
             ".emacs.d/etc" = {
@@ -254,20 +279,46 @@ Below includes the structure of the subflake for all ~emacs~-related configurati
             VISUAL = "emacsclient -c";
           };
         };
+      };
 
-        programs.emacs = {
-          enable = true;
-          package = emacsPkg.pkgs.withPackages (epkgs: [
+      darwinCompatiblePatch = { pkgs, lib, config, ... }: with lib;
+        let
+          cfg = config.programs.emacs;
+        in {
+          options.programs.emacs = {
+            enable = mkEnableOption "Emacs";
+
+            package = mkOption {
+              type = types.package;
+              default = pkgs.emacs;
+              defaultText = literalExample "pkgs.emacs";
+              example = literalExample "pkgs.emacs25-nox";
+              description = "The Emacs package to use.";
+            };
+          };
+          config = mkIf cfg.enable {
+            environment.systemPackages = [ cfg.package ];
+          };
+        };
+
+      emacsPackage = emacsPkg: { pkgs, lib, config, ... }:
+        let
+          emacs = emacsPkg.pkgs.withPackages (epkgs: [
             epkgs.use-package
             <<emacs-packages>>
           ]);
-        };
+        in
+          {
+            programs.emacs = {
+              enable = true;
+              package = emacs;
+            };
 
-        services.emacs = {
-          enable = true;
-          client.enable = true;
-        };
-      };
+            services.emacs = {
+              enable = true;
+              package = emacs;
+            };
+          };
     };
   }
 #+end_src
@@ -275,8 +326,8 @@ Below includes the structure of the subflake for all ~emacs~-related configurati
 Import this subflake alongside with ~emacs-overlay~ from ~nix-community~ to obtain derivations for the latest git version of ~emacs~.
 
 #+begin_src nix :noweb-ref flake-input
-  emacs-module.url = "path:./emacs.d";
   emacs-overlay.url = "github:nix-community/emacs-overlay";
+  emacs-module.url = "path:./emacs.d";
 #+end_src
 
 Changes made in the ~emacs-module~ subflake will not automatically made available to the main flake due to the lock file. As a result, I specifically ask the main flake to update subflake before building.
@@ -285,18 +336,16 @@ Changes made in the ~emacs-module~ subflake will not automatically made availabl
   nix flake lock --update-input emacs-module
 #+end_src
 
-To install ~emacs~ in Linux, call ~emacsModule~ function with the ~emacsGcc~ derivation from ~emacs-overlay~.
+Enable ~emacs~ in both Linux and MacOS.
 
 #+begin_src nix :noweb-ref linux-modules
   (
     let
       pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
     in
-      (emacs-module.emacsModule pkgs.emacsGcc)
+      (emacs-module.emacsPackage pkgs.emacsGcc)
   )
 #+end_src
-
-For MacOS, I need to wrap library around the default derivation and pass ~--with-ns~ flag when building ~emacs~ in order to use the ~cocoa~ API. I follow this [[https://github.com/twlz0ne/nix-gccemacs-darwin][repo]] for this task.
 
 #+begin_src nix :noweb-ref darwin-modules
   (
@@ -309,8 +358,7 @@ For MacOS, I need to wrap library around the default derivation and pass ~--with
       ];
       emacsNsGcc = pkgs.emacsGcc.overrideAttr (
         old: {
-          configureFlags = (lib.remove "--with-xft" old.configureFlags)
-            ++ [ "--with-ns" ];
+          configureFlags = (lib.remove "--with-xft" old.configureFlags) ++ [ "--with-ns" ];
           postInstall = old.postInstall or "" + ''
             ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
             ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
@@ -330,16 +378,27 @@ For MacOS, I need to wrap library around the default derivation and pass ~--with
         buildInputs = [ pkgs.makeWrapper ];
         postBuild = ''
           wrapProgram $out/bin/emacs \
-            --set LIBRARY_PATH ${libPath}
+          --set LIBRARY_PATH ${libPath}
         '';
         meta.platforms = pkgs.lib.platforms.darwin;
         passthru.nativeComp = true;
         src = emacsNsGcc.src;
       };
-    in
-      (emacs-module.emacsModule emacsDarwinGcc)
+    in {
+      imports = [
+        emacs-module.darwinCompatiblePatch
+        (emacs-module.emacsPackage emacsDarwinGcc)
+      ];
+    }
   )
 #+end_src
+
+Finally, include the configuration files
+
+#+begin_src nix :noweb-ref home-manager-modules
+  emacs-module.emacsConfig
+#+end_src
+
 
 ** Lexical Binding
 
@@ -961,7 +1020,7 @@ With the help of this custom module, I can include fonts (and their configuratio
 
 Since ~fontconfig~ is available in both Linux and MacOS, make font configuration universally available.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."font.nix"
 #+end_src
 
@@ -2659,7 +2718,7 @@ Finally, define the entry point for ~vterm~.
 
 Enable ~vterm~ in MacOS and Linux.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."vterm.nix"
 #+end_src
 
@@ -4172,7 +4231,7 @@ Finally, add key bindings for quick typo correction and grammar checking
 
 Make grammar modules available everywhere.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."grammar.nix"
 #+end_src
 
@@ -4193,7 +4252,7 @@ I use ~home-manager~ to configure my [[accounts][account information]] (email ad
 
 ~epa~ is the builtin ~emacs~ interface with the open source authentication and encryption tool ~GPG~. With it, I can use ~emacs~'s minibuffer to read and cache passwords.
 
-First, I include ~GPG~ in my ~home-manager~ system.
+First, I include ~GPG~ in my system.
 
 #+begin_src nix :tangle ./modules/gpg.nix :mkdirp yes
   inputs: with inputs; { lib, ... }: {
@@ -4230,6 +4289,14 @@ First, I include ~GPG~ in my ~home-manager~ system.
   }
 #+end_src
 
+Some extra efforts are needed in order to enable ~gpg-agent~ service on MacOS.
+
+#+begin_src nix :noweb-ref darwin-modules
+  {
+    programs.gnupg.agent.enable = true;
+  }
+#+end_src
+
 Second, I enable ~epa~ package in ~emacs~.
 
 #+begin_src emacs-lisp
@@ -4244,7 +4311,7 @@ Second, I enable ~epa~ package in ~emacs~.
 
 Finally, enable ~gpg~ modules in both Linux and MacOS.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."gpg.nix"
 #+end_src
 
@@ -4312,7 +4379,7 @@ Define the entry points for ~password-store~
 
 Finally, enable ~pass~ modules in both Linux and MacOS.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   (self.homeModules."pass.nix" homeDirectory)
 #+end_src
 
@@ -4352,7 +4419,7 @@ First enable ssh.
   }
 #+end_src
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."ssh.nix"
 #+end_src
 
@@ -4413,7 +4480,7 @@ Register ~git~ with ~home-manager~ first.
 
 Enable it in Linux and MacOS
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."git.nix"
 #+end_src
 
@@ -5186,7 +5253,7 @@ To address this problem, I use ~envrc~, which makes ~process-environment~ a buff
 
 Make sure ~direnv~ is enabled in both Linux and MacOS.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."direnv.nix"
 #+end_src
 
@@ -5551,6 +5618,27 @@ To receive and send emails from the comfort in ~emacs~, I use
          }
    #+end_src
 
+  In addition, include the following configuration for macOS to enable mail fetching service.
+
+  #+begin_src nix :noweb-ref darwin-modules
+    (
+      { pkgs, ... }: let
+        package = pkgs.isync;
+      in {
+        environment.systemPackages = [ package pkgs.notmuch ];
+        launchd.user.agents.mbsync = {
+          path = [ package ];
+          command  = "${package}/bin/mbsync -a && notmuch new";
+          serviceConfig.KeepAlive = false;
+          serviceConfig.RunAtLoad = true;
+          serviceConfig.StartInterval = 300;  # sync every 5 minutes
+          serviceConfig.StandardErrorPath = "/var/log/mbsync.log";
+          serviceConfig.StandardOutPath   = "/var/log/mbsync.log";
+        };
+      }
+    )
+  #+end_src
+
 + ~notmuch~ to index and search emails based on tag and other maildir attributes. It also provides a great ~emacs~ package to interact and manipulate its database.
 
   #+begin_src nix :noweb-ref mail-module-extra
@@ -5696,20 +5784,17 @@ To receive and send emails from the comfort in ~emacs~, I use
             text = ''
               <<OnlyAllowListFilter>>
             '';
+            onChange = ''
+              if [ -d ~/.config/afew/__pycache__ ]; then
+                  $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
+              fi
+            '';
           };
           ".config/afew/allow_list" = {
             text = ''
               <<AllowList>>
             '';
           };
-        };
-
-        home.activation = {
-          removeAfewFilterCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            if [ -d ~/.config/afew/__pycache__ ]; then
-                $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
-            fi
-          '';
         };
       }
     #+end_src
@@ -5724,7 +5809,7 @@ To receive and send emails from the comfort in ~emacs~, I use
 
 Make sure this setting is picked up in both Linux and MacOS systems.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   (self.homeModules."mail.nix" homeDirectory)
 #+end_src
 
@@ -6411,7 +6496,7 @@ Makes sure that the calendar directory (~$HOME/.cal~) exists.
   }
 #+end_src
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."calendar.nix"
 #+end_src
 
@@ -7702,7 +7787,7 @@ Nix community offers a basic LSP server for linting ~.nix~ file. I first registe
 
 ... include it in both Linux and MacOS:
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   (self.homeModules."nix-development.nix" system)
 #+end_src
 
@@ -8249,7 +8334,7 @@ Make ~texlive~ and ~digestif~ available system-wide.
 
 Make sure to load LaTeX module in both Linux and MacOS.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."latex.nix"
 #+end_src
 
@@ -8360,6 +8445,7 @@ Apart from the ability of folding sections, enabling ~outline-minor-mode~ also a
 #+end_src
 
 * Miscellaneous Tools
+
 ** Update Utilities
 
 First the updating script.
@@ -8377,10 +8463,16 @@ First the updating script.
 
   nix build .
 
-  ./result/activate
+  if [ -f "result/activate" ]; then
+      echo "found home-manager activation script, activating..."
+      ./result/activate
+  elif [ -f "result/sw/bin/darwin-rebuild" ]; then
+      echo "found nix-darwin activation script, activating..."
+      ./result/sw/bin/darwin-rebuild switch --flake .
+  fi
 #+end_src
 
-Allow the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.
+Allowing the ~--no-tangle~ optional flag, which skips tangling ~.nix~ and ~.el~ from ~main.org~ and use the configuration as is.
 
 #+begin_src shell :noweb-ref update-user-config-tangle-p
   if [ "$1" == "--no-tangle" ]; then
@@ -8513,7 +8605,7 @@ Here includes a series of small command line utilities.
   }
 #+end_src
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."cli.nix"
 #+end_src
 
@@ -8542,7 +8634,7 @@ I include ~alacritty~ in case ~emacs~ fails.
   }
 #+end_src
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."terminal-emulator.nix"
 #+end_src
 
@@ -8606,7 +8698,7 @@ Then make sure it is installed by the ~home-manager~.
 
 Make the loader available in Linux and MacOS.
 
-#+begin_src nix :noweb-ref common-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."drop-keyboard-loader.nix"
 #+end_src
 

@@ -20,4 +20,10 @@ nix flake lock --update-input emacs-module
 
 nix build .
 
-./result/activate
+if [ -f "result/activate" ]; then
+    echo "found home-manager activation script, activating..."
+    ./result/activate
+elif [ -f "result/sw/bin/darwin-rebuild" ]; then
+    echo "found nix-darwin activation script, activating..."
+    ./result/sw/bin/darwin-rebuild switch --flake .
+fi

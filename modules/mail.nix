@@ -133,6 +133,11 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
                               if list_id not in ALLOW_LIST:
                                   self.remove_tags(message, 'new')
             '';
+            onChange = ''
+              if [ -d ~/.config/afew/__pycache__ ]; then
+                  $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
+              fi
+            '';
           };
           ".config/afew/allow_list" = {
             text = ''
@@ -146,14 +151,6 @@ inputs: with inputs; homeDirectory: { pkgs, lib, config, ... }:
               ]
             '';
           };
-        };
-      
-        home.activation = {
-          removeAfewFilterCache = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            if [ -d ~/.config/afew/__pycache__ ]; then
-                $DRY_RUN_CMD rm -r $VERBOSE_ARG ~/.config/afew/__pycache__
-            fi
-          '';
         };
       }
       {

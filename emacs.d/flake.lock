@@ -32,6 +32,53 @@
         "type": "github"
       }
     },
+    "emacs-overlay": {
+      "locked": {
+        "lastModified": 1622460472,
+        "narHash": "sha256-PRaowZTahyqmW3wbrRp8LiIc7z5qNz2g1QAvlLnGzDU=",
+        "owner": "nix-community",
+        "repo": "emacs-overlay",
+        "rev": "b678b3774a84b5e96554e26dc0aa2bb4461178ee",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "emacs-overlay",
+        "type": "github"
+      }
+    },
+    "emacs-tree-sitter": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1617555130,
+        "narHash": "sha256-9ee52FAPc8rzXcYUJWauEJjJXkxJAUXA0xpEXKnIvJ0=",
+        "owner": "ubolonton",
+        "repo": "emacs-tree-sitter",
+        "rev": "7f5d0938002092ec08830a73f64961021303e1e9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ubolonton",
+        "repo": "emacs-tree-sitter",
+        "type": "github"
+      }
+    },
+    "emacs-tree-sitter-langs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1615741474,
+        "narHash": "sha256-Kt0+xZTkBNv+3LwlO0fn1E6ujvDgX0go4aSn77/3zoY=",
+        "owner": "ubolonton",
+        "repo": "tree-sitter-langs",
+        "rev": "5d362ce98dcf656d7a55fcad6ae21c0a2caca861",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ubolonton",
+        "repo": "tree-sitter-langs",
+        "type": "github"
+      }
+    },
     "flymake-childframe": {
       "flake": false,
       "locked": {
@@ -102,12 +149,19 @@
       "inputs": {
         "beacon": "beacon",
         "emacs-calfw": "emacs-calfw",
+        "emacs-overlay": "emacs-overlay",
+        "emacs-tree-sitter": "emacs-tree-sitter",
+        "emacs-tree-sitter-langs": "emacs-tree-sitter-langs",
         "flymake-childframe": "flymake-childframe",
         "ligature": "ligature",
         "org": "org",
         "org-appear": "org-appear",
         "stata-mode": "stata-mode",
-        "tree-sitter-fold": "tree-sitter-fold"
+        "tree-sitter-fold": "tree-sitter-fold",
+        "tree-sitter-nix-grammar": "tree-sitter-nix-grammar",
+        "tree-sitter-python-grammar": "tree-sitter-python-grammar",
+        "tree-sitter-r-grammar": "tree-sitter-r-grammar",
+        "tsc-module": "tsc-module"
       }
     },
     "stata-mode": {
@@ -140,6 +194,66 @@
         "owner": "junyi-hou",
         "repo": "tree-sitter-fold",
         "type": "github"
+      }
+    },
+    "tree-sitter-nix-grammar": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1619562111,
+        "narHash": "sha256-bSwowUMzxd+jSt6SXS5hq188KTeLZQ2HEDv1s9Jy8YU=",
+        "owner": "cstrahan",
+        "repo": "tree-sitter-nix",
+        "rev": "50f38ceab667f9d482640edfee803d74f4edeba5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cstrahan",
+        "repo": "tree-sitter-nix",
+        "type": "github"
+      }
+    },
+    "tree-sitter-python-grammar": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1616863313,
+        "narHash": "sha256-EzZjuOhaXYNs4rIRoG3y1rzy4C1SpdxYE0ThTWK/dJw=",
+        "owner": "tree-sitter",
+        "repo": "tree-sitter-python",
+        "rev": "d6210ceab11e8d812d4ab59c07c81458ec6e5184",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tree-sitter",
+        "repo": "tree-sitter-python",
+        "type": "github"
+      }
+    },
+    "tree-sitter-r-grammar": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1615323515,
+        "narHash": "sha256-UvD2Sm/k1RfAS+AhhDbZYNwjE5MFgcKt37iPAjLqVWM=",
+        "owner": "r-lib",
+        "repo": "tree-sitter-r",
+        "rev": "9a7f8d6429a48116f4c757ec0abbe42ac87c1f8e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "r-lib",
+        "repo": "tree-sitter-r",
+        "type": "github"
+      }
+    },
+    "tsc-module": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-7HdKbYoOhFgO6hWyM9bL25JtIwrTBnhmYebfxmnkt04=",
+        "type": "tarball",
+        "url": "https://github.com/ubolonton/emacs-tree-sitter/releases/download/0.15.1/tsc-0.15.1.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://github.com/ubolonton/emacs-tree-sitter/releases/download/0.15.1/tsc-0.15.1.tar.gz"
       }
     }
   },
