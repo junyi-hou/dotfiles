@@ -252,6 +252,29 @@ Below is a list of services that needs extra configuration on MacOS:
 - [[epa][gpg-agent]]
 - [[Email Client][periodic mbsync update]]
 
+~nix-darwin~ can also be used to customize MacOS options like enabling tapping on the trackpad. I include the customization below:
+
+#+begin_src nix :noweb-ref darwin-module
+  system.defaults = {
+    dock = {
+      autohide = true;
+      mru-spaces = false;  # do not rearrange desktop space
+      orientation = "left";
+      tilesize = 32;
+    };
+
+    trackpad = {
+      Clicking = true;
+      TrackpadRightClick = true;
+    };
+
+    finder = {
+      AppleShowAllExtensions = true;
+      FXEnableExtensionChangeWarning = false;  # do not warn when changing extensions
+    };
+  };
+#+end_src
+
 * ~emacs~ Configuration
 
 This section contains the code and explanation of my personal configuration for ~emacs~ editor.
