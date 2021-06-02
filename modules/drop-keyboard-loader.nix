@@ -6,6 +6,7 @@ inputs: with inputs; { pkgs, ... }: {
       pkgs.stdenv.mkDerivation {
         name = "mdloader";
         src = qmk-firmwork-loader;
+        buildFlags = "CC=cc";
         installPhase = ''
           install -Dt $out/bin/ ./build/mdloader
           cp applet-mdflash.bin $out/bin/

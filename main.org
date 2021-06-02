@@ -8764,6 +8764,7 @@ Then make sure it is installed by the ~home-manager~.
         pkgs.stdenv.mkDerivation {
           name = "mdloader";
           src = qmk-firmwork-loader;
+          buildFlags = "CC=cc";
           installPhase = ''
             install -Dt $out/bin/ ./build/mdloader
             cp applet-mdflash.bin $out/bin/
