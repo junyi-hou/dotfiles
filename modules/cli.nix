@@ -17,10 +17,6 @@ inputs: with inputs; { pkgs, ... }: {
   programs.bash = {
     enable = true;
 
-    profileExtra = ''
-      [[ -f ~/.bashrc ]] && . ~/.bashrc
-    '';
-
     initExtra = ''
       alias ls="ls --color"
       alias ll="ls -alh --color"
