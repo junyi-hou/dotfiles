@@ -178,25 +178,29 @@ The reason why I have a separate category for services that should be applied to
       # ===========================
 
       defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin"."junyi.hou".system;
-      homeConfigurations."x86_64-darwin" = with inputs; nix-darwin.lib.darwinSystem rec {
-        system = "x86_64-darwin";
-        nix.package = pkgs.nixUnstable;
-        services.nix-daemon.enable = true;
-
-        modules = [
-          <<services-modules>>
-          <<darwin-modules>>
-          home-manager.darwinModules.home-manager {
-            home-manager.useUserPackages = true;
-            home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
-              programs.home-manager.enable = true;
-              imports = [
-                <<home-manager-modules>>
-              ];
-            };
-          }
-        ];
-      };
+      homeConfigurations."x86_64-darwin" = with inputs;
+        let
+          system = "x86_64-darwin";
+        in
+          nix-darwin.lib.darwinSystem rec {
+            modules = [
+              {
+                nix.package = pkgs.nixUnstable;
+                services.nix-daemon.enable = true;
+              }
+              <<services-modules>>
+              <<darwin-modules>>
+              home-manager.darwinModules.home-manager {
+                home-manager.useUserPackages = true;
+                home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
+                  programs.home-manager.enable = true;
+                  imports = [
+                    <<home-manager-modules>>
+                  ];
+                };
+              }
+            ];
+          };
     };
   }
 #+end_src
