@@ -177,17 +177,19 @@ The reason why I have a separate category for services that should be applied to
       # x86_64-darwin configuration
       # ===========================
 
-      defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin"."junyi.hou".system;
+      defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin".system;
       homeConfigurations."x86_64-darwin" = with inputs;
         let
           system = "x86_64-darwin";
         in
           nix-darwin.lib.darwinSystem rec {
             modules = [
-              {
-                nix.package = pkgs.nixUnstable;
-                services.nix-daemon.enable = true;
-              }
+              (
+                {pkgs, ...}: {
+                  nix.package = pkgs.nixUnstable;
+                  services.nix-daemon.enable = true;
+                }
+              )
               <<services-modules>>
               <<darwin-modules>>
               home-manager.darwinModules.home-manager {
