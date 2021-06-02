@@ -21,15 +21,6 @@
       url = "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz";
       flake = false;
     };
-    gmail-oauth2-tools = {
-      url = "github:google/gmail-oauth2-tools";
-      flake = false;
-    };
-    
-    oauth2-lib = {
-      url = "github:robn/sasl2-oauth";
-      flake = false;
-    };
     rnix-lsp = {
       url = "github:nix-community/rnix-lsp";
     };
@@ -131,13 +122,8 @@
             emacs-module.emacsConfig
             self.homeModules."font.nix"
             self.homeModules."grammar.nix"
-            self.homeModules."gpg.nix"
-            (self.homeModules."pass.nix" homeDirectory)
-            self.homeModules."ssh.nix"
             self.homeModules."git.nix"
             self.homeModules."direnv.nix"
-            (self.homeModules."mail.nix" homeDirectory)
-            self.homeModules."calendar.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"
@@ -203,25 +189,6 @@
             ];
           }
         )
-        {
-          programs.gnupg.agent.enable = true;
-        }
-        (
-          { pkgs, ... }: let
-            package = pkgs.isync;
-          in {
-            environment.systemPackages = [ package pkgs.notmuch ];
-            launchd.user.agents.mbsync = {
-              path = [ package ];
-              command  = "${package}/bin/mbsync -a && notmuch new";
-              serviceConfig.KeepAlive = false;
-              serviceConfig.RunAtLoad = true;
-              serviceConfig.StartInterval = 300;  # sync every 5 minutes
-              serviceConfig.StandardErrorPath = "/var/log/mbsync.log";
-              serviceConfig.StandardOutPath   = "/var/log/mbsync.log";
-            };
-          }
-        )
         home-manager.darwinModules.home-manager {
           home-manager.useUserPackages = true;
           home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
@@ -230,13 +197,8 @@
               emacs-module.emacsConfig
               self.homeModules."font.nix"
               self.homeModules."grammar.nix"
-              self.homeModules."gpg.nix"
-              (self.homeModules."pass.nix" homeDirectory)
-              self.homeModules."ssh.nix"
               self.homeModules."git.nix"
               self.homeModules."direnv.nix"
-              (self.homeModules."mail.nix" homeDirectory)
-              self.homeModules."calendar.nix"
               (self.homeModules."nix-development.nix" system)
               self.homeModules."latex.nix"
               self.homeModules."cli.nix"

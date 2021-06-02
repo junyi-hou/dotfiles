@@ -4283,7 +4283,7 @@ Make grammar modules available everywhere.
   self.homeModules."grammar.nix"
 #+end_src
 
-* Secret Management
+* COMMENT Secret Management
 
 ~emacs~ is not only a text editor, it can also serve as the integrated interface between the user (me) and the computer, via its ability to spawn subprocesses and present them in text form. In particular, ~emacs~ can be used to manage secrets like passwords and tokens.
 
@@ -4453,7 +4453,7 @@ Sometimes I need to edit some file as ~root~. One way to do it is to close the f
   (add-hook 'after-init-hook #'sudo-edit-indicator-mode)
 #+end_src
 
-* Remote Editing
+* COMMENT Remote Editing
 
 First enable ssh.
 
@@ -4508,12 +4508,13 @@ Register ~git~ with ~home-manager~ first.
         enable = true;
 
         userName = self.realUser;
-        userEmail =
-          let
-            defaultAcc = with builtins; head
-              (filter (a: a.primary) (attrValues config.accounts.email.accounts));
-          in
-            defaultAcc.address;
+        userEmail = "junyi.yi.hou@gmail.com";
+        # userEmail =
+        #   let
+        #     defaultAcc = with builtins; head
+        #       (filter (a: a.primary) (attrValues config.accounts.email.accounts));
+        #   in
+        #     defaultAcc.address;
         aliases = {
           st = "status";
           co = "checkout";
@@ -4540,7 +4541,7 @@ Enable it in Linux and MacOS
   self.homeModules."git.nix"
 #+end_src
 
-*** global gitignore
+*** COMMENT global gitignore
 
 I specify the list of files that need to be ignore in all git repositories. These includes
 
@@ -5570,7 +5571,7 @@ The builtin ~dired~ mode lacks some aesthetic features, like marking different t
   (use-package dired-collapse :hook (dired-mode . dired-collapse-mode))
 #+end_src
 
-* Message Management
+* COMMENT Message Management
 
 This section showcases the potential of ~emacs~ being the integrated interface between the user and various tools, as long as the content of the interaction depends on displaying and reading text. I rely on ~emacs~ to
 + schedule my events, manage my calendar via ~org-gcal~ and ~calfw~;

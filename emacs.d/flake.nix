@@ -40,10 +40,6 @@
       url = "github:junyi-hou/tree-sitter-fold";
       flake = false;
     };
-    emacs-calfw = {
-      url = "github:tumashu/emacs-calfw";
-      flake = false;
-    };
     tree-sitter-python-grammar = {
       url = "github:tree-sitter/tree-sitter-python";
       flake = false;
@@ -264,8 +260,6 @@
           epkgs.ein
           epkgs.flyspell-correct
           epkgs.langtool
-          epkgs.password-store
-          epkgs.sudo-edit
           epkgs.magit
           epkgs.magit-delta
           epkgs.forge
@@ -273,19 +267,6 @@
           epkgs.deadgrep
           epkgs.envrc
           epkgs.dired-rainbow epkgs.dired-collapse
-          epkgs.notmuch
-          epkgs.org-gcal
-          (emacsPkg.pkgs.trivialBuild {
-            pname = "emacs-calfw";
-            version = "9999";
-            src = emacs-calfw;
-          
-            # remove howm backend support
-            preBuild = ''
-              rm calfw-howm.el
-            '';
-          })
-          epkgs.slack
           epkgs.helpful
           epkgs.aggressive-indent
           epkgs.easy-escape

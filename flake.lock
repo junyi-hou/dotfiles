@@ -32,26 +32,9 @@
         "type": "github"
       }
     },
-    "emacs-calfw": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1500160229,
-        "narHash": "sha256-NkC42Op0FeT8aVYHv1sXVU+PTRmmuDseAnaQIVBHnH0=",
-        "owner": "tumashu",
-        "repo": "emacs-calfw",
-        "rev": "8ff7e75331dde007ff7b6aca6a18828d9c2ac532",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tumashu",
-        "repo": "emacs-calfw",
-        "type": "github"
-      }
-    },
     "emacs-module": {
       "inputs": {
         "beacon": "beacon",
-        "emacs-calfw": "emacs-calfw",
         "emacs-tree-sitter": "emacs-tree-sitter",
         "emacs-tree-sitter-langs": "emacs-tree-sitter-langs",
         "flymake-childframe": "flymake-childframe",
@@ -66,7 +49,7 @@
         "tsc-module": "tsc-module"
       },
       "locked": {
-        "narHash": "sha256-IHnoPX7RPvyVReXcO6kmwDhVNnVfVY9a1qWs8KsRS0w=",
+        "narHash": "sha256-ZcT+yieWwOhq3mIaEXZzm2OL6DwS+uqiNXHKIR0a87c=",
         "path": "./emacs.d",
         "type": "path"
       },
@@ -135,22 +118,6 @@
       "original": {
         "owner": "junyi-hou",
         "repo": "flymake-childframe",
-        "type": "github"
-      }
-    },
-    "gmail-oauth2-tools": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1559164127,
-        "narHash": "sha256-jhjr3eENMeTUqTP7ue8wGUz2elkiH/K0fAFDqVSct7M=",
-        "owner": "google",
-        "repo": "gmail-oauth2-tools",
-        "rev": "e3229155a4037267ce40f1a3a681f53221aa4d8d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "google",
-        "repo": "gmail-oauth2-tools",
         "type": "github"
       }
     },
@@ -288,22 +255,6 @@
         "type": "indirect"
       }
     },
-    "oauth2-lib": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1611713742,
-        "narHash": "sha256-IaH8tNUhM0lUOmFiG4G9cGzsuM9mTWfQrzoQ78MIgZ0=",
-        "owner": "robn",
-        "repo": "sasl2-oauth",
-        "rev": "4236b6fb904d836b85b55ba32128b843fd8c2362",
-        "type": "github"
-      },
-      "original": {
-        "owner": "robn",
-        "repo": "sasl2-oauth",
-        "type": "github"
-      }
-    },
     "org": {
       "flake": false,
       "locked": {
@@ -391,12 +342,10 @@
         "digestif": "digestif",
         "emacs-module": "emacs-module",
         "emacs-overlay": "emacs-overlay",
-        "gmail-oauth2-tools": "gmail-oauth2-tools",
         "home-manager": "home-manager",
         "nix-darwin": "nix-darwin",
         "nix-gl": "nix-gl",
         "nixpkgs": "nixpkgs",
-        "oauth2-lib": "oauth2-lib",
         "pragmata-pro": "pragmata-pro",
         "qmk-firmwork-loader": "qmk-firmwork-loader",
         "rnix-lsp": "rnix-lsp"
