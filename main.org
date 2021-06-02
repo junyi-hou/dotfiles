@@ -8650,14 +8650,11 @@ Here includes a series of small command line utilities.
 
     imports = [
       <<cli-module-extra>>
+      <<do-not-touch-bash_profile>>
     ];
 
     programs.bash = {
       enable = true;
-
-      profileExtra = ''
-        [[ -f ~/.bashrc ]] && . ~/.bashrc
-      '';
 
       initExtra = ''
         alias ls="ls --color"
@@ -8680,6 +8677,65 @@ Here includes a series of small command line utilities.
 
 #+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."cli.nix"
+#+end_src
+
+My company laptop puts non-nix managed configurations into ~~/.bash_profile~. Therefore I would like to avoid making changes to this file. I write the following module overriding the default ~bash~ module in ~home-manager~ to achieve this.
+
+#+begin_src nix :noweb-ref do-not-touch-bash_profile
+  (
+    { pkgs, lib, config, ... }: {
+      config = (
+      let
+        aliasesStr = concatStringsSep "\n" (
+          mapAttrsToList (k: v: "alias ${k}=${escapeShellArg v}") cfg.shellAliases
+        );
+
+        shoptsStr = concatStringsSep "\n" (
+          map (v: "shopt -s ${v}") cfg.shellOptions
+        );
+
+        sessionVarsStr = config.lib.shell.exportAll cfg.sessionVariables;
+
+        historyControlStr =
+          concatStringsSep "\n" (mapAttrsToList (n: v: "${n}=${v}") (
+            {
+              HISTFILESIZE = toString cfg.historyFileSize;
+              HISTSIZE = toString cfg.historySize;
+            }
+            // optionalAttrs (cfg.historyFile != null) {
+              HISTFILE = "\"${cfg.historyFile}\"";
+            }
+            // optionalAttrs (cfg.historyControl != [ ]) {
+              HISTCONTROL = concatStringsSep ":" cfg.historyControl;
+            }
+            // optionalAttrs (cfg.historyIgnore != [ ]) {
+              HISTIGNORE = concatStringsSep ":" cfg.historyIgnore;
+            }
+          ));
+      in mkIf cfg.enable {
+
+        home.file.".profile".source = pkgs.writeShellScript "profile" ''
+          . "${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh"
+          ${sessionVarsStr}
+          ${cfg.profileExtra}
+        '';
+
+        home.file.".bashrc".source = pkgs.writeShellScript "bashrc" ''
+          ${cfg.bashrcExtra}
+          # Commands that should be applied only for interactive shells.
+          [[ $- == *i* ]] || return
+          ${historyControlStr}
+          ${shoptsStr}
+          ${aliasesStr}
+          ${cfg.initExtra}
+        '';
+
+        home.file.".bash_logout" = mkIf (cfg.logoutExtra != "") {
+          source = pkgs.writeShellScript "bash_logout" cfg.logoutExtra;
+        };
+      });
+    }
+  )
 #+end_src
 
 ** Browser
