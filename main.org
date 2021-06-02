@@ -4490,7 +4490,7 @@ Include server location shortcuts.
 * Project Management
 ** Git
 
-*** git:CLI
+*** COMMENT git:CLI
 
 Register ~git~ with ~home-manager~ first.
 
@@ -4508,13 +4508,12 @@ Register ~git~ with ~home-manager~ first.
         enable = true;
 
         userName = self.realUser;
-        userEmail = "junyi.yi.hou@gmail.com";
-        # userEmail =
-        #   let
-        #     defaultAcc = with builtins; head
-        #       (filter (a: a.primary) (attrValues config.accounts.email.accounts));
-        #   in
-        #     defaultAcc.address;
+        userEmail =
+          let
+            defaultAcc = with builtins; head
+              (filter (a: a.primary) (attrValues config.accounts.email.accounts));
+          in
+            defaultAcc.address;
         aliases = {
           st = "status";
           co = "checkout";
@@ -4968,9 +4967,9 @@ Finally, I set up the general keybindings to call up ~magit~.
 
 First enable ~delta~ with ~home-manager~.
 
-#+begin_src nix :noweb-ref git-module-extra
+#+begin_src nix :noweb-ref darwin-modules
   {
-    programs.git.delta.enable = true;
+    environment.systemPackages = [ pkgs.delta ];
   }
 #+end_src
 
