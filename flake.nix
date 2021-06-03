@@ -18,7 +18,7 @@
     emacs-overlay.url = "github:nix-community/emacs-overlay";
     emacs-module.url = "path:./emacs.d";
     pragmata-pro = {
-      url = "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz";
+      url = "file:///Users/junyi.hou/Downloads/PragmataPro0.829.tar.gz";
       flake = false;
     };
     rnix-lsp = {
@@ -108,6 +108,7 @@
             {
               home.packages = [ pkgs.firefox ];
             }
+            self.homeModules."terminal-emulator.nix"
             (
               let
                 nixGL = (import "${nix-gl}" { pkgs = pkgs; }).nixGLIntel;
@@ -130,7 +131,6 @@
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
             self.homeModules."cli.nix"
-            self.homeModules."terminal-emulator.nix"
             self.homeModules."drop-keyboard-loader.nix"
             
           ];
@@ -167,12 +167,13 @@
             (
               let
                 pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
-              in {
-                imports = [
-                  emacs-module.darwinCompatiblePatch
-                  (emacs-module.emacsPackage pkgs.emacsGcc)
-                ];
-              }
+              in
+                {
+                  imports = [
+                    emacs-module.darwinCompatiblePatch
+                    (emacs-module.emacsPackage pkgs.emacsGcc)
+                  ];
+                }
             )
             home-manager.darwinModules.home-manager {
               home-manager.useGlobalPkgs = true;
@@ -190,7 +191,6 @@
                   (self.homeModules."nix-development.nix" system)
                   self.homeModules."latex.nix"
                   self.homeModules."cli.nix"
-                  self.homeModules."terminal-emulator.nix"
                   self.homeModules."drop-keyboard-loader.nix"
                 ];
               };

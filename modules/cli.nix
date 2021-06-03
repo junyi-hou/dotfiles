@@ -17,6 +17,31 @@ inputs: with inputs; { pkgs, ... }: {
   programs.bash = {
     enable = true;
 
+    profileExtra = ''
+      export PROJECT_HOME="/Users/junyi.hou/robinhood"
+      # http://go/ahoy Golang - ANSIBLE MANAGED BLOCK
+      export GOPATH="$HOME/go"
+      export PATH="$PATH:$GOPATH/bin"
+      # http://go/ahoy Golang - ANSIBLE MANAGED BLOCK
+      export PATH="$PATH:$HOME/robinhood/phabricator/arcanist/bin/"
+      # BEGIN ANSIBLE MANAGED BLOCK
+      if command -v pyenv 1>/dev/null 2>&1; then
+        eval "$(pyenv init --path)"
+        eval "$(pyenv init -)"
+      fi
+      if which pyenv-virtualenv-init > /dev/null; then
+        eval "$(pyenv virtualenv-init -)"
+      fi
+      export PATH="$HOME/.pyenv/bin:$PATH"
+      export PATH="$PATH:/usr/local/bin"
+      export PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV="true"
+      export WORKON_HOME="$HOME/.virtualenvs"
+      pyenv virtualenvwrapper_lazy
+      export LDFLAGS="-L/usr/local/opt/zlib/lib -L/usr/local/opt/bzip2/lib"
+      export CPPFLAGS="-I/usr/local/opt/zlib/include -I/usr/local/opt/bzip2/include"
+      # END ANSIBLE MANAGED BLOCK
+    '';
+
     initExtra = ''
       alias cat="bat"
 

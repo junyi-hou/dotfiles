@@ -49,7 +49,7 @@
         "tsc-module": "tsc-module"
       },
       "locked": {
-        "narHash": "sha256-ZcT+yieWwOhq3mIaEXZzm2OL6DwS+uqiNXHKIR0a87c=",
+        "narHash": "sha256-m8bln1i26Y3QsSXQ+fkC5pMAXF4LohlIRfX239acJW4=",
         "path": "./emacs.d",
         "type": "path"
       },
@@ -294,11 +294,11 @@
       "locked": {
         "narHash": "sha256-i0h1KoEdzfB6yXlsx3Fp9VmifwnE3QGPLVM/zvFAO3k=",
         "type": "tarball",
-        "url": "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz"
+        "url": "file:///Users/junyi.hou/Downloads/PragmataPro0.829.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "file:///home/junyi/Downloads/PragmataPro0.829.tar.gz"
+        "url": "file:///Users/junyi.hou/Downloads/PragmataPro0.829.tar.gz"
       }
     },
     "qmk-firmwork-loader": {
