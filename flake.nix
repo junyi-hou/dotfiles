@@ -84,6 +84,7 @@
               in
                 (emacs-module.emacsPackage pkgs.emacsGcc)
             )
+            self.homeModules."git.nix"
             {
               home.packages = [
                 pkgs.xdotool
@@ -104,7 +105,6 @@
                 '')
               ];
             }
-            self.homeModules."cli.nix"
             {
               home.packages = [ pkgs.firefox ];
             }
@@ -123,10 +123,13 @@
             emacs-module.emacsConfig
             self.homeModules."font.nix"
             self.homeModules."grammar.nix"
-            self.homeModules."git.nix"
+            {
+              home.packages = [ pkgs.delta ];
+            }
             self.homeModules."direnv.nix"
             (self.homeModules."nix-development.nix" system)
             self.homeModules."latex.nix"
+            self.homeModules."cli.nix"
             self.homeModules."terminal-emulator.nix"
             self.homeModules."drop-keyboard-loader.nix"
             
@@ -138,75 +141,61 @@
     # x86_64-darwin configuration
     # ===========================
 
-    defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin"."junyi.hou".system;
-    homeConfigurations."x86_64-darwin" = with inputs; nix-darwin.lib.darwinSystem rec {
-      system = "x86_64-darwin";
-      nix.package = pkgs.nixUnstable;
-      services.nix-daemon.enable = true;
-
-      modules = [
-        
-        (
-          let
-            pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
-            libPath = with pkgs; lib.concatStringsSep ":" [
-              "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
-              "${lib.getLib stdenv.cc.cc}/lib"
-              "${lib.getLib stdenv.glibc}/lib"
-            ];
-            emacsNsGcc = pkgs.emacsGcc.overrideAttr (
-              old: {
-                configureFlags = (lib.remove "--with-xft" old.configureFlags) ++ [ "--with-ns" ];
-                postInstall = old.postInstall or "" + ''
-                  ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
-                  ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
-                  cat <<EOF> $out/bin/run-emacs.sh
-                  #!/usr/bin/env bash
-                  set -e
-                  exec $out/bin/emacs-28.0.50 "\$@"
-                  EOF
-                  chmod a+x $out/bin/run-emacs.sh
-                  ln -snf ./run-emacs.sh $out/bin/emacs
-                '';
-              }
-            );
-            emacsDarwinGcc = pkgs.symlinkJoin {
-              name = "emacsGccDarwin";
-              paths = [ emacsNsGcc ];
-              buildInputs = [ pkgs.makeWrapper ];
-              postBuild = ''
-                wrapProgram $out/bin/emacs \
-                --set LIBRARY_PATH ${libPath}
-              '';
-              meta.platforms = pkgs.lib.platforms.darwin;
-              passthru.nativeComp = true;
-              src = emacsNsGcc.src;
-            };
-          in {
-            imports = [
-              emacs-module.darwinCompatiblePatch
-              (emacs-module.emacsPackage emacsDarwinGcc)
-            ];
-          }
-        )
-        home-manager.darwinModules.home-manager {
-          home-manager.useUserPackages = true;
-          home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
-            programs.home-manager.enable = true;
-            imports = [
-              emacs-module.emacsConfig
-              self.homeModules."font.nix"
-              self.homeModules."grammar.nix"
-              self.homeModules."git.nix"
-              self.homeModules."direnv.nix"
-              (self.homeModules."nix-development.nix" system)
-              self.homeModules."latex.nix"
-              self.homeModules."terminal-emulator.nix"
-              self.homeModules."drop-keyboard-loader.nix"
-            ];
-          };
-        }
-      ];
+    defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin".system;
+    packages.x86_64-darwin.darwinConfigurations = let
+      hostname = builtins.getEnv "HOSTNAME";
+    in {
+      "${hostname}" = self.homeConfigurations."x86_64-darwin";
+      "junyi-hou--C02FM0MMMD6R" = self.homeConfigurations."x86_64-darwin";
     };
+
+    homeConfigurations."x86_64-darwin" = with inputs;
+      let
+        system = "x86_64-darwin";
+      in
+        nix-darwin.lib.darwinSystem rec {
+          modules = [
+            (
+              {pkgs, ...}: {
+                nix.package = pkgs.nixUnstable;
+                services.nix-daemon.enable = true;
+                users.users."junyi.hou".name = "junyi.hou";
+                users.users."junyi.hou".home = "/Users/junyi.hou";
+              }
+            )
+            
+            (
+              let
+                pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
+              in {
+                imports = [
+                  emacs-module.darwinCompatiblePatch
+                  (emacs-module.emacsPackage pkgs.emacsGcc)
+                ];
+              }
+            )
+            home-manager.darwinModules.home-manager {
+              home-manager.useGlobalPkgs = true;
+              home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
+                programs.home-manager.enable = true;
+    home.stateVersion = "21.03";
+                imports = [
+                  emacs-module.emacsConfig
+                  self.homeModules."font.nix"
+                  self.homeModules."grammar.nix"
+                  {
+                    home.packages = [ pkgs.delta ];
+                  }
+                  self.homeModules."direnv.nix"
+                  (self.homeModules."nix-development.nix" system)
+                  self.homeModules."latex.nix"
+                  self.homeModules."cli.nix"
+                  self.homeModules."terminal-emulator.nix"
+                  self.homeModules."drop-keyboard-loader.nix"
+                ];
+              };
+            }
+          ];
+        };
   };
 }

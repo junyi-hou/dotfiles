@@ -1,15 +1,13 @@
 diff --git a/tsc.el b/tsc.el
-index 717705c..ceb7543 100644
+index 717705c..b3b8d36 100644
 --- a/tsc.el
 +++ b/tsc.el
-@@ -26,8 +26,9 @@
- (eval-and-compile
+@@ -27,7 +27,8 @@
    (defconst tsc--dyn-version "0.15.1"
      "Required version of the dynamic module `tsc-dyn'.")
--  (require 'tsc-dyn-get)
+   (require 'tsc-dyn-get)
 -  (tsc-dyn-get-ensure tsc--dyn-version))
-+  ;; (require 'tsc-dyn-get)
-+  ;; (tsc-dyn-get-ensure tsc--dyn-version)
-+  )
++  (when (eq system-type 'darwin)
++    (tsc--mac-load-dyn)))
 
  (require 'tsc-dyn)

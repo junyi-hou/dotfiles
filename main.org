@@ -178,6 +178,13 @@ The reason why I have a separate category for services that should be applied to
       # ===========================
 
       defaultPackage."x86_64-darwin" = self.homeConfigurations."x86_64-darwin".system;
+      packages.x86_64-darwin.darwinConfigurations = let
+        hostname = builtins.getEnv "HOSTNAME";
+      in {
+        "${hostname}" = self.homeConfigurations."x86_64-darwin";
+        "junyi-hou--C02FM0MMMD6R" = self.homeConfigurations."x86_64-darwin";
+      };
+
       homeConfigurations."x86_64-darwin" = with inputs;
         let
           system = "x86_64-darwin";
@@ -188,14 +195,17 @@ The reason why I have a separate category for services that should be applied to
                 {pkgs, ...}: {
                   nix.package = pkgs.nixUnstable;
                   services.nix-daemon.enable = true;
+                  users.users."junyi.hou".name = "junyi.hou";
+                  users.users."junyi.hou".home = "/Users/junyi.hou";
                 }
               )
               <<services-modules>>
               <<darwin-modules>>
               home-manager.darwinModules.home-manager {
-                home-manager.useUserPackages = true;
+                home-manager.useGlobalPkgs = true;
                 home-manager.users."junyi.hou" = { pkgs, lib, config, ... }: {
                   programs.home-manager.enable = true;
+      home.stateVersion = "21.03";
                   imports = [
                     <<home-manager-modules>>
                   ];
@@ -254,7 +264,7 @@ MacOS uses ~launchd~ as its init system while ~home-manager~ only supports ~syst
 #+end_src
 
 Below is a list of services that needs extra configuration on MacOS:
-- [[Package Management][~emacs~ daemon]]
+- [[~emacs~ Package Management][~emacs~ daemon]]
 - [[epa][gpg-agent]]
 - [[Email Client][periodic mbsync update]]
 
@@ -280,6 +290,18 @@ Below is a list of services that needs extra configuration on MacOS:
     };
   };
 #+end_src
+
+I need to swap ~option~ and ~command~, as ~option~ on MacOS works as ~alt~ but placed physical at where ~meta~ key usually is.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref extra-emacs-setting
+  (when (eq system-type 'darwin)
+    (setq mac-option-modifier 'alt
+          mac-command-modifier 'meta)
+
+    ;; start up maximized
+    (add-hook 'server-after-make-frame-hook #'toggle-frame-maximized))
+#+end_src
+
 
 * ~emacs~ Configuration
 
@@ -396,45 +418,13 @@ Enable ~emacs~ in both Linux and MacOS.
   (
     let
       pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
-      libPath = with pkgs; lib.concatStringsSep ":" [
-        "${lib.getLib libgccjit}/lib/gcc/${stdenv.targetPlatform.config}/${libgccjit.version}"
-        "${lib.getLib stdenv.cc.cc}/lib"
-        "${lib.getLib stdenv.glibc}/lib"
-      ];
-      emacsNsGcc = pkgs.emacsGcc.overrideAttr (
-        old: {
-          configureFlags = (lib.remove "--with-xft" old.configureFlags) ++ [ "--with-ns" ];
-          postInstall = old.postInstall or "" + ''
-            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/native-lisp
-            ln -snf $out/lib/emacs/28.0.50/native-lisp $out/Applications/Emacs.app/Contents/native-lisp
-            cat <<EOF> $out/bin/run-emacs.sh
-            #!/usr/bin/env bash
-            set -e
-            exec $out/bin/emacs-28.0.50 "\$@"
-            EOF
-            chmod a+x $out/bin/run-emacs.sh
-            ln -snf ./run-emacs.sh $out/bin/emacs
-          '';
-        }
-      );
-      emacsDarwinGcc = pkgs.symlinkJoin {
-        name = "emacsGccDarwin";
-        paths = [ emacsNsGcc ];
-        buildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/emacs \
-          --set LIBRARY_PATH ${libPath}
-        '';
-        meta.platforms = pkgs.lib.platforms.darwin;
-        passthru.nativeComp = true;
-        src = emacsNsGcc.src;
-      };
-    in {
-      imports = [
-        emacs-module.darwinCompatiblePatch
-        (emacs-module.emacsPackage emacsDarwinGcc)
-      ];
-    }
+    in
+      {
+        imports = [
+          emacs-module.darwinCompatiblePatch
+          (emacs-module.emacsPackage pkgs.emacsGcc)
+        ];
+      }
   )
 #+end_src
 
@@ -587,6 +577,13 @@ One of the key advantage of ~emacs~ over other editors like ~vs-code~ and ~subli
 #+begin_src emacs-lisp
   (setq scroll-step 1)
 #+end_src
+
+*** extra settings
+
+#+begin_src emacs-lisp :noweb yes
+  <<extra-emacs-setting>>
+#+end_src
+
 
 ** Core Packages
 
@@ -860,6 +857,51 @@ I also want the notification to last long enough for me to at least read it.
 #+begin_src emacs-lisp
   (setq alert-fade-time 60)
 #+end_src
+
+*** exec-path-from-shell
+
+On MacOS, ~emcas~ launched from ~launchd~ does not have ~$PATH~ set properly. ~exec-path-from-shell~ fix this issue.
+
+#+begin_src nix :noweb-ref emacs-packages
+  epkgs.exec-path-from-shell
+#+end_src
+
+#+begin_src emacs-lisp
+  (when (and (eq system-type 'darwin) (daemonp))
+    (setq exec-path-from-shell-variables
+          '("_VIRTUALENVWRAPPER_API"
+            "NIX_REMOTE"
+            "WORKON_HOME"
+            "EDITOR"
+            "PYENV_VIRTUALENV_INIT"
+            "SSH_AUTH_SOCK"
+            "VIRTUALENVWRAPPER_VIRTUALENV"
+            "GOPATH"
+            "NIX_PROFILES"
+            "NIX_PATH"
+            "VIRTUALENVWRAPPER_LAZY_SCRIPT"
+            "XDG_DATA_DIRS"
+            "PYENV_VIRTUALENVWRAPPER_PYENV_VERSION"
+            "PROJECT_HOME"
+            "VIRTUALENVWRAPPER_PYTHON"
+            "XPC_SERVICE_NAME"
+            "VISUAL"
+            "NIX_USER_PROFILE_DIR"
+            "VIRTUALENVWRAPPER_SCRIPT"
+            "__CFBundleIdentifier"
+            "NIX_SSL_CERT_FILE"
+            "PYENV_SHELL"
+            "SHLVL"
+            "VIRTUALENVWRAPPER_VIRTUALENV_CLONE"
+            "CPPFLAGS"
+            "__HM_SESS_VARS_SOURCED"
+            "PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV"
+            "LDFLAGS"
+            "XDG_CONFIG_DIRS"
+            "PATH"))
+    (exec-path-from-shell-initialize))
+#+end_src
+
 
 ** Theme
 
@@ -1136,7 +1178,7 @@ I use a resolution-based scale method to determine font size. Specifically, I fi
 
   (set-face-attribute
    'default nil
-   :family "Monospace"
+   :family "PragmataPro Mono Liga"
    :width 'normal
    :weight 'Regular)
 
@@ -3461,18 +3503,16 @@ I also need to disable the fetching step in the installation phase so that nix w
 
 #+begin_src diff :tangle ./emacs.d/tree-sitter-patches/tsc-do-not-download.patch :mkdirp yes
   diff --git a/tsc.el b/tsc.el
-  index 717705c..ceb7543 100644
+  index 717705c..b3b8d36 100644
   --- a/tsc.el
   +++ b/tsc.el
-  @@ -26,8 +26,9 @@
-   (eval-and-compile
+  @@ -27,7 +27,8 @@
      (defconst tsc--dyn-version "0.15.1"
        "Required version of the dynamic module `tsc-dyn'.")
-  -  (require 'tsc-dyn-get)
+     (require 'tsc-dyn-get)
   -  (tsc-dyn-get-ensure tsc--dyn-version))
-  +  ;; (require 'tsc-dyn-get)
-  +  ;; (tsc-dyn-get-ensure tsc--dyn-version)
-  +  )
+  +  (when (eq system-type 'darwin)
+  +    (tsc--mac-load-dyn)))
 
    (require 'tsc-dyn)
 #+end_src
@@ -3490,7 +3530,7 @@ Finally, I modify the build script:
 
       LISPDIR=$out/share/emacs/site-lisp
       install -d $LISPDIR
-      cp *.el *.elc *.so *.dylib *.dll $LISPDIR
+      cp *.el *.elc *.dylib *.so $LISPDIR
 
       runHook postInstall
     '';
@@ -4496,7 +4536,7 @@ Include server location shortcuts.
 * Project Management
 ** Git
 
-*** COMMENT git:CLI
+*** git:CLI
 
 Register ~git~ with ~home-manager~ first.
 
@@ -4535,18 +4575,16 @@ Register ~git~ with ~home-manager~ first.
         };
       };
     };
-
-    home.packages = [ pkgs.gitAndTools.delta ];
   }
 #+end_src
 
-Enable it in Linux and MacOS
+I only want to enable it on Linux, as ~.gitignore~ and ~.gitconfig~ are managed by other parts on my MacOS laptop.
 
-#+begin_src nix :noweb-ref home-manager-modules
+#+begin_src nix :noweb-ref linux-modules
   self.homeModules."git.nix"
 #+end_src
 
-*** COMMENT global gitignore
+*** global gitignore
 
 I specify the list of files that need to be ignore in all git repositories. These includes
 
@@ -4973,9 +5011,9 @@ Finally, I set up the general keybindings to call up ~magit~.
 
 First enable ~delta~ with ~home-manager~.
 
-#+begin_src nix :noweb-ref darwin-modules
+#+begin_src nix :noweb-ref home-manager-modules
   {
-    environment.systemPackages = [ pkgs.delta ];
+    home.packages = [ pkgs.delta ];
   }
 #+end_src
 
@@ -8537,12 +8575,13 @@ First the updating script.
 
   nix build .
 
-  if [ -f "result/activate" ]; then
+  if [ -f "result/sw/bin/darwin-rebuild" ]; then
+      echo "found nix-darwin activation script, activating..."
+      export HOSTNAME=$(uname -n)  # nix-darwin requires a hostname, so, meh
+      ./result/sw/bin/darwin-rebuild switch --flake .
+  elif [ -f "result/activate" ]; then
       echo "found home-manager activation script, activating..."
       ./result/activate
-  elif [ -f "result/sw/bin/darwin-rebuild" ]; then
-      echo "found nix-darwin activation script, activating..."
-      ./result/sw/bin/darwin-rebuild switch --flake .
   fi
 #+end_src
 
@@ -8661,8 +8700,6 @@ Here includes a series of small command line utilities. I include this setting o
       enable = true;
 
       initExtra = ''
-        alias ls="ls --color"
-        alias ll="ls -alh --color"
         alias cat="bat"
 
         mkcd(){
@@ -8679,7 +8716,7 @@ Here includes a series of small command line utilities. I include this setting o
   }
 #+end_src
 
-#+begin_src nix :noweb-ref linux-modules
+#+begin_src nix :noweb-ref home-manager-modules
   self.homeModules."cli.nix"
 #+end_src
 
@@ -8704,7 +8741,7 @@ I include ~alacritty~ in case ~emacs~ fails.
     programs.alacritty = {
       enable = true;
       settings = {
-        font.size = 9;
+        font.size = 15;
       };
     };
   }

@@ -68,6 +68,13 @@
 
 (setq scroll-step 1)
 
+(when (eq system-type 'darwin)
+  (setq mac-option-modifier 'alt
+        mac-command-modifier 'meta)
+
+  ;; start up maximized
+  (add-hook 'server-after-make-frame-hook #'toggle-frame-maximized))
+
 (use-package dash)
 (use-package f)
 (use-package s)
@@ -186,6 +193,40 @@
 
 (setq alert-fade-time 60)
 
+(when (and (eq system-type 'darwin) (daemonp))
+  (setq exec-path-from-shell-variables
+        '("_VIRTUALENVWRAPPER_API"
+          "NIX_REMOTE"
+          "WORKON_HOME"
+          "EDITOR"
+          "PYENV_VIRTUALENV_INIT"
+          "SSH_AUTH_SOCK"
+          "VIRTUALENVWRAPPER_VIRTUALENV"
+          "GOPATH"
+          "NIX_PROFILES"
+          "NIX_PATH"
+          "VIRTUALENVWRAPPER_LAZY_SCRIPT"
+          "XDG_DATA_DIRS"
+          "PYENV_VIRTUALENVWRAPPER_PYENV_VERSION"
+          "PROJECT_HOME"
+          "VIRTUALENVWRAPPER_PYTHON"
+          "XPC_SERVICE_NAME"
+          "VISUAL"
+          "NIX_USER_PROFILE_DIR"
+          "VIRTUALENVWRAPPER_SCRIPT"
+          "__CFBundleIdentifier"
+          "NIX_SSL_CERT_FILE"
+          "PYENV_SHELL"
+          "SHLVL"
+          "VIRTUALENVWRAPPER_VIRTUALENV_CLONE"
+          "CPPFLAGS"
+          "__HM_SESS_VARS_SOURCED"
+          "PYENV_VIRTUALENVWRAPPER_PREFER_PYVENV"
+          "LDFLAGS"
+          "XDG_CONFIG_DIRS"
+          "PATH"))
+  (exec-path-from-shell-initialize))
+
 (use-package gruvbox-theme)
 (setq custom-safe-themes t)
 (load-theme 'gruvbox-dark-medium)
@@ -283,7 +324,7 @@
 
 (set-face-attribute
  'default nil
- :family "Monospace"
+ :family "PragmataPro Mono Liga"
  :width 'normal
  :weight 'Regular)
 

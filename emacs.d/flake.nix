@@ -105,6 +105,7 @@
           epkgs.no-littering
           epkgs.visual-fill-column
           epkgs.alert
+          epkgs.exec-path-from-shell
           epkgs.gruvbox-theme
           (emacsPkg.pkgs.trivialBuild {
             pname   = "ligature";
@@ -168,7 +169,7 @@
               
                   LISPDIR=$out/share/emacs/site-lisp
                   install -d $LISPDIR
-                  cp *.el *.elc *.so *.dylib *.dll $LISPDIR
+                  cp *.el *.elc *.dylib *.so $LISPDIR
               
                   runHook postInstall
                 '';

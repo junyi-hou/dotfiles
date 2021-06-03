@@ -18,8 +18,6 @@ inputs: with inputs; { pkgs, ... }: {
     enable = true;
 
     initExtra = ''
-      alias ls="ls --color"
-      alias ll="ls -alh --color"
       alias cat="bat"
 
       mkcd(){
