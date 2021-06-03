@@ -43,6 +43,8 @@ inputs: with inputs; { pkgs, ... }: {
     '';
 
     initExtra = ''
+      export PS1="\w \\$\[$(tput sgr0)\] "
+
       alias cat="bat"
 
       mkcd(){

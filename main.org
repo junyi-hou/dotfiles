@@ -8725,6 +8725,8 @@ Here includes a series of small command line utilities. I include this setting o
       '';
 
       initExtra = ''
+        export PS1="\w \\$\[$(tput sgr0)\] "
+
         alias cat="bat"
 
         mkcd(){
