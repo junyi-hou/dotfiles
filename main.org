@@ -8728,6 +8728,9 @@ Here includes a series of small command line utilities. I include this setting o
         export LDFLAGS="-L/usr/local/opt/zlib/lib -L/usr/local/opt/bzip2/lib"
         export CPPFLAGS="-I/usr/local/opt/zlib/include -I/usr/local/opt/bzip2/include"
         # END ANSIBLE MANAGED BLOCK
+
+        # big sur fix
+        export SYSTEM_VERSION_COMPAT=1
       '';
 
       initExtra = ''
