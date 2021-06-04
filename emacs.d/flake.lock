@@ -16,37 +16,6 @@
         "type": "github"
       }
     },
-    "emacs-calfw": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1500160229,
-        "narHash": "sha256-NkC42Op0FeT8aVYHv1sXVU+PTRmmuDseAnaQIVBHnH0=",
-        "owner": "tumashu",
-        "repo": "emacs-calfw",
-        "rev": "8ff7e75331dde007ff7b6aca6a18828d9c2ac532",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tumashu",
-        "repo": "emacs-calfw",
-        "type": "github"
-      }
-    },
-    "emacs-overlay": {
-      "locked": {
-        "lastModified": 1622460472,
-        "narHash": "sha256-PRaowZTahyqmW3wbrRp8LiIc7z5qNz2g1QAvlLnGzDU=",
-        "owner": "nix-community",
-        "repo": "emacs-overlay",
-        "rev": "b678b3774a84b5e96554e26dc0aa2bb4461178ee",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "emacs-overlay",
-        "type": "github"
-      }
-    },
     "emacs-tree-sitter": {
       "flake": false,
       "locked": {
@@ -148,8 +117,6 @@
     "root": {
       "inputs": {
         "beacon": "beacon",
-        "emacs-calfw": "emacs-calfw",
-        "emacs-overlay": "emacs-overlay",
         "emacs-tree-sitter": "emacs-tree-sitter",
         "emacs-tree-sitter-langs": "emacs-tree-sitter-langs",
         "flymake-childframe": "flymake-childframe",
@@ -183,11 +150,11 @@
     "tree-sitter-fold": {
       "flake": false,
       "locked": {
-        "lastModified": 1621271739,
-        "narHash": "sha256-UOMehL8HxrYI3A7EuzN9iMHJ5tFIPiM7nc4Pf9EB+JM=",
+        "lastModified": 1622776913,
+        "narHash": "sha256-C8mrbBTxS9axX8z8hQT72XCiwlrBpKNnthitCY+jGdk=",
         "owner": "junyi-hou",
         "repo": "tree-sitter-fold",
-        "rev": "510f3ff119c265bde080de92173f9d14da0e0a05",
+        "rev": "3ebdb45c3ddc96fd967ce20c392972ad4f5866a0",
         "type": "github"
       },
       "original": {
