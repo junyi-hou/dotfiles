@@ -418,11 +418,17 @@ Enable ~emacs~ in both Linux and MacOS.
   (
     let
       pkgs = import nixpkgs { inherit system; overlays = [ emacs-overlay.overlay ]; };
+      macPort = pkgs.callPackage ./macos/macport/package.nix {
+        inherit (pkgs.darwin.apple_sdk.frameworks)
+          AppKit Carbon Cocoa IOKit OSAKit Quartz QuartzCore WebKit
+          ImageCaptureCore GSS ImageIO;
+        stdenv = if pkgs.stdenv.cc.isClang then pkgs.llvmPackages_6.stdenv else pkgs.stdenv;
+      };
     in
       {
         imports = [
           emacs-module.darwinCompatiblePatch
-          (emacs-module.emacsPackage pkgs.emacsGcc)
+          (emacs-module.emacsPackage macPort)
         ];
       }
   )
