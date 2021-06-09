@@ -383,8 +383,9 @@
 (add-hook 'eldoc-box-frame-hook #'gatsby:eldoc-box--set-font-size)
 
 (use-package evil
-  :custom (evil-undo-system 'undo-redo)
-  :init (evil-mode 1)
+  :custom (evil-undo-system 'undo-fu)
+  :init
+  (evil-mode 1)
   :general
   (:keymaps '(motion normal visual)
    "j" 'evil-next-visual-line
@@ -1065,7 +1066,7 @@ If there is already a eshell buffer open for that directory, switch to that buff
 (use-package org
   :config
   (setq org-startup-indented t
-        org-startup-with-latex-preview t
+        org-startup-with-latex-preview nil
         org-preview-latex-image-directory ".org-latex-imgcache/")
   (setq org-use-sub-superscripts nil)
   (setq org-indent-mode-turns-on-hiding-stars nil
@@ -1367,16 +1368,16 @@ If there is already a eshell buffer open for that directory, switch to that buff
       (when (and field
                  (eq (point) (marker-position (yas--field-start field))))
         cmd)))
-  
+
   (advice-add #'yas--maybe-clear-field-filter :override #'gatsby:yas--clear-field-filter)
-  
+
   (defun gatsby:yas-better-backspace ()
     "If `point' is at the beginning of an unmodified yas-field, delete the field, otherwise backwards delete char."
     (interactive)
     (cond ((yas--maybe-clear-field-filter t)
            (yas--skip-and-clear (yas-current-field)))
           (t (call-interactively #'backward-delete-char-untabify))))
-  
+
   (general-define-key :keymaps 'yas-keymap "<backspace>" 'gatsby:yas-better-backspace)
   (add-to-list 'yas-prompt-functions #'completing-read))
 
@@ -2045,7 +2046,7 @@ List of CANDIDATES is given by flyspell for the WORD."
     (if (projectile-project-root)
         (projectile--find-file args)
       (call-interactively #'find-file)))
-  
+
   (advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
   :general
   (:keymaps '(normal motion)
@@ -3166,23 +3167,23 @@ Taken from `slack-room-display'."
         (with-current-buffer buf
           (inferior-emacs-lisp-mode)))
       buf))
-  
+
   (add-to-list 'gatsby:comint-repl-function-alist '(emacs-lisp-mode gatsby:ielm-repl))
   (add-to-list 'gatsby:comint-repl-function-alist '(lisp-interaction-mode gatsby:ielm-repl))
-  
+
   (add-to-list 'gatsby:comint-repl-mode-alist '(emacs-lisp-mode . inferior-emacs-lisp-mode))
   (add-to-list 'gatsby:comint-repl-mode-alist '(lisp-interaction-mode . inferior-emacs-lisp-mode))
   :config
   (add-hook 'inferior-emacs-lisp-mode-hook #'company-mode)
   (defun gatsby:ielm--eval-input ()
     (ielm-eval-input ielm-input))
-  
+
   (defun gatsby:ielm-return ()
     (interactive)
     (advice-add #'comint-send-input :after #'gatsby:ielm--eval-input)
     (call-interactively #'gatsby:comint-return)
     (advice-remove #'comint-send-input #'gatsby:ielm--eval-input))
-  
+
   (general-define-key :keymaps 'inferior-emacs-lisp-mode-map :states 'insert
     "<return>" #'gatsby:ielm-return)
   (defun gatsby:lisp-eval-region-or-sexp ()
@@ -3237,7 +3238,7 @@ Taken from `slack-room-display'."
                      (completing-read "Cannot infer python interpreter, please select: "
                                       '("python2" "python3")))))
       (jupyter-run-repl kernel kernel (current-buffer) nil t)))
-  
+
   (add-to-list 'gatsby:jupyter-repl-function-alist '(python-mode . gatsby:python-start-repl))
   (defun gatsby:python--dedent-string (string)
     "remove the comment indentation of STRING."
@@ -3253,7 +3254,7 @@ Taken from `slack-room-display'."
                              "")
                            strings)))
         string)))
-  
+
   (defun gatsby:python-eval-region-or-line ()
     "If region is active, eval current region, otherwise eval current line."
     (interactive)
@@ -3272,10 +3273,10 @@ Taken from `slack-room-display'."
    "rb" #'jupyter-eval-buffer
    "rr" #'gatsby:python-eval-region-or-line
    "ro" #'gatsby:jupyter-start-or-switch-to-repl
-  
+
    "rz" #'jupyter-repl-associate-buffer
    "rZ" #'jupyter-repl-restart-kernel)
-  
+
   (:states 'visual
    :keymaps 'python-mode-map
    [remap evil-shift-left] #'python-indent-shift-left
@@ -3295,7 +3296,7 @@ Taken from `slack-room-display'."
    "rb" #'jupyter-eval-buffer
    "rr" #'jupyter-eval-line-or-region
    "ro" #'gatsby:jupyter-start-or-switch-to-repl
-  
+
    "rz" #'jupyter-repl-associate-buffer
    "rZ" #'jupyter-repl-restart-kernel))
 
@@ -3317,7 +3318,7 @@ Taken from `slack-room-display'."
     (if (re-search-backward "[[:space:]]*=[[:space:]]*\\=" (line-beginning-position) t)
         (progn (replace-match "") (call-interactively #'ess-insert-assign))
       (gatsby:r-pipe)))
-  
+
   (general-define-key :keymaps 'ess-r-mode-map :states 'insert
     "M-RET" #'gatsby:r-assign-or-pipe)
   :general
@@ -3327,7 +3328,7 @@ Taken from `slack-room-display'."
    "rb" #'jupyter-eval-buffer
    "rr" #'jupyter-eval-line-or-region
    "ro" #'gatsby:jupyter-start-or-switch-to-repl
-  
+
    "rz" #'jupyter-repl-associate-buffer
    "rZ" #'jupyter-repl-restart-kernel))
 
@@ -3360,55 +3361,55 @@ Taken from `slack-room-display'."
       (if current-prefix-arg
           (gatsby:vterm-open-here)
         (gatsby:eshell-open-here))))
-  
+
   (general-define-key :keymaps '(normal motion) :prefix "SPC"
     "ns" #'gatsby:nix-shell-in-storage)
   (add-to-list 'eglot-server-programs '(nix-mode . ("rnix-lsp")))
   :config
   (add-to-list 'gatsby:comint-repl-function-alist '(nix-mode gatsby:nix-repl))
   (add-to-list 'gatsby:comint-repl-mode-alist '(nix-mode . nix-repl-mode))
-  
+
   (defun gatsby:nix-repl ()
     (let ((buf (get-buffer-create "*Nix-REPL*")))
       (unless (comint-check-proc buf)
         (nix--make-repl-in-buffer buf)
         (with-current-buffer buf (nix-repl-mode)))
       buf))
-  
+
   (general-define-key :keymaps 'nix-mode-map :states '(normal visual) :prefix "SPC"
     "ro" #'gatsby:comint-start-or-pop-to-repl
     "rr" #'gatsby:comint-eval-region-or-line
     "rb" #'gatsby:comint-eval-buffer
     "rz" #'gatsby:comint-associate-nix-repl)
   (setq nix-nixfmt-bin "nixpkgs-fmt")
-  
+
   (defun gatsby:nix--fmt-before-save ()
     (add-hook 'before-save-hook #'nix-format-buffer nil t))
-  
+
   (add-hook 'nix-mode-hook #'gatsby:nix--fmt-before-save)
   (defun gatsby:nix--save-excrusion (fn &rest args)
     (let ((ori-point (point)))
       (apply fn args)
       (goto-char ori-point)))
-  
+
   (advice-add #'nix-format-buffer :around #'gatsby:nix--save-excrusion)
   (defun gatsby:nix-snippet-update-body (regexp &rest updates)
     "Update the current content identified by REGEXP using UPDATES.
-  
+
   REGEXP should contain 3 groups.  Group 1 is the beginning of the section.  Group
   2 is the current content.  Group 3 is the end of the section.
-  
+
   UPDATE is either strings to be added to the current content, or a function that
   takes listified current content as the only argument and return a modified list
   of strings as the updated content.
-  
+
   This function first separate the current content into a list of lines.  This
   list is then fed into `gatsby:nix-snippet--process-content' along with UPDATE.
   The content then gets updated and inserted back to the buffer.
-  
+
   This function updates the BODY of a let block.  To update the BINDING of a let
   block, use `gatsby:nix-snippet-update-bind' instead.
-  
+
   Return nil."
     (save-excursion
       (when (re-search-forward regexp nil 'no-error)
@@ -3426,12 +3427,12 @@ Taken from `slack-room-display'."
             (apply #'concat)
             insert))))
     nil)
-  
+
   (defun gatsby:nix-snippet-update-inputs (&rest inputs)
     "Update the current content in flake inputs block using UPDATES.
-  
+
   INPUTS should be strings defining new flakes inputs.
-  
+
   Return nil."
     (save-excursion
       (goto-char (point-min))
@@ -3450,18 +3451,18 @@ Taken from `slack-room-display'."
           (apply #'concat)
           insert)))
     nil)
-  
+
   (defun gatsby:nix-snippet-update-bind (&rest updates)
     "Update the content of the current let bind with UPDATES.
-  
+
   UPDATE is either strings to be added to the current content, or a function that
   takes listified current content as the only argument and return a modified list
   of strings as the updated content.
-  
+
   This function first separate the current content into a list of node strings.  This
   list is then fed into `gatsby:nix-snippet--process-content' along with UPDATE.
   The content then gets updated and inserted back to the buffer.
-  
+
   Return nil."
     (let* ((root (tree-sitter-node-at-point 'let))
            (node (tsc-get-nth-named-child root 0))
@@ -3483,14 +3484,14 @@ Taken from `slack-room-display'."
       (insert (substring padding 2)))
     (call-interactively #'evil-open-above)
     nil)
-  
+
   (defun gatsby:nix-snippet--process-content (content updates)
     "Update CONTENT recursively using UPDATES.
-  
+
   Elements of UPDATES can either be a function, which takes CONTENT as the
   only argument and returns an updated list of content, or a string.  In the
   latter case, the string will be simply appended to the end of CONTENT.
-  
+
   Return the updated content."
     (let* ((updated (pcase (car updates)
                       ((pred functionp) (funcall (car updates) content))
@@ -3500,7 +3501,7 @@ Taken from `slack-room-display'."
       (if next
           (gatsby:nix-snippet--process-content updated next)
         updated)))
-  
+
   (defmacro gatsby:nix-snippet--include-python-pkgs (&rest pkgs)
     `(lambda (content)
        (if-let* ((idx (--find-index (string-match "(python\\.withPackages (p: with p; \\[\\(?1:.*\\)]))" it) content))
@@ -3523,7 +3524,7 @@ Taken from `slack-room-display'."
     "Snippets used in the `nix-mode'."
     :type '(repeat function)
     :group 'nix)
-  
+
   (defun gatsby:nix-snippet-dispatcher ()
     "Use `completing-read' to select and insert snippets."
     (interactive)
@@ -3531,10 +3532,10 @@ Taken from `slack-room-display'."
      (intern
       (completing-read "Select snippet: "
                        gatsby:nix-snippets))))
-  
+
   (general-define-key :keymaps 'nix-mode-map :states 'insert
     "<M-RET>" #'gatsby:nix-snippet-dispatcher)
-  
+
   (defun gatsby:nix-snippet-python ()
     (interactive)
     ;; apply only when the cursor is inside a let bind block
@@ -3545,7 +3546,7 @@ Taken from `slack-room-display'."
        "\\(?1:devShell\\(.*\n\\)*[[:space:]]*buildInputs = \\[\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*];\\)"
        "(python.withPackages (p: with p; [ jupyter ]))"
        "pkgs.nodePackages.pyright")))
-  
+
   (defun gatsby:nix-snippet-r ()
     (interactive)
     (when (gatsby:nix-snippet--in-let-bind-p)
@@ -3582,7 +3583,7 @@ Taken from `slack-room-display'."
       (gatsby:nix-snippet-update-body
        "\\(?1:devShell\\(.*\n\\)*[[:space:]]*shellHook = ''\\)\\(?2:\\(.*\n\\)*\\)\\(?3:[[:space:]]*'';\\)"
        "export JUPYTER_PATH=$JUPYTER_PATH''${JUPYTER_PATH:+:}${rKernel}")))
-  
+
   (defun gatsby:nix-snippet-stata ()
     (interactive)
     (when (gatsby:nix-snippet--in-let-bind-p)
@@ -3666,7 +3667,7 @@ Taken from `slack-room-display'."
         (cl-letf (((symbol-function 'Man-notify-when-ready) 'switch-to-buffer))
           (apply fn args))
       (apply fn args)))
-  
+
   (advice-add #'man :around #'gatsby:man--maybe-use-current-window))
 
 (use-package auctex
@@ -3696,13 +3697,13 @@ Taken from `slack-room-display'."
         TeX-source-correlate-mode t
         TeX-source-correlate-start-server t
         LaTeX-command "latex -shell-escape")
-  
+
   (add-hook 'TeX-after-compilation-finished-functions #'TeX-revert-document-buffer)
   (setq TeX-outline-extra '(("^\\(% \\)?\\\\begin{frame}" 3)))
   (setq TeX-electric-math (cons "$" "$")
         LaTeX-electric-left-right-brace t
         LaTeX-syntactic-comments nil)
-  
+
   (defun gatsby:latex-delete ()
     "Deleting the whole pair if in an empty pair, other wise delete the character on the left."
     (interactive)
@@ -3741,7 +3742,7 @@ Taken from `slack-room-display'."
               (delete-region brace-start (point))
             (goto-char old-point)
             (call-interactively 'backward-delete-char-untabify))))))
-  
+
   (general-define-key :keymaps 'LaTeX-mode-map :states 'insert
     "DEL" #'gatsby:latex-delete)
   (setq LaTeX-syntactic-comments nil

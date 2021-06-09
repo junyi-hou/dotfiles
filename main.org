@@ -1351,12 +1351,14 @@ I like the customizability and extensibility ~emacs~ offers, but I am not a big 
 
 #+begin_src nix :noweb-ref emacs-packages
   epkgs.evil
+  epkgs.undo-fu
 #+end_src
 
 #+begin_src emacs-lisp
   (use-package evil
-    :custom (evil-undo-system 'undo-redo)
-    :init (evil-mode 1)
+    :custom (evil-undo-system 'undo-fu)
+    :init
+    (evil-mode 1)
     :general
     (:keymaps '(motion normal visual)
      "j" 'evil-next-visual-line
@@ -2829,7 +2831,7 @@ Set the indent width to 2 in the ~org-mode~.
 
 #+begin_src emacs-lisp :tangle no :noweb-ref org-config
   (setq org-startup-indented t
-        org-startup-with-latex-preview t
+        org-startup-with-latex-preview nil
         org-preview-latex-image-directory ".org-latex-imgcache/")
 #+end_src
 

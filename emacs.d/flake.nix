@@ -124,6 +124,7 @@
           epkgs.hl-todo
           epkgs.eldoc-box
           epkgs.evil
+          epkgs.undo-fu
           epkgs.evil-surround
           epkgs.evil-nerd-commenter
           epkgs.expand-region
