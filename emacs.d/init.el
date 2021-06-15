@@ -163,6 +163,7 @@
 (use-package visual-fill-column)
 
 (add-hook 'text-mode-hook #'visual-fill-column-mode)
+(add-hook 'ein:markdown-mode-hook #'visual-fill-column-mode--disable)
 
 (setq comment-auto-fill-only-comments t)
 (add-hook 'prog-mode-hook #'auto-fill-mode)

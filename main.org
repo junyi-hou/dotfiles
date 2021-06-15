@@ -779,8 +779,11 @@ Alongside with the builtin ~visual-line-mode~, there is also ~visual-fill-column
 
 I turn on ~visual-fill-column-mode~ only for ~text-mode~, while using the builtin ~auto-fill-mode~ for ~prog-mode~, as the latter can be configured to hard-wrap only the comments, not the actual code.
 
+~visual-fill-column-mode~ does not play well with ~poly-mode~, which enables multiple major modes in a same buffer. If there are both ~text-mode~ and ~prog-mode~ running in the same buffer, ~visual-fill-column-mode~ will try to reset the column width every time the cursor moves from ~text-mode~ blocks to ~prog-mode~ blocks (and vice versa). Therefore, I enable ~visual-fill-column-mode~ only when ~poly-mode~ is not present:
+
 #+begin_src emacs-lisp
   (add-hook 'text-mode-hook #'visual-fill-column-mode)
+  (add-hook 'ein:markdown-mode-hook #'visual-fill-column-mode--disable)
 #+end_src
 
 **** auto-fill-mode
