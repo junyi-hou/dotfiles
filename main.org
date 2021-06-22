@@ -5197,6 +5197,8 @@ For the first two features, I use ~projectile~.
     (after-init . projectile-mode)
     :init
     <<projectile-init>>
+    :config
+    <<projectile-config>>
     :general
     (:keymaps '(normal motion)
      :prefix "SPC"
@@ -5216,6 +5218,18 @@ By default, ~projectile-find-file~ will ask me to switch to an known project if 
       (call-interactively #'find-file)))
 
   (advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
+#+end_src
+
+Make sure that the builtin ~project.el~ recognize ~projectile~'s way of finding project root.
+
+#+begin_src emacs-lisp :tangle no :noweb-ref projectile-config
+  ;; taken from https://zerokspot.com/weblog/2019/11/27/eglot-projects-not-in-vcs-root/
+  (defun gatsby:projectile-project-find-function (dir)
+    (let ((root (projectile-project-root dir)))
+      (and root (cons 'transient root))))
+
+  (with-eval-after-load 'project
+    (add-to-list 'project-find-functions 'gatsby:projectile-project-find-function))
 #+end_src
 
 ~projectile~ can utilize ~fd~ for faster file search. Enable it requires installing the ~fd~ utility.
@@ -7514,8 +7528,9 @@ Enable LSP, ~tree-sitter~ mode, and the local tab width when loading python file
   (python-mode . eglot-ensure)
 #+end_src
 
-#+begin_src emacs-lisp :tangle no :noweb-ref python-init
-  (setf (cdr (assq 'python-mode eglot-server-programs)) '("pyright-langserver" "--stdio"))
+Format python source code buffer before saving using ~eglot~
+#+begin_src emacs-lisp :tangle no :noweb-ref python-config
+  (add-hook 'before-save-hook #'eglot-format-buffer nil t)
 #+end_src
 
 Register python with ~emacs-jupyter~ to enable REPL for python.

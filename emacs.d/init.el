@@ -2048,6 +2048,14 @@ List of CANDIDATES is given by flyspell for the WORD."
       (call-interactively #'find-file)))
 
   (advice-add #'projectile-find-file :override #'gatsby:projectile-find-file)
+  :config
+  ;; taken from https://zerokspot.com/weblog/2019/11/27/eglot-projects-not-in-vcs-root/
+  (defun gatsby:projectile-project-find-function (dir)
+    (let ((root (projectile-project-root dir)))
+      (and root (cons 'transient root))))
+  
+  (with-eval-after-load 'project
+    (add-to-list 'project-find-functions 'gatsby:projectile-project-find-function))
   :general
   (:keymaps '(normal motion)
    :prefix "SPC"
@@ -3228,8 +3236,8 @@ Taken from `slack-room-display'."
   :init
   (defun gatsby:python--set-indent-width ()
     (setq-local tab-width 4))
-  (setf (cdr (assq 'python-mode eglot-server-programs)) '("pyright-langserver" "--stdio"))
   :config
+  (add-hook 'before-save-hook #'eglot-format-buffer nil t)
   (defun gatsby:python-start-repl ()
     "Infer python versions from shebang.  If there is no shebang, promote the user for python's version."
     (let* ((shebang (save-excursion (goto-char 1) (thing-at-point 'line)))
