@@ -1659,8 +1659,7 @@ If there is already a eshell buffer open for that directory, switch to that buff
     (setq inferior-STA-program-name "stata-mp"))
 
   ;; load languages
-  (let* ((kernel-names '("python3" "stata"))
-         (jupyter '(jupyter . t))
+  (let* ((jupyter '(jupyter . t))
          (kernels `(,@(--map `(,(intern it) . t) kernel-names)))
          (interpreters (if (assq 'jupyter org-babel-load-languages)
                            `(,@(butlast org-babel-load-languages)

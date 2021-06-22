@@ -4075,8 +4075,7 @@ First, according to the [[https://github.com/nnicandro/emacs-jupyter#org-mode-so
       (setq inferior-STA-program-name "stata-mp"))
 
     ;; load languages
-    (let* ((kernel-names '("python3" "stata"))
-           (jupyter '(jupyter . t))
+    (let* ((jupyter '(jupyter . t))
            (kernels `(,@(--map `(,(intern it) . t) kernel-names)))
            (interpreters (if (assq 'jupyter org-babel-load-languages)
                              `(,@(butlast org-babel-load-languages)
