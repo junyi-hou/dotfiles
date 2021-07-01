@@ -1630,23 +1630,41 @@ If there is already a eshell buffer open for that directory, switch to that buff
 (defcustom gatsby:jupyter-repl-function-alist nil
   "An alist of (code-buffer-mode . action), where action can be:
 - a string indicating the kernel name should be called in CODE-BUFFER-MODE
-- a function with no argument that should be called to start the corresponding jupyter REPL in CODE-BUFFER-MODE"
+- a function with an optional argument of a jupyter server or nil that should be called to start the corresponding jupyter REPL in CODE-BUFFER-MODE"
   :type 'alist
   :group 'jupyter)
 
-(defun gatsby:jupyter-start-or-switch-to-repl ()
-  "Switch to REPL associated the current buffer.  If there is no REPL associated with the current buffer, start one according to KERNEL type."
-  (interactive)
+(defun gatsby:jupyter-start-or-switch-to-repl (arg)
+  "Switch to REPL associated the current buffer.  If there is no REPL associated with the current buffer, start one according to KERNEL type.
+
+If ARG is not nil, use a `jupyter-server' instance to launch REPL."
+  (interactive "P")
   (if (and jupyter-current-client
            (jupyter-kernel-alive-p jupyter-current-client))
       (jupyter-repl-pop-to-buffer)
-    (let ((code-buffer (current-buffer))
-          (major-mode-action (cdr (assq major-mode gatsby:jupyter-repl-function-alist))))
+    (let* ((code-buffer (current-buffer))
+           (major-mode-action (cdr (assq major-mode gatsby:jupyter-repl-function-alist)))
+           (server
+            (when arg
+              (let* ((url-or-port
+                      ;; first remove closed servers
+                      (progn (jupyter-gc-servers)
+                             (completing-read
+                              "Select or type the url of the jupyter server to connect to: "
+                              (--map (oref it url) (jupyter-servers)))))
+                     (url (if (s-match "^[0-9]+$" url-or-port)
+                              (format "http://localhost:%s" url-or-port)
+                            url-or-port)))
+                (or (jupyter-find-server url)
+                    (jupyter-server :url url))))))
       (cond ((stringp major-mode-action)
-             (jupyter-run-repl major-mode-action major-mode-action (current-buffer) nil t))
+             (if server
+                 (jupyter-run-server-repl
+                  server major-mode-action major-mode-action (current-buffer) nil t)
+               (jupyter-run-repl major-mode-action major-mode-action (current-buffer) nil t)))
             ((functionp major-mode-action)
-             (funcall major-mode-action))
-            (t (call-interactively 'jupyter-run-repl)))
+             (funcall major-mode-action server))
+            (t (user-error "Do not know what to do with %s. Please configure `gatsby:jupyter-repl-function-alist' first" major-mode)))
       (switch-to-buffer-other-window code-buffer))))
 
 (add-hook 'jupyter-repl-mode-hook #'company-mode)
@@ -2054,7 +2072,7 @@ List of CANDIDATES is given by flyspell for the WORD."
   (defun gatsby:projectile-project-find-function (dir)
     (let ((root (projectile-project-root dir)))
       (and root (cons 'transient root))))
-  
+
   (with-eval-after-load 'project
     (add-to-list 'project-find-functions 'gatsby:projectile-project-find-function))
   :general
@@ -3239,14 +3257,18 @@ Taken from `slack-room-display'."
     (setq-local tab-width 4))
   :config
   (add-hook 'before-save-hook #'eglot-format-buffer nil t)
-  (defun gatsby:python-start-repl ()
-    "Infer python versions from shebang.  If there is no shebang, promote the user for python's version."
+  (defun gatsby:python-start-repl (&optional server)
+    "Infer python versions from shebang.  If there is no shebang, promote the user for python's version.
+
+  Start REPL using SERVER if it is not nil, otherwise start REPL using regular kernel."
     (let* ((shebang (save-excursion (goto-char 1) (thing-at-point 'line)))
            (kernel (if (string-match "#!/usr/bin/env\s+\\(python.?\\)" (or shebang ""))
                        (match-string 1 shebang)
                      (completing-read "Cannot infer python interpreter, please select: "
                                       '("python2" "python3")))))
-      (jupyter-run-repl kernel kernel (current-buffer) nil t)))
+      (if server
+          (jupyter-run-server-repl server kernel kernel (current-buffer) nil t)
+        (jupyter-run-repl kernel kernel (current-buffer) nil t))))
 
   (add-to-list 'gatsby:jupyter-repl-function-alist '(python-mode . gatsby:python-start-repl))
   (defun gatsby:python--dedent-string (string)
