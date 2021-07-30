@@ -66,7 +66,7 @@
         "tsc-module": "tsc-module"
       },
       "locked": {
-        "narHash": "sha256-His+F9I2XjSM8aG9kR63DNamqB6ovflPkPrpFdJ1kAA=",
+        "narHash": "sha256-94OqiJX/Z1i7u3DRTAWiaLcSEUzwTuSrzqWGkUYOWlU=",
         "path": "./emacs.d",
         "type": "path"
       },

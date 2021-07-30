@@ -65,6 +65,10 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-07-30 Fri
+
+- add project management configuration to ~org-mode~
+
 *** 2021-05-31 Mon
 
 - fix Darwin compatibility bug
@@ -1261,12 +1265,6 @@ I only need a handful of keywords: todo, fixme, hack, and note.
                                 ("FIXME"  . "#FB4934")
                                 ("NOTE"   . "#FABD2F")
                                 ("HACK"   . "#FABD2F")))
-#+end_src
-
-I also want to have these highlights in all modes, even in ~org-mode~ where there are already todo highlights.
-
-#+begin_src emacs-lisp
-  (setq hl-todo-exclude-modes nil)
 #+end_src
 
 *** display line number
@@ -2953,6 +2951,25 @@ Make ~org-block~, ~org-block-begin-line~ and ~org-block-end-line~ faces look bet
   (set-face-extend 'org-block t)
   (set-face-extend 'org-block-begin-line t)
   (set-face-extend 'org-block-end-line t)
+#+end_src
+
+*** org-todo
+
+The original purpose of the ~org-mode~ is to maintain to-do lists and plan projects. I collect settings related to such functionalities here.
+
+First define the life cycle of a todo item (or a project):
+
+#+begin_src emacs-lisp
+  (setq org-todo-keywords '((sequence "TODO(t)" "PROCESSING(p)" "BLOCKED(b)" "|" "FEEDBACK(f)" "DONE(d)"))
+        org-use-fast-todo-selection t)
+#+end_src
+
+Next, define keybindings for toggling priority and todo states.
+
+#+begin_src emacs-lisp
+  (general-define-key :keymaps 'org-mode-map :states '(normal visual motion) :prefix "SPC"
+    "rp" #'org-priority
+    "rt" #'org-todo)
 #+end_src
 
 *** org-appear

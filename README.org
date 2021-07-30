@@ -59,6 +59,10 @@ to commit updates. The ~--no-tangle~ flag is important: without this flag, ~upda
 
 ** News
 
+*** 2021-07-30 Fri
+
+- add project management configuration to ~org-mode~
+
 *** 2021-05-31 Mon
 
 - fix Darwin compatibility bug

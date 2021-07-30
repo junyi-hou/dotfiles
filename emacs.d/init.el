@@ -346,8 +346,6 @@
                               ("NOTE"   . "#FABD2F")
                               ("HACK"   . "#FABD2F")))
 
-(setq hl-todo-exclude-modes nil)
-
 (use-package display-line-numbers :hook (prog-mode . display-line-numbers-mode))
 
 (defun gatsby:theme--set-line-number-background (&rest _)
@@ -1151,6 +1149,13 @@ If there is already a eshell buffer open for that directory, switch to that buff
 
 (general-define-key :keymaps 'org-mode-map :states 'normal
   "RET" #'org-open-at-point)
+
+(setq org-todo-keywords '((sequence "TODO(t)" "PROCESSING(p)" "BLOCKED(b)" "|" "FEEDBACK(f)" "DONE(d)"))
+      org-use-fast-todo-selection t)
+
+(general-define-key :keymaps 'org-mode-map :states '(normal visual motion) :prefix "SPC"
+  "rp" #'org-priority
+  "rt" #'org-todo)
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
