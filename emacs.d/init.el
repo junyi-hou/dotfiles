@@ -1157,6 +1157,40 @@ If there is already a eshell buffer open for that directory, switch to that buff
   "rp" #'org-priority
   "rt" #'org-todo)
 
+(setq org-agenda-files `(,(expand-file-name "~/org-agenda/")))
+
+(setq org-agenda-window-setup 'other-window)
+
+(add-to-list 'evil-motion-state-modes 'org-agenda-mode)
+(general-define-key :keymaps 'org-agenda-mode-map :states 'motion
+  "RET" #'org-agenda-goto
+  "+" #'org-agenda-priority-up
+  "-" #'org-agenda-priority-down
+  "d" #'org-agenda-deadline
+  "t" #'org-agenda-set-tags
+  "z" #'org-agenda-add-note
+  "s" #'org-agenda-filter-by-tag)
+
+(add-to-list 'org-capture-templates
+             `("t" "RH todo" entry (file ,(expand-file-name "~/org-agenda/rh-todo-item.org"))
+               "* TODO %? %T\n%i"
+               :empty-lines 1))
+
+(defun gatsby:org-new-todo-item ()
+  (interactive)
+  (org-capture t "t"))
+
+(defun gatsby:org--ignore-delete-other-windows (oldfun args)
+  (cl-letf (((symbol-function 'delete-other-windows) 'ignore))
+    (apply oldfun args)))
+
+(with-eval-after-load "org-capture"
+  (advice-add #'org-capture-place-template :around #'gatsby:org--ignore-delete-other-windows))
+
+(general-define-key :states '(normal visual motion) :prefix "SPC"
+  "jt" #'org-todo-list
+  "jn" #'gatsby:org-new-todo-item)
+
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
 

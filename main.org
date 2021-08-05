@@ -2953,7 +2953,7 @@ Make ~org-block~, ~org-block-begin-line~ and ~org-block-end-line~ faces look bet
   (set-face-extend 'org-block-end-line t)
 #+end_src
 
-*** org-todo
+*** todo management with org-agenda and org-capture
 
 The original purpose of the ~org-mode~ is to maintain to-do lists and plan projects. I collect settings related to such functionalities here.
 
@@ -2971,6 +2971,66 @@ Next, define keybindings for toggling priority and todo states.
     "rp" #'org-priority
     "rt" #'org-todo)
 #+end_src
+
+I use the builtin ~org-agenda~ to manage my todo items. First, set up the folder that holds all ~org-todo~ files.
+
+#+begin_src emacs-lisp
+  (setq org-agenda-files `(,(expand-file-name "~/org-agenda/")))
+#+end_src
+
+By default, ~org-agenda~ rearranges my window configuration, which is not ideal and needs to be overridden.
+
+#+begin_src emacs-lisp
+  (setq org-agenda-window-setup 'other-window)
+#+end_src
+
+~org-agenda~ is launched in its own mode: ~org-agenda-mode~. I put this mode in the ~motion~ state and override its key bindings.
+
+#+begin_src emacs-lisp
+  (add-to-list 'evil-motion-state-modes 'org-agenda-mode)
+  (general-define-key :keymaps 'org-agenda-mode-map :states 'motion
+    "RET" #'org-agenda-goto
+    "+" #'org-agenda-priority-up
+    "-" #'org-agenda-priority-down
+    "d" #'org-agenda-deadline
+    "t" #'org-agenda-set-tags
+    "z" #'org-agenda-add-note
+    "s" #'org-agenda-filter-by-tag)
+#+end_src
+
+Next, provide an ~org-capture~ template specifically for adding todo item.
+
+#+begin_src emacs-lisp
+  (add-to-list 'org-capture-templates
+               `("t" "RH todo" entry (file ,(expand-file-name "~/org-agenda/rh-todo-item.org"))
+                 "* TODO %? %T\n%i"
+                 :empty-lines 1))
+
+  (defun gatsby:org-new-todo-item ()
+    (interactive)
+    (org-capture t "t"))
+#+end_src
+
+I ask ~org-capture~ not to mess with my current window configuration:
+
+#+begin_src emacs-lisp
+  (defun gatsby:org--ignore-delete-other-windows (oldfun args)
+    (cl-letf (((symbol-function 'delete-other-windows) 'ignore))
+      (apply oldfun args)))
+
+  (with-eval-after-load "org-capture"
+    (advice-add #'org-capture-place-template :around #'gatsby:org--ignore-delete-other-windows))
+#+end_src
+
+
+Finally, define global entry point for interacting with ~org-agenda~ and ~org-capture~.
+
+#+begin_src emacs-lisp
+  (general-define-key :states '(normal visual motion) :prefix "SPC"
+    "jt" #'org-todo-list
+    "jn" #'gatsby:org-new-todo-item)
+#+end_src
+
 
 *** org-appear
 
